@@ -2,6 +2,9 @@ import React from 'react';
 import Link from 'next/link';
 
 export default function Home() {
+  // Helper function to easily grab Firebase Storage URLs for your local paths
+  const getFbUrl = (path) => `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path)}?alt=media`;
+
   return (
     <main className="bg-white text-gray-900 font-sans flex flex-col flex-1">
       
@@ -9,7 +12,7 @@ export default function Home() {
       <header 
         className="relative min-h-[250px] md:min-h-[320px] py-8 flex items-center justify-center text-center text-white"
         style={{ 
-          background: "linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('/images/heros/main-hero.jpg')",
+          background: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('${getFbUrl('images/heros/main-hero.jpg')}')`,
           backgroundSize: "cover",
           backgroundPosition: "center"
         }}
@@ -30,7 +33,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 <Link href="/category#Luxury-Vinyl" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <img src="/images/heros/lvp.jpg" alt="Luxury Vinyl" className="absolute inset-0 w-full h-full object-cover" />
+                    <img src={getFbUrl('images/heros/lvp.jpg')} alt="Luxury Vinyl" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h3 className="text-white text-3xl font-bold mb-1">Luxury Vinyl</h3>
@@ -40,7 +43,7 @@ export default function Home() {
                 </Link>
                 
                 <Link href="/category#Carpet" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <img src="/images/heros/carpet.jpg" alt="Designer Carpet" className="absolute inset-0 w-full h-full object-cover" />
+                    <img src={getFbUrl('images/heros/carpet.jpg')} alt="Designer Carpet" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h3 className="text-white text-3xl font-bold mb-1">Designer Carpet</h3>
@@ -50,7 +53,7 @@ export default function Home() {
                 </Link>
 
                 <Link href="/category#Laminate" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <img src="/images/heros/laminate.jpg" alt="Premium Laminate" className="absolute inset-0 w-full h-full object-cover" />
+                    <img src={getFbUrl('images/heros/laminate.jpg')} alt="Premium Laminate" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h3 className="text-white text-3xl font-bold mb-1">Premium Laminate</h3>
@@ -60,7 +63,7 @@ export default function Home() {
                 </Link>
 
                 <Link href="/category#Hardwood" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <img src="/images/heros/hardwood.jpg" alt="Hardwood" className="absolute inset-0 w-full h-full object-cover" />
+                    <img src={getFbUrl('images/heros/hardwood.jpg')} alt="Hardwood" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h3 className="text-white text-3xl font-bold mb-1">Hardwood</h3>
@@ -92,10 +95,11 @@ export default function Home() {
                 </div>
             </div>
             <div className="rounded-3xl h-[400px] overflow-hidden shadow-2xl">
-                <img src="/images/heros/showroom.jpg" alt="Showrooms" className="w-full h-full object-cover" />
+                <img src={getFbUrl('images/heros/showroom.jpg')} alt="Showrooms" className="w-full h-full object-cover" />
             </div>
         </div>
       </section>
+
     </main>
   );
 }

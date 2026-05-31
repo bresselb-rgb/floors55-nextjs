@@ -214,20 +214,20 @@ export default function CategoryPage() {
       setTimeout(() => {
           window.dispatchEvent(new Event('hashchange'));
       }, 50);
-  };
+  let heroImage = 'images/heros/main-hero.jpg';
+  if (activeCategoryHash === 'Luxury Vinyl (LVP)') heroImage = 'images/heros/lvp.jpg';
+  else if (activeCategoryHash === 'Carpet') heroImage = 'images/heros/carpet.jpg';
+  else if (activeCategoryHash === 'Laminate') heroImage = 'images/heros/laminate.jpg';
+  else if (activeCategoryHash === 'Hardwood') heroImage = 'images/heros/hardwood.jpg';
 
-  let heroImage = '/images/heros/main-hero.jpg';
-  if (activeCategoryHash === 'Luxury Vinyl (LVP)') heroImage = '/images/heros/lvp.jpg';
-  else if (activeCategoryHash === 'Carpet') heroImage = '/images/heros/carpet.jpg';
-  else if (activeCategoryHash === 'Laminate') heroImage = '/images/heros/laminate.jpg';
-  else if (activeCategoryHash === 'Hardwood') heroImage = '/images/heros/hardwood.jpg';
+  const heroFbUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(heroImage)}?alt=media`;
 
   return (
     <main className="bg-gray-50 text-gray-900 font-sans flex flex-col flex-1">
       <header 
         className="relative min-h-[250px] md:min-h-[320px] py-12 flex items-center justify-center text-center text-white transition-all duration-500"
         style={{ 
-            backgroundImage: `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.55)), url('${heroImage}')`, 
+            backgroundImage: `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.55)), url('${heroFbUrl}')`, 
             backgroundSize: "cover", 
             backgroundPosition: "center"
         }}
@@ -344,7 +344,12 @@ export default function CategoryPage() {
                             folderName = folderName.replace(/-+$/, '');
 
                             const mainType = p.category === 'Carpet' ? 'main' : 'main';
-                            const lowerPath = `/images/${folderName}/${safePrefix}${displaySku}_${mainType}.jpg`.toLowerCase();
+                            
+                            // CONVERT TO FIREBASE URL
+                            const rawPath = `images/${folderName}/${safePrefix}${displaySku}_${mainType}.jpg`.toLowerCase();
+                            const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+                            
+                            const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
                             
                             return (
                                 <div key={p.id} className={isListView ? "bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col sm:flex-row items-center p-4 gap-6 hover:shadow-md transition relative" : "bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition relative"}>
@@ -355,18 +360,22 @@ export default function CategoryPage() {
                                         {p.isContractor && <div className={`bg-purple-100 text-purple-800 font-black rounded-full uppercase tracking-widest shadow-md flex items-center ${isListView ? 'text-[9px] px-2.5 py-1 gap-1' : 'text-[9px] px-3 py-1.5 gap-1'}`}><span>🛠️</span> Pro Select</div>}
                                     </div>
 
-                                    <Link href={`/product#${p.id}`} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
-                                        <img src={lowerPath} className="w-full h-full object-cover transition duration-300 hover:scale-105" onError={e => e.target.src='/images/tbd.jpg'} />
+                                    <Link href={`/product/${p.id}`} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
+                                        <img src={fbPath} className="w-full h-full object-cover transition duration-300 hover:scale-105" onError={e => e.target.src=TBD_IMG} />
                                     </Link>
 
                                     {!isListView && (
                                         <div className="px-4 py-2 border-b border-gray-50 bg-gray-50/50 flex flex-wrap gap-1.5 min-h-[40px] items-center">
                                             {colors.slice(0, 6).map(c => {
                                                 const sType = p.category === 'Carpet' ? 'swatch' : 'main';
-                                                const swatchPath = `/images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
+                                                
+                                                // CONVERT TO FIREBASE URL
+                                                const swatchRawPath = `images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
+                                                const swatchFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(swatchRawPath)}?alt=media`;
+
                                                 return (
                                                     <button key={c.sku} onMouseEnter={() => setActivePreviews(prev => ({...prev, [p.id]: c.sku}))} onClick={(e) => { e.preventDefault(); setActivePreviews(prev => ({...prev, [p.id]: c.sku})); }} className="w-6 h-6 rounded-full border border-gray-200 overflow-hidden shrink-0 transition-transform hover:scale-125 focus:scale-125 focus:outline-none bg-gray-100 cursor-pointer" title={c.name}>
-                                                        <img src={swatchPath} className="w-full h-full object-cover pointer-events-none" onError={e => e.target.src='/images/tbd.jpg'} />
+                                                        <img src={swatchFbPath} className="w-full h-full object-cover pointer-events-none" onError={e => e.target.src=TBD_IMG} />
                                                     </button>
                                                 )
                                             })}
@@ -382,23 +391,19 @@ export default function CategoryPage() {
                                             </div>
                                             {!isListView && (
                                                 <>
-                                                    <h3 className="text-lg font-bold text-gray-950 truncate"><Link href={`/product#${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{p.displayTitle}</Link></h3>
-                                                    <p className="text-gray-500 text-xs line-clamp-3 leading-relaxed">{safeDesc}</p>
-                                                </>
-                                            )}
-                                        </div>
-                                        
-                                        {isListView && (
-                                            <>
-                                                <h3 className="text-lg font-bold text-gray-900 truncate"><Link href={`/product#${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{p.displayTitle}</Link></h3>
+                                                <h3 className="text-lg font-bold text-gray-900 truncate"><Link href={`/product/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{p.displayTitle}</Link></h3>
                                                 <p className="text-gray-500 text-xs line-clamp-2">{safeDesc}</p>
                                                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1.5">
                                                     {colors.slice(0, 6).map(c => {
                                                         const sType = p.category === 'Carpet' ? 'swatch' : 'main';
-                                                        const swatchPath = `/images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
+                                                        
+                                                        // CONVERT TO FIREBASE URL
+                                                        const swatchRawPath = `images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
+                                                        const swatchFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(swatchRawPath)}?alt=media`;
+
                                                         return (
                                                             <button key={c.sku} onMouseEnter={() => setActivePreviews(prev => ({...prev, [p.id]: c.sku}))} onClick={(e) => { e.preventDefault(); setActivePreviews(prev => ({...prev, [p.id]: c.sku})); }} className="w-6 h-6 rounded-full border border-gray-200 overflow-hidden shrink-0 transition-transform hover:scale-125 focus:scale-125 focus:outline-none bg-gray-100 cursor-pointer" title={c.name}>
-                                                                <img src={swatchPath} className="w-full h-full object-cover pointer-events-none" onError={e => e.target.src='/images/tbd.jpg'} />
+                                                                <img src={swatchFbPath} className="w-full h-full object-cover pointer-events-none" onError={e => e.target.src=TBD_IMG} />
                                                             </button>
                                                         )
                                                     })}
