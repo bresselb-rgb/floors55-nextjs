@@ -70,7 +70,6 @@ export default function CategoryPage() {
         }
     };
     
-    // Run immediately, and run again in 100ms to catch Next.js delayed routing.
     syncHash();
     const timeoutId = setTimeout(syncHash, 100);
     
@@ -133,7 +132,7 @@ export default function CategoryPage() {
              setMaxPrice(priceBounds.max);
          }
      }
-  }, [priceBounds.max, priceBounds.min, liveProductsRaw.length]);
+  }, [priceBounds.max, priceBounds.min, liveProductsRaw.length, maxPrice]);
 
   const filteredProducts = useMemo(() => {
     const searchVal = searchQuery.toLowerCase().trim();
@@ -205,15 +204,16 @@ export default function CategoryPage() {
       if (isMobileDrawerOpen) setIsMobileDrawerOpen(false);
   };
 
-  // Safely tell Next.js to update the URL so the back button knows the history
+  // The missing bracket has been restored here!
   const handleCategorySwitch = (hash) => {
       router.push(`${pathname}#${hash}`, { scroll: false });
       setIsMobileDrawerOpen(false);
       
-      // Force the native event so the page instantly filters
       setTimeout(() => {
           window.dispatchEvent(new Event('hashchange'));
       }, 50);
+  };
+
   let heroImage = 'images/heros/main-hero.jpg';
   if (activeCategoryHash === 'Luxury Vinyl (LVP)') heroImage = 'images/heros/lvp.jpg';
   else if (activeCategoryHash === 'Carpet') heroImage = 'images/heros/carpet.jpg';
@@ -221,6 +221,7 @@ export default function CategoryPage() {
   else if (activeCategoryHash === 'Hardwood') heroImage = 'images/heros/hardwood.jpg';
 
   const heroFbUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(heroImage)}?alt=media`;
+  const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
   return (
     <main className="bg-gray-50 text-gray-900 font-sans flex flex-col flex-1">
@@ -345,11 +346,8 @@ export default function CategoryPage() {
 
                             const mainType = p.category === 'Carpet' ? 'main' : 'main';
                             
-                            // CONVERT TO FIREBASE URL
                             const rawPath = `images/${folderName}/${safePrefix}${displaySku}_${mainType}.jpg`.toLowerCase();
                             const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
-                            
-                            const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
                             
                             return (
                                 <div key={p.id} className={isListView ? "bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col sm:flex-row items-center p-4 gap-6 hover:shadow-md transition relative" : "bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition relative"}>
@@ -369,7 +367,6 @@ export default function CategoryPage() {
                                             {colors.slice(0, 6).map(c => {
                                                 const sType = p.category === 'Carpet' ? 'swatch' : 'main';
                                                 
-                                                // CONVERT TO FIREBASE URL
                                                 const swatchRawPath = `images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
                                                 const swatchFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(swatchRawPath)}?alt=media`;
 
@@ -393,11 +390,18 @@ export default function CategoryPage() {
                                                 <>
                                                 <h3 className="text-lg font-bold text-gray-900 truncate"><Link href={`/product/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{p.displayTitle}</Link></h3>
                                                 <p className="text-gray-500 text-xs line-clamp-2">{safeDesc}</p>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {isListView && (
+                                            <>
+                                                <h3 className="text-lg font-bold text-gray-900 truncate"><Link href={`/product/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{p.displayTitle}</Link></h3>
+                                                <p className="text-gray-500 text-xs line-clamp-2">{safeDesc}</p>
                                                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1.5">
                                                     {colors.slice(0, 6).map(c => {
                                                         const sType = p.category === 'Carpet' ? 'swatch' : 'main';
                                                         
-                                                        // CONVERT TO FIREBASE URL
                                                         const swatchRawPath = `images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
                                                         const swatchFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(swatchRawPath)}?alt=media`;
 
@@ -442,7 +446,7 @@ export default function CategoryPage() {
                                                     </div>
                                                 )
                                             )}
-                                            <Link href={`/product#${p.id}`} className={isListView ? "w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-2 rounded-lg transition text-[10px] tracking-widest" : "w-full block text-center border border-black hover:bg-black text-black hover:text-white font-black uppercase py-2.5 rounded-xl transition text-[10px] tracking-widest"} style={{ textDecoration: 'none' }}>View Details</Link>
+                                            <Link href={`/product/${p.id}`} className={isListView ? "w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-2 rounded-lg transition text-[10px] tracking-widest" : "w-full block text-center border border-black hover:bg-black text-black hover:text-white font-black uppercase py-2.5 rounded-xl transition text-[10px] tracking-widest"} style={{ textDecoration: 'none' }}>View Details</Link>
                                         </div>
                                     </div>
                                 </div>
@@ -473,7 +477,7 @@ export default function CategoryPage() {
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
                         <button onClick={() => handleCategorySwitch('All Products')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategoryHash === 'All Products' ? 'bg-gold text-black font-black' : 'text-gray-500 hover:bg-gray-100'}`}>🌐 All Collections</button>
-                        <button onClick={() => handleCategorySwitch('Hot Buys')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold animate-pulse transition-all outline-none cursor-pointer ${activeCategoryHash === 'Hot Buys' ? 'bg-red-50 text-red-700 font-black' : 'text-red-500 hover:bg-red-50'}`}>🔥 Hot Buys (On Sale)</button>
+                        <button onClick={() => handleCategorySwitch('Hot Buys')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold animate-pulse transition-all outline-none cursor-pointer ${activeCategoryHash === 'Hot Buys' ? 'bg-red-50 text-red-700 font-black' : 'text-red-50 hover:bg-red-50'}`}>🔥 Hot Buys (On Sale)</button>
                         {uniqueCategoriesList.map(cat => (
                             <button key={cat} onClick={() => handleCategorySwitch(encodeURIComponent(cat))} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategoryHash === cat ? 'bg-gold text-black font-black' : 'text-gray-500 hover:bg-gray-100'}`}>{cat}</button>
                         ))}
