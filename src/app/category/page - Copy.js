@@ -118,28 +118,21 @@ export default function CategoryPage() {
 
   const priceBounds = useMemo(() => {
     let min = 0; let max = 15;
-    
-    // 1. Filter products to ONLY the currently selected category before finding min/max
-    const categoryProducts = liveProductsRaw.filter(p => {
-        if (activeCategoryHash === "All Products") return true;
-        if (activeCategoryHash === "Hot Buys") return p.isSale === true;
-        return p.category === activeCategoryHash;
-    });
-
-    const prices = categoryProducts.map(p => isWholesale ? p.price : (p.retailPrice ? parseFloat(p.retailPrice) : p.price * 2.2)).filter(v => !isNaN(v));
+    const prices = liveProductsRaw.map(p => isWholesale ? p.price : (p.retailPrice ? parseFloat(p.retailPrice) : p.price * 2.2)).filter(v => !isNaN(v));
     if (prices.length > 0) {
         min = Math.floor(Math.min(...prices));
         max = Math.ceil(Math.max(...prices));
     }
     return { min, max };
-  }, [liveProductsRaw, activeCategoryHash, isWholesale]);
+  }, [liveProductsRaw, isWholesale]);
 
   useEffect(() => {
      if (liveProductsRaw.length > 0) {
-         // 2. Safely reset the slider to the new category's absolute maximum so no items are hidden
-         setMaxPrice(priceBounds.max);
+         if (maxPrice === 10000 || maxPrice > priceBounds.max || maxPrice < priceBounds.min) {
+             setMaxPrice(priceBounds.max);
+         }
      }
-  }, [priceBounds.max, activeCategoryHash]);
+  }, [priceBounds.max, priceBounds.min, liveProductsRaw.length, maxPrice]);
 
   const filteredProducts = useMemo(() => {
     const searchVal = searchQuery.toLowerCase().trim();
@@ -262,7 +255,7 @@ export default function CategoryPage() {
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
                         <button onClick={() => handleCategorySwitch('All Products')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategoryHash === 'All Products' ? 'bg-gold text-black font-black' : 'text-gray-500 hover:bg-gray-100'}`}>🌐 All Collections</button>
-                        <button onClick={() => handleCategorySwitch('Hot Buys')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategoryHash === 'Hot Buys' ? 'bg-red-50 text-red-700 font-black' : 'text-gray-500 hover:bg-gray-100'}`}>🔥 Hot Buys (On Sale)</button>
+                        <button onClick={() => handleCategorySwitch('Hot Buys')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold animate-pulse transition-all outline-none cursor-pointer ${activeCategoryHash === 'Hot Buys' ? 'bg-red-50 text-red-700 font-black' : 'text-red-50 hover:bg-red-50'}`}>🔥 Hot Buys (On Sale)</button>
                         {uniqueCategoriesList.map(cat => (
                             <button key={cat} onClick={() => handleCategorySwitch(encodeURIComponent(cat))} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategoryHash === cat ? 'bg-gold text-black font-black' : 'text-gray-500 hover:bg-gray-100'}`}>{cat}</button>
                         ))}
@@ -484,7 +477,7 @@ export default function CategoryPage() {
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
                         <button onClick={() => handleCategorySwitch('All Products')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategoryHash === 'All Products' ? 'bg-gold text-black font-black' : 'text-gray-500 hover:bg-gray-100'}`}>🌐 All Collections</button>
-                        <button onClick={() => handleCategorySwitch('Hot Buys')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategoryHash === 'Hot Buys' ? 'bg-red-50 text-red-700 font-black' : 'text-gray-500 hover:bg-gray-100'}`}>🔥 Hot Buys (On Sale)</button>
+                        <button onClick={() => handleCategorySwitch('Hot Buys')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold animate-pulse transition-all outline-none cursor-pointer ${activeCategoryHash === 'Hot Buys' ? 'bg-red-50 text-red-700 font-black' : 'text-red-50 hover:bg-red-50'}`}>🔥 Hot Buys (On Sale)</button>
                         {uniqueCategoriesList.map(cat => (
                             <button key={cat} onClick={() => handleCategorySwitch(encodeURIComponent(cat))} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategoryHash === cat ? 'bg-gold text-black font-black' : 'text-gray-500 hover:bg-gray-100'}`}>{cat}</button>
                         ))}
