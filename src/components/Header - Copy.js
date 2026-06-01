@@ -84,53 +84,48 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             
-            {/* Left Section: Logo & Products Nav */}
-            <div className="flex items-center gap-8 h-full">
-              {/* Logo */}
-              <div className="flex items-center">
-                <Link href="/" onClick={() => setIsMobileMenuOpen(false)} style={{ textDecoration: 'none' }}>
-                  <img src={getFbUrl('images/f55-pros-logo.jpg')} alt="Floors 55 for Pros" className="h-12 md:h-16 w-auto" />
-                </Link>
-              </div>
+            {/* Logo */}
+            <div className="flex items-center">
+              <Link href="/" onClick={() => setIsMobileMenuOpen(false)} style={{ textDecoration: 'none' }}>
+                <img src={getFbUrl('images/f55-pros-logo.jpg')} alt="Floors 55 for Pros" className="h-12 md:h-16 w-auto" />
+              </Link>
+            </div>
 
-              {/* Desktop Nav */}
-              <div className="hidden md:flex space-x-8 text-sm font-bold uppercase tracking-widest h-full items-center">
-                <div className="group relative h-full flex items-center">
-                  <button className="hover:text-gold transition flex items-center gap-1 py-8 text-black bg-transparent border-none font-bold uppercase cursor-pointer outline-none">
-                    Products ▾
-                  </button>
-                  <div className="absolute top-full left-0 bg-white shadow-2xl border border-gray-100 min-w-[280px] hidden group-hover:block animate-in fade-in slide-in-from-top-2 duration-200 z-50">
-                    <Link href="/category" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
-                      All Collections
+            {/* Desktop Nav */}
+            <div className="hidden md:flex space-x-8 text-sm font-bold uppercase tracking-widest h-full items-center">
+              <div className="group relative h-full flex items-center">
+                <button className="hover:text-gold transition flex items-center gap-1 py-8 text-black bg-transparent border-none font-bold uppercase cursor-pointer outline-none">
+                  Products ▾
+                </button>
+                <div className="absolute top-full left-0 bg-white shadow-2xl border border-gray-100 min-w-[280px] hidden group-hover:block animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+                  <Link href="/category" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
+                    All Collections
+                  </Link>
+                  {categories.map(cat => (
+                    <Link key={cat} href={getCategorySlug(cat)} className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
+                      {cat}
                     </Link>
-                    {hasSaleItems && (
-                      <Link href="/category/hot-buys" className="block w-full text-left px-6 py-4 hover:bg-red-50 hover:text-red-700 border-b border-gray-50 text-xs text-red-600 font-bold" style={{ textDecoration: 'none' }}>
-                        🔥 Hot Buys
-                      </Link>
-                    )}
-                    {categories.map(cat => (
-                      <Link key={cat} href={getCategorySlug(cat)} className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
-                        {cat}
-                      </Link>
-                    ))}
-                  </div>
+                  ))}
                 </div>
               </div>
+              {hasSaleItems && (
+                <Link href="/category/hot-buys" className="hover:text-red-500 text-red-600 transition flex items-center gap-1 font-bold" style={{ textDecoration: 'none' }}>🔥 Hot Buys</Link>
+              )}
+              <Link href="/#locations" className="hover:text-gold transition text-gray-900" style={{ textDecoration: 'none' }}>Locations</Link>
             </div>
 
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-6">
               <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                <Link href="/wholesale-request" className="hover:text-gold transition text-gray-500" style={{ textDecoration: 'none' }}>Pro Sign Up</Link>
                 {user && !user.isAnonymous ? (
                   <button onClick={handleLogout} className="hover:text-gold transition uppercase tracking-widest outline-none text-[#c5a059] bg-transparent border-none font-bold cursor-pointer">Sign Out</button>
                 ) : (
                   <button onClick={() => setIsLoginModalOpen(true)} className="hover:text-gold transition uppercase tracking-widest outline-none bg-transparent border-none font-bold cursor-pointer text-gray-500">Sign In</button>
                 )}
+                {/* Request Quote removed here */}
               </div>
-              <div className="flex items-center gap-3">
-                <Link href="/become-a-pro" className="bg-gold text-black px-6 py-3 rounded-full text-xs font-bold uppercase hover:bg-black hover:text-white transition-all shadow-md" style={{ textDecoration: 'none' }}>Become a Pro</Link>
-                <Link href="/general-contact" className="bg-black text-white px-6 py-3 rounded-full text-xs font-bold uppercase hover:bg-gold hover:text-black transition-all shadow-md" style={{ textDecoration: 'none' }}>Contact Us</Link>
-              </div>
+              <Link href="/general-contact" className="bg-black text-white px-6 py-3 rounded-full text-xs font-bold uppercase hover:bg-gold hover:text-black transition-all shadow-md" style={{ textDecoration: 'none' }}>Contact Us</Link>
             </div>
 
             {/* Mobile Menu Toggle */}
@@ -153,16 +148,15 @@ export default function Header() {
               {categories.map(cat => (
                 <Link key={cat} href={getCategorySlug(cat)} onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>{cat}</Link>
               ))}
+              <Link href="/#locations" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>Locations</Link>
+              <Link href="/wholesale-request" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>Pro Sign Up</Link>
               {user && !user.isAnonymous ? (
                 <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="block w-full text-left py-4 text-sm font-bold uppercase tracking-widest text-[#c5a059] border-b border-gray-50 outline-none bg-transparent cursor-pointer">Sign Out</button>
               ) : (
                 <button onClick={() => { setIsLoginModalOpen(true); setIsMobileMenuOpen(false); }} className="block w-full text-left py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50 outline-none bg-transparent cursor-pointer">Sign In</button>
               )}
               {/* Request Quote removed here */}
-              <div className="pt-4 space-y-3">
-                <Link href="/become-a-pro" onClick={() => setIsMobileMenuOpen(false)} className="block w-full bg-gold text-black text-center px-6 py-4 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-md" style={{ textDecoration: 'none' }}>Become a Pro</Link>
-                <Link href="/general-contact" onClick={() => setIsMobileMenuOpen(false)} className="block w-full bg-black text-white text-center px-6 py-4 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-gold hover:text-black transition-all shadow-md" style={{ textDecoration: 'none' }}>Contact Us</Link>
-              </div>
+              <div className="pt-4"><Link href="/general-contact" onClick={() => setIsMobileMenuOpen(false)} className="block w-full bg-black text-white text-center px-6 py-4 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-gold hover:text-black transition-all" style={{ textDecoration: 'none' }}>Contact Us</Link></div>
             </div>
           </div>
         )}

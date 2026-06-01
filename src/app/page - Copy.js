@@ -23,7 +23,7 @@ export default function Home() {
             <p className="text-base md:text-lg mb-6 text-gray-200 font-light leading-relaxed">The Northwest's premier flooring broker. Secure wholesale pricing on Luxury Vinyl, Hardwood, Tile and Designer Carpet.</p>
             <div className="flex flex-col sm:flex-row justify-center gap-3">
                 <Link href="/category" className="bg-gold text-black px-6 py-3 rounded-full font-bold uppercase text-xs hover:bg-white transition-all shadow-lg" style={{ textDecoration: 'none' }}>Explore Collections</Link>
-                <Link href="/become-a-pro" className="bg-white/10 backdrop-blur-md border border-white/20 px-6 py-3 rounded-full font-bold uppercase text-xs hover:bg-gold hover:text-black transition-all shadow-lg" style={{ textDecoration: 'none' }}>Partner With Us</Link>
+                <Link href="#locations" className="bg-white/10 backdrop-blur-md border border-white/20 px-6 py-3 rounded-full font-bold uppercase text-xs hover:bg-gold hover:text-black transition-all shadow-lg" style={{ textDecoration: 'none' }}>Our Locations</Link>
             </div>
         </div>
       </header>
@@ -76,63 +76,26 @@ export default function Home() {
       </section>
 
       {}
-      <section 
-        className="py-24 relative bg-gray-900"
-        style={{
-            background: `linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.85)), url('${getFbUrl('images/heros/trade-bg.jpg')}')`,
-            backgroundSize: "cover",
-            backgroundPosition: "center"
-        }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="text-center mb-16">
-                <h2 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-white">Tailored for Your Trade</h2>
-                <p className="text-gray-300 text-lg max-w-2xl mx-auto leading-relaxed">Curated flooring collections designed specifically for the rigorous demands of your industry.</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                
-                {/* Prop Mgt Card - Frosted Glass */}
-                <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-10 border border-white/20 shadow-2xl hover:bg-white/20 transition-all duration-300 relative overflow-hidden group transform hover:-translate-y-1">
-                    <div className="absolute top-0 right-0 p-8 opacity-10 text-8xl group-hover:scale-110 transition-transform duration-500 pointer-events-none">🏠</div>
-                    <div className="w-12 h-12 bg-white/10 border border-white/20 text-gold rounded-full flex items-center justify-center text-xl mb-6 shadow-md">🏠</div>
-                    <h3 className="text-2xl font-bold mb-3 text-white">Property Management</h3>
-                    <p className="text-gray-200 mb-8 leading-relaxed max-w-sm font-light">Durable, high-yield LVP and carpet solutions built for rapid multi-family and commercial turn-overs. Standardized lines for consistent, repeatable ordering.</p>
-                    <Link href="/category?program=propmgt" className="inline-block bg-gold text-black px-6 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:bg-white transition-colors shadow-md" style={{ textDecoration: 'none' }}>
-                        Explore Prop Mgt
-                    </Link>
+      <section id="locations" className="py-24 border-t border-gray-100 flex-1 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
+            <div>
+                <h2 className="text-4xl md:text-5xl font-bold mb-8 tracking-tight">Visit Our Showrooms</h2>
+                <p className="text-gray-500 text-lg mb-10 leading-relaxed">Experience our collections in person. Our Lake Oswego and SE Portland showrooms feature hundreds of samples for immediate order.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    <div>
+                        <p className="text-gold font-black uppercase tracking-widest text-[10px] mb-2">Lake Oswego</p>
+                        <p className="font-bold text-gray-900">21 S State St</p>
+                        <p className="text-sm text-gray-500">Lake Oswego, OR 97034</p>
+                    </div>
+                    <div>
+                        <p className="text-gold font-black uppercase tracking-widest text-[10px] mb-2">SE Portland</p>
+                        <p className="font-bold text-gray-900">1320 SE Water Ave</p>
+                        <p className="text-sm text-gray-500">Portland, OR 97214</p>
+                    </div>
                 </div>
-
-                {/* Contractor Pro Card - Frosted Glass */}
-                <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-10 border border-white/20 shadow-2xl hover:bg-white/20 transition-all duration-300 relative overflow-hidden group transform hover:-translate-y-1">
-                    <div className="absolute top-0 right-0 p-8 opacity-10 text-8xl group-hover:scale-110 transition-transform duration-500 pointer-events-none">🛠️</div>
-                    <div className="w-12 h-12 bg-white/10 border border-white/20 text-gold rounded-full flex items-center justify-center text-xl mb-6 shadow-md">🛠️</div>
-                    <h3 className="text-2xl font-bold mb-3 text-white">Contractor Pro Select</h3>
-                    <p className="text-gray-200 mb-8 leading-relaxed max-w-sm font-light">Premium hardwood, tile, and luxury vinyl carefully sourced for custom builders and high-end renovations. Uncompromising quality to impress your clients.</p>
-                    <Link href="/category?program=contractor" className="inline-block bg-gold text-black px-6 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:bg-white transition-colors shadow-md" style={{ textDecoration: 'none' }}>
-                        Explore Pro Select
-                    </Link>
-                </div>
-
             </div>
-        </div>
-      </section>
-
-      {/* Bring the Showroom to Your Client Section */}
-      <section className="py-24 bg-black text-white border-t border-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-            <div className="order-2 md:order-1 rounded-3xl h-[400px] overflow-hidden shadow-2xl relative group border border-gray-800">
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-500 z-10"></div>
-                
-                <img src={getFbUrl('images/heros/samples.jpg')} alt="Flooring Samples" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                
-            </div>
-            <div className="order-1 md:order-2">
-                <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight text-white">Bring the Showroom <br/>to Your Client.</h2>
-                <p className="text-gray-400 text-lg mb-8 leading-relaxed">Save time and close bids faster. Order physical samples of any premium hardwood, LVP, or designer carpet shipped directly to your firm or active job site.</p>
-                
-                <Link href="/order-sample" className="inline-block bg-gold text-black px-8 py-4 rounded-full font-bold uppercase text-xs tracking-widest hover:bg-white transition-all shadow-lg" style={{ textDecoration: 'none' }}>
-                    Order Physical Samples
-                </Link>
+            <div className="rounded-3xl h-[400px] overflow-hidden shadow-2xl">
+                <img src={getFbUrl('images/heros/showroom.jpg')} alt="Showrooms" className="w-full h-full object-cover" />
             </div>
         </div>
       </section>

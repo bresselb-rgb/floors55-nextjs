@@ -24,6 +24,18 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activePreviews, setActivePreviews] = useState({});
 
+  // NEW: Read the URL for program filters on initial load
+  useEffect(() => {
+      if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search);
+          const prog = params.get('program');
+          if (prog === 'propmgt' || prog === 'contractor') {
+              setSelectedPrograms([prog]);
+          }
+      }
+  }, []);
+
+  // Listen to the server-provided category from the URL
   useEffect(() => {
       setActiveCategory(initialCategory);
   }, [initialCategory]);
