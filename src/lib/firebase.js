@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+console.log("🔍 VERCEL API KEY CHECK:", process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? "KEY FOUND!" : "KEY IS MISSING!");
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
