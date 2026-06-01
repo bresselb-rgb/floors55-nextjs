@@ -22,7 +22,7 @@ export default function Home() {
             <h1 className="text-4xl md:text-6xl font-bold mb-3 tracking-tight">Professional Fashion Flooring for Less</h1>
             <p className="text-base md:text-lg mb-6 text-gray-200 font-light leading-relaxed">The Northwest's premier flooring broker. Secure wholesale pricing on Luxury Vinyl, Hardwood, Tile and Designer Carpet.</p>
             <div className="flex flex-col sm:flex-row justify-center gap-3">
-                <Link href="/category#All-Products" className="bg-gold text-black px-6 py-3 rounded-full font-bold uppercase text-xs hover:bg-white transition-all shadow-lg" style={{ textDecoration: 'none' }}>Explore Collections</Link>
+                <Link href="/category" className="bg-gold text-black px-6 py-3 rounded-full font-bold uppercase text-xs hover:bg-white transition-all shadow-lg" style={{ textDecoration: 'none' }}>Explore Collections</Link>
                 <Link href="#locations" className="bg-white/10 backdrop-blur-md border border-white/20 px-6 py-3 rounded-full font-bold uppercase text-xs hover:bg-gold hover:text-black transition-all shadow-lg" style={{ textDecoration: 'none' }}>Our Locations</Link>
             </div>
         </div>
@@ -32,7 +32,7 @@ export default function Home() {
       <section id="categories" className="py-10 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                <Link href="/category#Luxury-Vinyl" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
+                <Link href="/category/luxury-vinyl" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
                     <img src={getFbUrl('images/heros/lvp.jpg')} alt="Luxury Vinyl" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
@@ -42,7 +42,7 @@ export default function Home() {
                     </div>
                 </Link>
                 
-                <Link href="/category#Carpet" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
+                <Link href="/category/carpet" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
                     <img src={getFbUrl('images/heros/carpet.jpg')} alt="Designer Carpet" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
@@ -52,7 +52,7 @@ export default function Home() {
                     </div>
                 </Link>
 
-                <Link href="/category#Laminate" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
+                <Link href="/category/laminate" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
                     <img src={getFbUrl('images/heros/laminate.jpg')} alt="Premium Laminate" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
@@ -62,7 +62,7 @@ export default function Home() {
                     </div>
                 </Link>
 
-                <Link href="/category#Hardwood" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
+                <Link href="/category/hardwood" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
                     <img src={getFbUrl('images/heros/hardwood.jpg')} alt="Hardwood" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
