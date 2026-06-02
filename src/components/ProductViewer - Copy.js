@@ -195,6 +195,12 @@ function ProductViewerContent({ initialProduct }) {
                     <h1 className="text-3xl font-bold m-0 leading-tight">{productData.displayTitle}</h1>
                     <div className="flex flex-wrap items-center gap-2 mt-2 mb-4">
                         <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-[10px] font-black uppercase tracking-widest">{productData.category}</span>
+                        {/* B2B Dynamic Manufacturer Badge */}
+                        {user && !user.isAnonymous && productData.manufacturer && (
+                            <span className="inline-block px-3 py-1 bg-[#fdfdfd] border border-gray-200 text-gray-700 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
+                                <span className="text-gray-400 font-normal mr-1">Mfg:</span> {productData.manufacturer} {productData.sku ? `(${productData.sku})` : ''}
+                            </span>
+                        )}
                         {productData.isSale && <span className="inline-block px-3 py-1 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse">🔥 HOT BUY</span>}
                         {productData.isPropMgt && <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-gold border border-gold/30 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</span>}
                         {productData.isContractor && <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"><span>🛠️</span> Pro Select</span>}
