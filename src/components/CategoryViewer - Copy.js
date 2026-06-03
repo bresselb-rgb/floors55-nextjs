@@ -23,7 +23,17 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
   const [isListView, setIsListView] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activePreviews, setActivePreviews] = useState({});
-  const [showHotBuys, setShowHotBuys] = useState(false);
+
+  // NEW: Read the URL for program filters on initial load
+  useEffect(() => {
+      if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search);
+          const prog = params.get('program');
+          if (prog === 'propmgt' || prog === 'contractor') {
+              setSelectedPrograms([prog]);
+          }
+      }
+  }, []);
 
   // Listen to the server-provided category from the URL
   useEffect(() => {
@@ -42,7 +52,7 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
             }
         }
       } catch (err) {
-        console.warn("Auth error", err);
+        console.warn("Auth init error:", err);
       }
     };
     initAuth();
@@ -60,12 +70,14 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
   }, []);
 
   useEffect(() => {
-    if (!isAuthReady || !user) return;
+    if (!isAuthReady) return;
     
     let isMounted = true;
 
+    // Strict 4-Second Timeout Failsafe: Ensures it NEVER spins infinitely
     const failsafeTimeout = setTimeout(() => {
         if (isMounted && !isDataLoaded) {
+            console.warn("Firebase took too long. Disabling spinner.");
             setIsDataLoaded(true);
         }
     }, 4000);
@@ -102,20 +114,13 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
         unsubDb();
         clearTimeout(failsafeTimeout);
     };
-  }, [user, isAuthReady]);
+  }, [isAuthReady, user]); 
 
   const uniqueCategoriesList = useMemo(() => {
     return [...new Set(liveProductsRaw.map(p => p.category))].sort();
   }, [liveProductsRaw]);
 
   const isWholesale = user && !user.isAnonymous;
-
-  // --- AUTOMATIC HOT BUYS TOGGLE FOR PROS ---
-  useEffect(() => {
-      if (isWholesale) {
-          setShowHotBuys(true);
-      }
-  }, [isWholesale]);
 
   const priceBounds = useMemo(() => {
     let min = 0; let max = 15;
@@ -196,7 +201,7 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
         if (catCompare !== 0) return catCompare;
         return (a.displayTitle || '').localeCompare(b.displayTitle || '');
     });
-  }, [liveProductsRaw, activeCategory, searchQuery, maxPrice, selectedPrograms, sortMode, isWholesale, showHotBuys]);
+  }, [liveProductsRaw, activeCategory, searchQuery, maxPrice, selectedPrograms, sortMode, isWholesale]);
 
   const handleProgramToggle = (val) => {
       setSelectedPrograms(prev => prev.includes(val) ? prev.filter(p => p !== val) : [...prev, val]);
@@ -222,34 +227,14 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
       router.push(getCategorySlug(catName), { scroll: true });
   };
 
-  const getFbUrl = (path) => {
-      return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path)}?alt=media`;
-  };
-
-  const getPrimaryImage = (product) => {
-      const safeName = (product.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      const safeSku = (product.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      let folderName = 'images';
-      if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-      else if (safeName) folderName = safeName;
-      folderName = folderName.replace(/-+$/, '');
-
-      const view = product.views?.[0] || 'MAIN';
-      const colorSku = product.colors?.[0]?.sku || '';
-      const imgPrefix = product.imgPrefix || '';
-      
-      const rawPath = `images/${folderName}/${imgPrefix}${colorSku}_${view}.jpg`.toLowerCase();
-      return getFbUrl(rawPath);
-  };
-
   let heroImage = 'images/heros/main-hero.jpg';
   if (activeCategory === 'Luxury Vinyl (LVP)') heroImage = 'images/heros/lvp.jpg';
   else if (activeCategory === 'Carpet') heroImage = 'images/heros/carpet.jpg';
   else if (activeCategory === 'Laminate') heroImage = 'images/heros/laminate.jpg';
   else if (activeCategory === 'Hardwood') heroImage = 'images/heros/hardwood.jpg';
 
-  const heroFbUrl = getFbUrl(heroImage);
-  const TBD_IMG = getFbUrl('images/tbd.jpg');
+  const heroFbUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(heroImage)}?alt=media`;
+  const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
   return (
     <main className="bg-gray-50 text-gray-900 font-sans flex flex-col flex-1">
@@ -314,19 +299,6 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                     </div>
                 </div>
 
-                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                    <button 
-                        onClick={() => setShowHotBuys(!showHotBuys)}
-                        className={`w-full p-3 rounded font-bold uppercase tracking-widest text-xs transition-colors cursor-pointer ${
-                            showHotBuys 
-                            ? 'bg-red-600 text-white' 
-                            : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                        }`}
-                    >
-                        Hot Buys Only
-                    </button>
-                </div>
-
                 <button onClick={resetAllFilters} className="w-full bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-black border border-gray-200 font-bold text-[10px] uppercase py-2 rounded-xl transition outline-none cursor-pointer">
                     Clear Active Filters
                 </button>
@@ -388,19 +360,19 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                             const mainType = p.category === 'Carpet' ? 'main' : 'main';
                             
                             const rawPath = `images/${folderName}/${safePrefix}${displaySku}_${mainType}.jpg`.toLowerCase();
-                            const fbPath = getFbUrl(rawPath);
+                            const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
                             
                             return (
-                                <div key={p.id} className={isListView ? "bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col sm:flex-row items-center p-4 gap-6 hover:shadow-md transition relative" : "bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col hover:shadow-md transition-all duration-300 relative"}>
+                                <div key={p.id} className={isListView ? "bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col sm:flex-row items-center p-4 gap-6 hover:shadow-md transition relative" : "bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition relative"}>
                                     
-                                    <div className={`absolute z-10 flex flex-col items-start ${isListView ? 'top-2 left-2 gap-1' : 'top-2 left-2 gap-1.5'}`}>
-                                        {p.isSale && <div className={`bg-red-600 text-white font-black rounded uppercase tracking-widest shadow-md ${isListView ? 'text-[9px] px-2.5 py-1' : 'text-[10px] px-2 py-1 flex items-center gap-1'}`}>HOT BUY</div>}
-                                        {p.isPropMgt && <div className={`bg-black text-gold font-black rounded-full uppercase tracking-widest shadow-md flex items-center border border-gold/30 ${isListView ? 'text-[9px] px-2.5 py-1 gap-1.5' : 'text-[9px] px-3 py-1.5 gap-1.5'}`}><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏠</span> Prop Mgt</div>}
+                                    <div className={`absolute z-10 flex flex-col items-start ${isListView ? 'top-2 left-2 gap-1' : 'top-4 left-4 gap-1.5'}`}>
+                                        {p.isSale && <div className={`bg-red-600 text-white font-black rounded-full uppercase tracking-widest shadow-md ${isListView ? 'text-[9px] px-2.5 py-1' : 'text-[9px] px-3 py-1.5 flex items-center gap-1 animate-pulse'}`}><span>🔥</span> HOT BUY</div>}
+                                        {p.isPropMgt && <div className={`bg-black text-gold font-black rounded-full uppercase tracking-widest shadow-md flex items-center border border-gold/30 ${isListView ? 'text-[9px] px-2.5 py-1 gap-1.5' : 'text-[9px] px-3 py-1.5 gap-1.5'}`}><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</div>}
                                         {p.isContractor && <div className={`bg-purple-100 text-purple-800 font-black rounded-full uppercase tracking-widest shadow-md flex items-center ${isListView ? 'text-[9px] px-2.5 py-1 gap-1' : 'text-[9px] px-3 py-1.5 gap-1'}`}><span>🛠️</span> Pro Select</div>}
                                     </div>
 
-                                    <Link href={`/product/${p.id}`} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block" : "block overflow-hidden aspect-[4/3] bg-gray-100 relative"} style={{ textDecoration: 'none' }}>
-                                        <img src={fbPath} className="w-full h-full object-cover transition duration-500 hover:scale-105" onError={e => e.target.src=TBD_IMG} />
+                                    <Link href={`/product/${p.id}`} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
+                                        <img src={fbPath} className="w-full h-full object-cover transition duration-300 hover:scale-105" onError={e => e.target.src=TBD_IMG} />
                                     </Link>
 
                                     {!isListView && (
@@ -409,7 +381,7 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                                                 const sType = p.category === 'Carpet' ? 'swatch' : 'main';
                                                 
                                                 const swatchRawPath = `images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
-                                                const swatchFbPath = getFbUrl(swatchRawPath);
+                                                const swatchFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(swatchRawPath)}?alt=media`;
 
                                                 return (
                                                     <button key={c.sku} onMouseEnter={() => setActivePreviews(prev => ({...prev, [p.id]: c.sku}))} onClick={(e) => { e.preventDefault(); setActivePreviews(prev => ({...prev, [p.id]: c.sku})); }} className="w-6 h-6 rounded-full border border-gray-200 overflow-hidden shrink-0 transition-transform hover:scale-125 focus:scale-125 focus:outline-none bg-gray-100 cursor-pointer" title={c.name}>
@@ -429,20 +401,8 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                                             </div>
                                             {!isListView && (
                                                 <>
-                                                <h3 className="text-lg font-bold text-gray-900 truncate mb-2 leading-tight"><Link href={`/product/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{p.displayTitle}</Link></h3>
-                                                <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-end">
-                                                    {isWholesale ? (
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[10px] text-gold uppercase font-black tracking-wider">Wholesale</span>
-                                                            <span className="text-lg font-black text-gray-900">${wholesalePriceFormatted}</span>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm text-gray-500">From</span>
-                                                            <span className="text-lg font-black text-gray-900">${retailPriceFormatted}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <h3 className="text-lg font-bold text-gray-900 truncate"><Link href={`/product/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{p.displayTitle}</Link></h3>
+                                                <p className="text-gray-500 text-xs line-clamp-2">{safeDesc}</p>
                                                 </>
                                             )}
                                         </div>
@@ -456,7 +416,7 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                                                         const sType = p.category === 'Carpet' ? 'swatch' : 'main';
                                                         
                                                         const swatchRawPath = `images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
-                                                        const swatchFbPath = getFbUrl(swatchRawPath);
+                                                        const swatchFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(swatchRawPath)}?alt=media`;
 
                                                         return (
                                                             <button key={c.sku} onMouseEnter={() => setActivePreviews(prev => ({...prev, [p.id]: c.sku}))} onClick={(e) => { e.preventDefault(); setActivePreviews(prev => ({...prev, [p.id]: c.sku})); }} className="w-6 h-6 rounded-full border border-gray-200 overflow-hidden shrink-0 transition-transform hover:scale-125 focus:scale-125 focus:outline-none bg-gray-100 cursor-pointer" title={c.name}>
@@ -469,23 +429,38 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                                             </>
                                         )}
 
-                                        {isListView && (
-                                            <div className="w-full sm:w-44 border-t sm:border-t-0 sm:border-l border-gray-100 pt-4 sm:pt-0 sm:pl-6 text-center sm:text-right shrink-0 flex flex-col justify-center">
-                                                {isWholesale ? (
+                                        <div className={isListView ? "w-full sm:w-44 border-t sm:border-t-0 sm:border-l border-gray-100 pt-4 sm:pt-0 sm:pl-6 text-center sm:text-right shrink-0 flex flex-col justify-center" : "space-y-3 pt-3 border-t border-gray-50"}>
+                                            {isWholesale ? (
+                                                isListView ? (
                                                     <>
                                                         <div className="text-[10px] text-gold font-bold uppercase tracking-wider mb-0.5">Wholesale</div>
                                                         <div className="text-xl font-black text-gray-950 mb-0 font-mono">${wholesalePriceFormatted} <span className="text-xs font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></div>
                                                         <div className="text-[9px] text-gray-400 line-through mb-2">Retail: ${retailPriceFormatted}</div>
                                                     </>
                                                 ) : (
+                                                    <div className="flex flex-col mt-1">
+                                                        <span className="text-[9px] text-gray-400 line-through self-end mb-0.5">Retail: ${retailPriceFormatted}</span>
+                                                        <div className="flex justify-between items-baseline">
+                                                            <span className="text-[10px] text-gold uppercase font-black tracking-wider">Wholesale</span>
+                                                            <span className="text-base font-black text-gray-900 font-mono">${wholesalePriceFormatted} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            ) : (
+                                                isListView ? (
                                                     <>
                                                         <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-0.5">Est. Retail Price</div>
                                                         <div className="text-xl font-black text-gray-950 mb-3 font-mono">${retailPriceFormatted} <span className="text-xs font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></div>
                                                     </>
-                                                )}
-                                                <Link href={`/product/${p.id}`} className="w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-2 rounded-lg transition text-[10px] tracking-widest" style={{ textDecoration: 'none' }}>View Details</Link>
-                                            </div>
-                                        )}
+                                                ) : (
+                                                    <div className="flex justify-between items-baseline">
+                                                        <span className="text-[10px] text-gray-400 uppercase font-black tracking-wider">Retail Price</span>
+                                                        <span className="text-base font-black text-gray-900 font-mono">${retailPriceFormatted} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
+                                                    </div>
+                                                )
+                                            )}
+                                            <Link href={`/product/${p.id}`} className={isListView ? "w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-2 rounded-lg transition text-[10px] tracking-widest" : "w-full block text-center border border-black hover:bg-black text-black hover:text-white font-black uppercase py-2.5 rounded-xl transition text-[10px] tracking-widest"} style={{ textDecoration: 'none' }}>View Details</Link>
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -494,6 +469,7 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                 )}
             </div>
         </div>
+      </section>
 
       {isMobileDrawerOpen && (
           <div className="fixed inset-0 bg-black/70 z-[100] flex justify-end transition-opacity duration-300">
@@ -543,19 +519,6 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                             <input type="checkbox" checked={selectedPrograms.includes('contractor')} onChange={() => handleProgramToggle('contractor')} className="accent-gold h-4 w-4 rounded" /> 🛠️ Contractor Pro
                         </label>
                     </div>
-                </div>
-
-                <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200 mt-4">
-                    <button 
-                        onClick={() => setShowHotBuys(!showHotBuys)}
-                        className={`w-full p-3 rounded font-bold uppercase tracking-widest text-xs transition-colors cursor-pointer ${
-                            showHotBuys 
-                            ? 'bg-red-600 text-white' 
-                            : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                        }`}
-                    >
-                        Hot Buys Only
-                    </button>
                 </div>
 
                 <div className="pt-4 flex gap-3">
