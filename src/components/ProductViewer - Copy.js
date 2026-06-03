@@ -17,6 +17,7 @@ function ProductViewerContent({ initialProduct }) {
 
     const [activeColor, setActiveColor] = useState(null);
     const [activeView, setActiveView] = useState('MAIN');
+    const [validViews, setValidViews] = useState([]);
 
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     const [isCalcOpen, setIsCalcOpen] = useState(false);
@@ -102,6 +103,31 @@ function ProductViewerContent({ initialProduct }) {
         return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path.toLowerCase())}?alt=media`;
     };
 
+    // 4. Ghost Video Check (Silently removes video thumbnail if video doesn't exist)
+    useEffect(() => {
+        if (!productData?.views) return;
+        
+        // Start by displaying all standard images (hide video initially)
+        const standardViews = productData.views.filter(v => v !== 'VIDEO');
+        setValidViews(standardViews);
+
+        // If the product is supposed to have a video, ping Firebase to see if it's actually there
+        if (productData.views.includes('VIDEO')) {
+            const videoUrl = getMediaPath('VIDEO');
+            if (videoUrl) {
+                const vid = document.createElement('video');
+                vid.onloadedmetadata = () => {
+                    // Success! The video exists, add the thumbnail back to the screen
+                    setValidViews(prev => {
+                        if (!prev.includes('VIDEO')) return [...prev, 'VIDEO'];
+                        return prev;
+                    });
+                };
+                vid.src = videoUrl;
+            }
+        }
+    }, [productData, activeColor]);
+
     const handleZoomPan = (e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         let clientX = e.clientX;
@@ -130,7 +156,12 @@ function ProductViewerContent({ initialProduct }) {
     const wsPrice = productData?.price ? productData.price.toFixed(2) : "0.00";
     const retailPrice = productData?.retailPrice ? parseFloat(productData.retailPrice).toFixed(2) : ((productData?.price || 0) * 2.2).toFixed(2);
 
+    // Carpet Math Converter
     const isCarpet = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
+    const isSqft = !productData?.unit || productData?.unit === 'sqft';
+    const sqydWsPrice = isCarpet && isSqft ? (parseFloat(wsPrice) * 9).toFixed(2) : null;
+    const sqydRetailPrice = isCarpet && isSqft ? (parseFloat(retailPrice) * 9).toFixed(2) : null;
+
     let cartonSqft = parseFloat(productData?.cartonSize);
     if (isNaN(cartonSqft) || cartonSqft <= 0) cartonSqft = parseFloat(productData?.boxSqft);
 
@@ -168,9 +199,9 @@ function ProductViewerContent({ initialProduct }) {
                 )}
             </div>
 
-            {productData.views && (
+            {validViews.length > 0 && (
                 <div className="mt-4 flex gap-3">
-                    {productData.views.map(v => (
+                    {validViews.map(v => (
                          <img
                             key={v}
                             src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)}
@@ -223,14 +254,19 @@ function ProductViewerContent({ initialProduct }) {
                             <span className="w-1.5 h-1.5 rounded-full bg-white inline-block animate-pulse"></span> Wholesale Live
                         </div>
                         <span className="text-[0.9rem] text-gray-500 line-through mb-1 block">Retail: ${retailPrice} <span className="text-sm">/</span><span className="text-sm">{productData.unit || 'sqft'}</span></span>
+                        {isCarpet && isSqft && <span className="text-[0.8rem] text-gray-400 italic block -mt-1 mb-2">(That's ${sqydRetailPrice} / sqyd)</span>}
                         <div className="mt-3 pt-3 border-t border-gray-200">
-                            <span className="text-[1.1rem] text-gray-900 font-bold mr-1 text-gold">Wholesale Price:</span>
-                            <span className="text-[2rem] text-red-700 font-bold">${wsPrice} <span className="text-sm font-normal text-gray-500">/</span><span className="text-sm font-normal text-gray-500">{productData.unit || 'sqft'}</span></span>
+                            <div className="flex items-end gap-2">
+                                <span className="text-[1.1rem] text-gray-900 font-bold text-gold mb-1">Wholesale Price:</span>
+                                <span className="text-[2rem] text-red-700 font-bold leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/</span><span className="text-sm font-normal text-gray-500">{productData.unit || 'sqft'}</span></span>
+                            </div>
+                            {isCarpet && isSqft && <div className="text-sm text-gray-500 font-bold mt-1">That's ${sqydWsPrice} per sqyd</div>}
                         </div>
                     </>
                 ) : (
                     <>
                         <span className="text-[1.5rem] text-gray-900 font-bold mb-1 block">Retail: ${retailPrice} <span className="text-sm">/</span><span className="text-sm">{productData.unit || 'sqft'}</span></span>
+                        {isCarpet && isSqft && <span className="text-[1rem] text-gray-500 font-bold italic block mb-2">That's ${sqydRetailPrice} per sqyd</span>}
                         <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
                             <Link href="/wholesale-request" className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gold" style={{ textDecoration: 'none' }}>Log in or request access for wholesale pricing</Link>
                         </div>

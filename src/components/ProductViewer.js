@@ -27,6 +27,10 @@ function ProductViewerContent({ initialProduct }) {
     const [calcWidth, setCalcWidth] = useState('');
     const [calcWaste, setCalcWaste] = useState('1.10');
 
+    // Image Fallbacks
+    const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
+    const TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
     // 1. Auth Listener for Wholesale Pricing
     useEffect(() => {
         let isMounted = true;
@@ -76,8 +80,6 @@ function ProductViewerContent({ initialProduct }) {
          }
     }, [urlColorSku, productData, activeColor]);
 
-    const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
-
     // Format Firebase Image Paths
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
@@ -107,17 +109,14 @@ function ProductViewerContent({ initialProduct }) {
     useEffect(() => {
         if (!productData?.views) return;
         
-        // Start by displaying all standard images (hide video initially)
         const standardViews = productData.views.filter(v => v !== 'VIDEO');
         setValidViews(standardViews);
 
-        // If the product is supposed to have a video, ping Firebase to see if it's actually there
         if (productData.views.includes('VIDEO')) {
             const videoUrl = getMediaPath('VIDEO');
             if (videoUrl) {
                 const vid = document.createElement('video');
                 vid.onloadedmetadata = () => {
-                    // Success! The video exists, add the thumbnail back to the screen
                     setValidViews(prev => {
                         if (!prev.includes('VIDEO')) return [...prev, 'VIDEO'];
                         return prev;
@@ -190,10 +189,10 @@ function ProductViewerContent({ initialProduct }) {
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
                     <img
-                       src={getMediaPath(activeView) || TBD_IMG}
+                       src={getMediaPath(activeView) || (productData?.hideTbd ? TRANSPARENT_PIXEL : TBD_IMG)}
                        alt="Product"
                        className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85"
-                       onError={(e) => e.target.src = TBD_IMG}
+                       onError={(e) => e.target.src = productData?.hideTbd ? TRANSPARENT_PIXEL : TBD_IMG}
                        style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }}
                     />
                 )}
@@ -204,10 +203,13 @@ function ProductViewerContent({ initialProduct }) {
                     {validViews.map(v => (
                          <img
                             key={v}
-                            src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)}
+                            src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || (productData?.hideTbd ? TRANSPARENT_PIXEL : TBD_IMG))}
                             className={`w-[75px] h-[75px] object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`}
                             onClick={() => setActiveView(v)}
-                            onError={(e) => e.target.src = TBD_IMG}
+                            onError={(e) => {
+                                if (productData?.hideTbd) e.target.style.display = 'none';
+                                else e.target.src = TBD_IMG;
+                            }}
                             alt={`View ${v}`}
                          />
                     ))}
@@ -292,7 +294,12 @@ function ProductViewerContent({ initialProduct }) {
                             router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
                             setActiveColor(c);
                         }}>
-                            <img src={fbPath} onError={(e) => e.target.src = TBD_IMG} className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} alt={c.name} />
+                            <img 
+                                src={fbPath} 
+                                onError={(e) => e.target.src = productData?.hideTbd ? TRANSPARENT_PIXEL : TBD_IMG} 
+                                className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} 
+                                alt={c.name} 
+                            />
                             <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
                         </div>
                     );
@@ -359,11 +366,11 @@ function ProductViewerContent({ initialProduct }) {
                       onTouchEnd={() => setZoomPos({x:50, y:50})}
                   >
                       <img 
-                          src={getMediaPath(activeView) || TBD_IMG} 
+                          src={getMediaPath(activeView) || (productData?.hideTbd ? TRANSPARENT_PIXEL : TBD_IMG)} 
                           alt="Zoomed Product" 
                           className="w-full h-full object-contain transition-transform duration-150 ease-out hover:scale-[2.2]"
                           style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }}
-                          onError={(e) => e.target.src = TBD_IMG}
+                          onError={(e) => e.target.src = productData?.hideTbd ? TRANSPARENT_PIXEL : TBD_IMG}
                       />
                   </div>
               </div>
