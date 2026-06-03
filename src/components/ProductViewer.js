@@ -202,10 +202,11 @@ function ProductViewerContent({ initialProduct }) {
                 <div className="mt-4 flex gap-3">
                     {validViews.map(v => (
                          <img
-                            key={v}
+                            key={`${v}-${activeColor?.sku}`} /* CRITICAL FIX: Forces React to clear hidden styles when colors change */
                             src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || (productData?.hideTbd ? TRANSPARENT_PIXEL : TBD_IMG))}
                             className={`w-[75px] h-[75px] object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`}
                             onClick={() => setActiveView(v)}
+                            onLoad={(e) => e.target.style.display = 'block'} /* CRITICAL FIX: Double ensures it is visible if it successfully loads */
                             onError={(e) => {
                                 if (productData?.hideTbd) e.target.style.display = 'none';
                                 else e.target.src = TBD_IMG;
