@@ -27,8 +27,6 @@ function ProductViewerContent({ initialProduct }) {
     const [calcWidth, setCalcWidth] = useState('');
     const [calcWaste, setCalcWaste] = useState('1.10');
 
-    const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
-
     // 1. Auth Listener for Wholesale Pricing
     useEffect(() => {
         let isMounted = true;
@@ -78,6 +76,8 @@ function ProductViewerContent({ initialProduct }) {
          }
     }, [urlColorSku, productData, activeColor]);
 
+    const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
+
     // Format Firebase Image Paths
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
@@ -107,14 +107,17 @@ function ProductViewerContent({ initialProduct }) {
     useEffect(() => {
         if (!productData?.views) return;
         
+        // Start by displaying all standard images (hide video initially)
         const standardViews = productData.views.filter(v => v !== 'VIDEO');
         setValidViews(standardViews);
 
+        // If the product is supposed to have a video, ping Firebase to see if it's actually there
         if (productData.views.includes('VIDEO')) {
             const videoUrl = getMediaPath('VIDEO');
             if (videoUrl) {
                 const vid = document.createElement('video');
                 vid.onloadedmetadata = () => {
+                    // Success! The video exists, add the thumbnail back to the screen
                     setValidViews(prev => {
                         if (!prev.includes('VIDEO')) return [...prev, 'VIDEO'];
                         return prev;
@@ -289,12 +292,7 @@ function ProductViewerContent({ initialProduct }) {
                             router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
                             setActiveColor(c);
                         }}>
-                            <img 
-                                src={fbPath} 
-                                onError={(e) => e.target.src = TBD_IMG} 
-                                className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} 
-                                alt={c.name} 
-                            />
+                            <img src={fbPath} onError={(e) => e.target.src = TBD_IMG} className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} alt={c.name} />
                             <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
                         </div>
                     );
