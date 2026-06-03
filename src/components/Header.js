@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, signInAnonymously } from "firebase/auth";
 import { collection, onSnapshot } from "firebase/firestore";
 import { auth, db, appId } from "../lib/firebase";
@@ -15,6 +16,16 @@ export default function Header() {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Listen for the "open-login-modal" custom event from other pages
+  useEffect(() => {
+    const handleOpenLogin = () => setIsLoginModalOpen(true);
+    window.addEventListener('open-login-modal', handleOpenLogin);
+    return () => window.removeEventListener('open-login-modal', handleOpenLogin);
+  }, []);
 
   // Format Firebase image URL for the logo
   const getFbUrl = (path) => {
@@ -57,6 +68,9 @@ export default function Header() {
       });
       setCategories([...cats].sort());
       setHasSaleItems(sale);
+    }, (error) => {
+      // Quietly swallow the permission-denied error that happens during split-second auth syncing
+      if (error.code !== 'permission-denied') console.error("Header DB Error:", error);
     });
     return () => unsubDb();
   }, [user]);
@@ -69,6 +83,11 @@ export default function Header() {
       setIsLoginModalOpen(false);
       setLoginEmail('');
       setLoginPassword('');
+      
+      // Redirect to home if they logged in from the wholesale request page
+      if (pathname === '/wholesale-request') {
+          router.push('/');
+      }
     } catch (error) {
       setLoginError('Access denied.');
     }
@@ -76,6 +95,10 @@ export default function Header() {
 
   const handleLogout = async () => {
     try { await signOut(auth); } catch (err) {}
+  };
+
+  const closeMenu = () => {
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -88,7 +111,7 @@ export default function Header() {
             <div className="flex items-center gap-8 h-full">
               {/* Logo */}
               <div className="flex items-center">
-                <Link href="/" onClick={() => setIsMobileMenuOpen(false)} style={{ textDecoration: 'none' }}>
+                <Link href="/" onClick={closeMenu} style={{ textDecoration: 'none' }}>
                   <img src={getFbUrl('images/f55-pros-logo.jpg')} alt="Floors 55 for Pros" className="h-12 md:h-16 w-auto" />
                 </Link>
               </div>

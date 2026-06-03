@@ -27,6 +27,8 @@ function ProductViewerContent({ initialProduct }) {
     const [calcWidth, setCalcWidth] = useState('');
     const [calcWaste, setCalcWaste] = useState('1.10');
 
+    const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
+
     // 1. Auth Listener for Wholesale Pricing
     useEffect(() => {
         let isMounted = true;
@@ -76,8 +78,6 @@ function ProductViewerContent({ initialProduct }) {
          }
     }, [urlColorSku, productData, activeColor]);
 
-    const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
-
     // Format Firebase Image Paths
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
@@ -107,17 +107,14 @@ function ProductViewerContent({ initialProduct }) {
     useEffect(() => {
         if (!productData?.views) return;
         
-        // Start by displaying all standard images (hide video initially)
         const standardViews = productData.views.filter(v => v !== 'VIDEO');
         setValidViews(standardViews);
 
-        // If the product is supposed to have a video, ping Firebase to see if it's actually there
         if (productData.views.includes('VIDEO')) {
             const videoUrl = getMediaPath('VIDEO');
             if (videoUrl) {
                 const vid = document.createElement('video');
                 vid.onloadedmetadata = () => {
-                    // Success! The video exists, add the thumbnail back to the screen
                     setValidViews(prev => {
                         if (!prev.includes('VIDEO')) return [...prev, 'VIDEO'];
                         return prev;
@@ -232,7 +229,9 @@ function ProductViewerContent({ initialProduct }) {
                                 <span className="text-gray-400 font-normal mr-1">Mfg:</span> {productData.manufacturer} {productData.sku ? `(${productData.sku})` : ''}
                             </span>
                         )}
-                        {productData.isSale && <span className="inline-block px-3 py-1 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse">🔥 HOT BUY</span>}
+                        {/* 🔥 HOT BUY badge only visible to logged-in wholesale pros! */}
+                        {user && !user.isAnonymous && productData.isSale && <span className="inline-block px-3 py-1 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse">🔥 HOT BUY</span>}
+                        
                         {productData.isPropMgt && <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-gold border border-gold/30 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</span>}
                         {productData.isContractor && <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"><span>🛠️</span> Pro Select</span>}
                         {productData.isVisible === false && <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-[10px] font-black uppercase tracking-widest">⚠️ Unlisted Draft</span>}
@@ -244,6 +243,7 @@ function ProductViewerContent({ initialProduct }) {
                 </button>
             </div>
 
+            {}
             <p className="text-[1.05rem] text-gray-500 mb-6 italic">{productData.desc || 'Premium flooring collection.'}</p>
             <h2 className="text-xl font-bold mb-4">Select a Color: {activeColor?.name}</h2>
 
@@ -292,7 +292,12 @@ function ProductViewerContent({ initialProduct }) {
                             router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
                             setActiveColor(c);
                         }}>
-                            <img src={fbPath} onError={(e) => e.target.src = TBD_IMG} className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} alt={c.name} />
+                            <img 
+                                src={fbPath} 
+                                onError={(e) => e.target.src = TBD_IMG} 
+                                className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} 
+                                alt={c.name} 
+                            />
                             <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
                         </div>
                     );
@@ -313,7 +318,7 @@ function ProductViewerContent({ initialProduct }) {
             )}
           </div>
 
-          {/* Calc and Lightbox Logic */}
+          {}
           <div className="fixed bottom-5 right-5 md:bottom-8 md:right-8 bg-black text-white px-5 py-3 md:px-6 md:py-4 rounded-full cursor-pointer font-bold shadow-xl z-40 transition-colors border-2 border-black hover:bg-gold hover:text-black hover:border-gold flex items-center gap-2 text-sm md:text-base" onClick={() => setIsCalcOpen(!isCalcOpen)}>
               <span className="mr-1">📐</span> Room Calculator
           </div>
