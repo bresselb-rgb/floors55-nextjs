@@ -20,7 +20,7 @@ export default function MyAccountPage() {
         business: '',
         phone: '',
         address: '',
-        clientMargin: 20 // Default 20% margin
+        clientMargin: 20 // Default 20% markup
     });
 
     const [activityHistory, setActivityHistory] = useState([]);
@@ -90,7 +90,7 @@ export default function MyAccountPage() {
     const handleSaveMargin = async () => {
         try {
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { clientMargin: formData.clientMargin }, { merge: true });
-            setSaveMessage('Margin saved successfully.');
+            setSaveMessage('Markup saved successfully.');
             setTimeout(() => setSaveMessage(''), 3000);
         } catch (err) {
             console.error(err);
@@ -120,6 +120,9 @@ export default function MyAccountPage() {
         sessionStorage.setItem('client_margin', formData.clientMargin);
         router.push('/category');
     };
+
+    // Mathematically convert Markup to Gross Profit Margin
+    const grossMarginPct = ((formData.clientMargin / 100) / (1 + formData.clientMargin / 100) * 100).toFixed(1);
 
     if (isLoading) {
         return (
@@ -195,11 +198,11 @@ export default function MyAccountPage() {
                     <div className="bg-gray-900 rounded-2xl shadow-xl p-8 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-6 opacity-5 text-6xl pointer-events-none group-hover:scale-110 transition-transform duration-500">🤝</div>
                         <h3 className="text-white font-bold text-xl mb-2">Client Presentation Mode</h3>
-                        <p className="text-gray-400 text-xs leading-relaxed mb-6">Set your desired markup margin. Share the Magic Link with your clients or activate it on this device to safely browse the catalog together. Wholesale badges and manufacturers will be hidden.</p>
+                        <p className="text-gray-400 text-xs leading-relaxed mb-6">Set your desired retail markup. Share the Magic Link with your clients or activate it on this device to safely browse the catalog together. Wholesale badges and manufacturers will be hidden.</p>
                         
                         <div className="bg-gray-800 rounded-xl p-5 border border-gray-700 mb-5">
                             <div className="flex justify-between items-center mb-3">
-                                <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider">Your Retail Margin</span>
+                                <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider">Your Retail Markup</span>
                                 <span className="text-lg font-black text-gold">+{formData.clientMargin}%</span>
                             </div>
                             <input 
@@ -211,6 +214,10 @@ export default function MyAccountPage() {
                                 onTouchEnd={handleSaveMargin}
                                 className="w-full accent-gold cursor-pointer"
                             />
+                            {/* NEW: True Margin Calculator display */}
+                            <div className="text-right text-[10px] text-gray-400 font-bold mt-3">
+                                That's a <span className="text-white bg-gray-700 px-1.5 py-0.5 rounded">{grossMarginPct}%</span> Gross Profit Margin
+                            </div>
                         </div>
 
                         <div className="flex flex-col gap-3">

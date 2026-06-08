@@ -461,10 +461,17 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                                             
                                             {/* PRICING BLOCK */}
                                             {isClientMode ? (
-                                                <div className="flex flex-col mt-1">
-                                                    <span className="text-[10px] text-gray-400 uppercase font-black tracking-wider text-right mb-0.5">Price</span>
-                                                    <span className="text-xl font-black text-gray-900 font-mono">${finalPrice} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
-                                                </div>
+                                                isListView ? (
+                                                    <>
+                                                        <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-0.5">Price</div>
+                                                        <div className="text-xl font-black text-gray-950 mb-3 font-mono">${finalPrice} <span className="text-xs font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></div>
+                                                    </>
+                                                ) : (
+                                                    <div className="flex justify-between items-baseline mt-1">
+                                                        <span className="text-[10px] text-gray-400 uppercase font-black tracking-wider">Price</span>
+                                                        <span className="text-base font-black text-gray-900 font-mono">${finalPrice} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
+                                                    </div>
+                                                )
                                             ) : isWholesale ? (
                                                 isListView ? (
                                                     <>
