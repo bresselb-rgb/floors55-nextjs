@@ -160,7 +160,14 @@ function ProductViewerContent({ initialProduct }) {
     };
 
     const shareProduct = () => {
-        const url = `${window.location.origin}/product/${productData.id}?color=${activeColor?.sku || ''}`;
+        let url = `${window.location.origin}/product/${productData.id}?color=${activeColor?.sku || ''}`;
+        
+        // If the Pro is in Client Mode, secretly append the Magic Link code to the shared URL!
+        if (clientMargin !== null) {
+            const encodedMargin = btoa(clientMargin.toString());
+            url += `&cm=${encodedMargin}`;
+        }
+
         if (navigator.share) {
             navigator.share({ title: `${productData.displayTitle} | Floors 55`, url }).catch(console.error);
         } else {
