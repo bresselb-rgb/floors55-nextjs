@@ -58,6 +58,8 @@ function ProductViewerContent({ initialProduct }) {
                 dbData.displayTitle = (dbData.usePrivateName && dbData.privateName) ? dbData.privateName : (dbData.name || 'Unnamed Product');
                 setProductData({ id: docSnap.id, ...dbData });
             }
+        }, (error) => {
+            if (error.code !== 'permission-denied') console.error("Firestore Error:", error);
         });
         return () => unsub();
     }, [initialProduct.id]);
@@ -243,7 +245,6 @@ function ProductViewerContent({ initialProduct }) {
                 </button>
             </div>
 
-            {}
             <p className="text-[1.05rem] text-gray-500 mb-6 italic">{productData.desc || 'Premium flooring collection.'}</p>
             <h2 className="text-xl font-bold mb-4">Select a Color: {activeColor?.name}</h2>
 
@@ -268,7 +269,9 @@ function ProductViewerContent({ initialProduct }) {
                         <span className="text-[1.5rem] text-gray-900 font-bold mb-1 block">Retail: ${retailPrice} <span className="text-sm">/</span><span className="text-sm">{productData.unit || 'sqft'}</span></span>
                         {isCarpet && isSqft && <span className="text-[1rem] text-gray-500 font-bold italic block mb-2">That's ${sqydRetailPrice} per sqyd</span>}
                         <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                            <Link href="/wholesale-request" className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gold" style={{ textDecoration: 'none' }}>Log in or request access for wholesale pricing</Link>
+                            {/* LOGIN BUTTON TRIGGER */}
+                            <button onClick={() => window.dispatchEvent(new Event('open-login-modal'))} className="block w-full text-left text-[10px] font-bold uppercase tracking-widest text-gold hover:text-black transition-colors underline bg-transparent border-none cursor-pointer outline-none">Log in for wholesale pricing</button>
+                            <Link href="/wholesale-request" className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gold" style={{ textDecoration: 'none' }}>Request access here</Link>
                         </div>
                     </>
                 )}
@@ -318,7 +321,7 @@ function ProductViewerContent({ initialProduct }) {
             )}
           </div>
 
-          {}
+          {/* Calc and Lightbox Logic */}
           <div className="fixed bottom-5 right-5 md:bottom-8 md:right-8 bg-black text-white px-5 py-3 md:px-6 md:py-4 rounded-full cursor-pointer font-bold shadow-xl z-40 transition-colors border-2 border-black hover:bg-gold hover:text-black hover:border-gold flex items-center gap-2 text-sm md:text-base" onClick={() => setIsCalcOpen(!isCalcOpen)}>
               <span className="mr-1">📐</span> Room Calculator
           </div>

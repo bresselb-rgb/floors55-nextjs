@@ -29,10 +29,10 @@ export default function BecomeAProPage() {
                 Exclusive wholesale pricing, dedicated account management, and seamless will-call logistics for Portland’s top contractors, designers, and property managers.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-                <Link href="/wholesale-request" className="bg-gold text-black px-8 py-4 rounded-xl font-black uppercase text-sm hover:bg-white transition-all shadow-lg" style={{ textDecoration: 'none' }}>
+                <Link href="/wholesale-request" className="bg-gold text-black px-8 py-4 rounded-xl font-black uppercase text-sm hover:bg-white transition-all shadow-lg flex items-center justify-center" style={{ textDecoration: 'none' }}>
                     Apply for Pro Access
                 </Link>
-                <a href="#consultation" className="bg-transparent border-2 border-white text-white px-8 py-4 rounded-xl font-bold uppercase text-sm hover:bg-white hover:text-black transition-all" style={{ textDecoration: 'none' }}>
+                <a href="#consultation" className="bg-transparent border-2 border-white text-white px-8 py-4 rounded-xl font-bold uppercase text-sm hover:bg-white hover:text-black transition-all flex items-center justify-center" style={{ textDecoration: 'none' }}>
                     Book a Consultation
                 </a>
             </div>
@@ -90,17 +90,27 @@ export default function BecomeAProPage() {
         </section>
 
         {/* Booking Section */}
-        <section id="consultation" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 md:p-16 text-center max-w-4xl mx-auto scroll-mt-24">
+        <section id="consultation" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 md:p-16 text-center max-w-5xl mx-auto scroll-mt-24">
             <h2 className="text-3xl font-black mb-4">Ready to Talk Specs?</h2>
             <p className="text-gray-500 mb-8 max-w-2xl mx-auto">
                 Select a time below to connect with an Account Manager. Choose a quick introductory phone call, or schedule a private, trade-only visit at our Portland or Lake Oswego showrooms to review samples.<br/><span className="text-xs italic mt-2 block">(Physical addresses will be provided in your secure confirmation email).</span>
             </p>
             
-            {/* Calendar Widget Placeholder */}
-            <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-12 text-gray-400 font-bold flex flex-col items-center justify-center min-h-[400px]">
-                <span className="text-4xl mb-4">📅</span>
-                <p className="uppercase tracking-widest text-sm mb-2 text-gray-500">Booking Widget Integration</p>
-                <p className="text-xs font-normal max-w-sm mx-auto">This space is reserved for your Calendly or HubSpot booking embed code. It will load seamlessly right here.</p>
+            {/* Embedded Calendar Widget (Calendly Example) */}
+            <div className="w-full bg-white border border-gray-200 rounded-2xl overflow-hidden h-[700px] shadow-inner relative">
+                {/* 
+                  NOTE FOR BYRON:
+                  When you create your free Calendly account, just change the URL in the 'src' below to your specific link! 
+                  (e.g. https://calendly.com/floors55) 
+                */}
+                <iframe 
+                    src="https://calendly.com" 
+                    width="100%" 
+                    height="100%" 
+                    frameBorder="0" 
+                    title="Schedule a Consultation"
+                    className="absolute inset-0"
+                ></iframe>
             </div>
         </section>
 

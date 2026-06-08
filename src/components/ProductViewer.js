@@ -26,10 +26,31 @@ function ProductViewerContent({ initialProduct }) {
     const [calcLength, setCalcLength] = useState('');
     const [calcWidth, setCalcWidth] = useState('');
     const [calcWaste, setCalcWaste] = useState('1.10');
+    
+    const [clientMargin, setClientMargin] = useState(null);
 
     const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
-    // 1. Auth Listener for Wholesale Pricing
+    // Client Mode Initialization
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const cmParam = searchParams.get('cm');
+            if (cmParam) {
+                try {
+                    const decoded = parseInt(atob(cmParam), 10);
+                    if (!isNaN(decoded)) {
+                        sessionStorage.setItem('client_margin', decoded);
+                        // Clean URL without losing color parameter
+                        const colorParam = urlColorSku ? `?color=${urlColorSku}` : '';
+                        router.replace(`${window.location.pathname}${colorParam}`, { scroll: false });
+                    }
+                } catch(e) {}
+            }
+            const stored = sessionStorage.getItem('client_margin');
+            if (stored !== null) setClientMargin(parseInt(stored, 10));
+        }
+    }, [searchParams, router, urlColorSku]);
+
     useEffect(() => {
         let isMounted = true;
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -50,7 +71,6 @@ function ProductViewerContent({ initialProduct }) {
         };
     }, []);
 
-    // 2. Live DB Snapshot (Keeps prices updated if changed in DB Manager)
     useEffect(() => {
         const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', initialProduct.id), (docSnap) => {
             if (docSnap.exists()) {
@@ -64,7 +84,6 @@ function ProductViewerContent({ initialProduct }) {
         return () => unsub();
     }, [initialProduct.id]);
 
-    // 3. Sync Active Color with URL
     useEffect(() => {
          if (productData && productData.colors) {
              if (urlColorSku) {
@@ -80,7 +99,6 @@ function ProductViewerContent({ initialProduct }) {
          }
     }, [urlColorSku, productData, activeColor]);
 
-    // Format Firebase Image Paths
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
         const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -105,7 +123,6 @@ function ProductViewerContent({ initialProduct }) {
         return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path.toLowerCase())}?alt=media`;
     };
 
-    // 4. Ghost Video Check (Silently removes video thumbnail if video doesn't exist)
     useEffect(() => {
         if (!productData?.views) return;
         
@@ -152,13 +169,19 @@ function ProductViewerContent({ initialProduct }) {
         }
     };
 
-    const wsPrice = productData?.price ? productData.price.toFixed(2) : "0.00";
-    const retailPrice = productData?.retailPrice ? parseFloat(productData.retailPrice).toFixed(2) : ((productData?.price || 0) * 2.2).toFixed(2);
+    const isClientMode = clientMargin !== null;
 
-    // Carpet Math Converter
+    // Dynamic Pricing Calculation
+    const basePrice = productData?.price || 0;
+    const finalPrice = isClientMode ? basePrice * (1 + clientMargin / 100) : basePrice;
+    
+    const wsPrice = finalPrice.toFixed(2);
+    const retailPrice = productData?.retailPrice ? parseFloat(productData.retailPrice).toFixed(2) : (basePrice * 2.2).toFixed(2);
+
     const isCarpet = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
     const isSqft = !productData?.unit || productData?.unit === 'sqft';
-    const sqydWsPrice = isCarpet && isSqft ? (parseFloat(wsPrice) * 9).toFixed(2) : null;
+    
+    const sqydWsPrice = isCarpet && isSqft ? (finalPrice * 9).toFixed(2) : null;
     const sqydRetailPrice = isCarpet && isSqft ? (parseFloat(retailPrice) * 9).toFixed(2) : null;
 
     let cartonSqft = parseFloat(productData?.cartonSize);
@@ -178,8 +201,17 @@ function ProductViewerContent({ initialProduct }) {
     const calcTotal = isCarpet ? (totalWithWaste / 9).toFixed(2) : Math.ceil(totalWithWaste / cartonSqft);
 
     return (
-        <div className="flex-1 max-w-[1400px] mx-auto px-4 py-10 w-full flex flex-col md:flex-row gap-10">
+        <div className="flex-1 max-w-[1400px] mx-auto px-4 py-10 w-full flex flex-col md:flex-row gap-10 relative">
           
+          {isClientMode && (
+              <button 
+                  onClick={() => { sessionStorage.removeItem('client_margin'); window.location.reload(); }} 
+                  className="fixed bottom-6 left-6 bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-full font-bold text-xs uppercase tracking-widest shadow-2xl z-[200] transition-colors flex items-center gap-2"
+              >
+                  <span>✕</span> Exit Client Mode
+              </button>
+          )}
+
           <div className="flex-1 min-w-[350px] sticky top-24 self-start z-10">
             <div
                 className="w-full aspect-[4/3] rounded-lg bg-gray-50 border border-gray-200 overflow-hidden relative cursor-zoom-in group"
@@ -213,10 +245,12 @@ function ProductViewerContent({ initialProduct }) {
                 </div>
             )}
 
-            <div className="flex gap-4 mt-6">
-                <Link href={`/quote?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-black text-white text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-gold transition-colors border-2 border-black hover:border-gold" style={{ textDecoration: 'none' }}>Request Quote</Link>
-                <Link href={`/order-sample?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
-            </div>
+            {!isClientMode && (
+                <div className="flex gap-4 mt-6">
+                    <Link href={`/quote?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-black text-white text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-gold transition-colors border-2 border-black hover:border-gold" style={{ textDecoration: 'none' }}>Request Quote</Link>
+                    <Link href={`/order-sample?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
+                </div>
+            )}
           </div>
 
           <div className="flex-1 min-w-[320px]">
@@ -225,18 +259,16 @@ function ProductViewerContent({ initialProduct }) {
                     <h1 className="text-3xl font-bold m-0 leading-tight">{productData.displayTitle}</h1>
                     <div className="flex flex-wrap items-center gap-2 mt-2 mb-4">
                         <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-[10px] font-black uppercase tracking-widest">{productData.category}</span>
-                        {/* B2B Dynamic Manufacturer Badge */}
-                        {user && !user.isAnonymous && productData.manufacturer && (
+                        
+                        {!isClientMode && user && !user.isAnonymous && productData.manufacturer && (
                             <span className="inline-block px-3 py-1 bg-[#fdfdfd] border border-gray-200 text-gray-700 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
                                 <span className="text-gray-400 font-normal mr-1">Mfg:</span> {productData.manufacturer} {productData.sku ? `(${productData.sku})` : ''}
                             </span>
                         )}
-                        {/* 🔥 HOT BUY badge only visible to logged-in wholesale pros! */}
-                        {user && !user.isAnonymous && productData.isSale && <span className="inline-block px-3 py-1 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse">🔥 HOT BUY</span>}
-                        
-                        {productData.isPropMgt && <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-gold border border-gold/30 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</span>}
-                        {productData.isContractor && <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"><span>🛠️</span> Pro Select</span>}
-                        {productData.isVisible === false && <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-[10px] font-black uppercase tracking-widest">⚠️ Unlisted Draft</span>}
+                        {!isClientMode && user && !user.isAnonymous && productData.isSale && <span className="inline-block px-3 py-1 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse">🔥 HOT BUY</span>}
+                        {!isClientMode && productData.isPropMgt && <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-gold border border-gold/30 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</span>}
+                        {!isClientMode && productData.isContractor && <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"><span>🛠️</span> Pro Select</span>}
+                        {!isClientMode && productData.isVisible === false && <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-[10px] font-black uppercase tracking-widest">⚠️ Unlisted Draft</span>}
                     </div>
                 </div>
                 <button onClick={shareProduct} className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-full transition-all shadow-sm text-sm font-bold shrink-0 mt-1 cursor-pointer outline-none">
@@ -249,7 +281,18 @@ function ProductViewerContent({ initialProduct }) {
             <h2 className="text-xl font-bold mb-4">Select a Color: {activeColor?.name}</h2>
 
             <div className="my-5 p-4 border-l-4 border-gold bg-[#fdfdfd] relative overflow-hidden">
-                {user && !user.isAnonymous ? (
+                {isClientMode ? (
+                    <>
+                        <div className="absolute top-0 right-0 bg-gray-900 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-widest shadow-sm">
+                            Client Pricing
+                        </div>
+                        <div className="mt-1">
+                            <span className="text-[1.1rem] text-gray-900 font-bold mr-2">Price:</span>
+                            <span className="text-[2.2rem] text-gray-900 font-black leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
+                        </div>
+                        {isCarpet && isSqft && <div className="text-sm text-gray-500 font-bold mt-1">That's ${sqydWsPrice} per sqyd</div>}
+                    </>
+                ) : user && !user.isAnonymous ? (
                     <>
                         <div className="absolute top-0 right-0 bg-gold text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-widest flex items-center gap-2 shadow-sm">
                             <span className="w-1.5 h-1.5 rounded-full bg-white inline-block animate-pulse"></span> Wholesale Live
@@ -269,7 +312,6 @@ function ProductViewerContent({ initialProduct }) {
                         <span className="text-[1.5rem] text-gray-900 font-bold mb-1 block">Retail: ${retailPrice} <span className="text-sm">/</span><span className="text-sm">{productData.unit || 'sqft'}</span></span>
                         {isCarpet && isSqft && <span className="text-[1rem] text-gray-500 font-bold italic block mb-2">That's ${sqydRetailPrice} per sqyd</span>}
                         <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                            {/* LOGIN BUTTON TRIGGER */}
                             <button onClick={() => window.dispatchEvent(new Event('open-login-modal'))} className="block w-full text-left text-[10px] font-bold uppercase tracking-widest text-gold hover:text-black transition-colors underline bg-transparent border-none cursor-pointer outline-none">Log in for wholesale pricing</button>
                             <Link href="/wholesale-request" className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gold" style={{ textDecoration: 'none' }}>Request access here</Link>
                         </div>

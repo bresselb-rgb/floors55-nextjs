@@ -20,19 +20,16 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Listen for the "open-login-modal" custom event from other pages
   useEffect(() => {
     const handleOpenLogin = () => setIsLoginModalOpen(true);
     window.addEventListener('open-login-modal', handleOpenLogin);
     return () => window.removeEventListener('open-login-modal', handleOpenLogin);
   }, []);
 
-  // Format Firebase image URL for the logo
   const getFbUrl = (path) => {
     return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path)}?alt=media`;
   };
 
-  // Convert string categories to SEO slugs
   const getCategorySlug = (catName) => {
       if (catName === 'All Products') return '/category';
       if (catName === 'Hot Buys') return '/category/hot-buys';
@@ -69,7 +66,6 @@ export default function Header() {
       setCategories([...cats].sort());
       setHasSaleItems(sale);
     }, (error) => {
-      // Quietly swallow the permission-denied error that happens during split-second auth syncing
       if (error.code !== 'permission-denied') console.error("Header DB Error:", error);
     });
     return () => unsubDb();
@@ -83,8 +79,6 @@ export default function Header() {
       setIsLoginModalOpen(false);
       setLoginEmail('');
       setLoginPassword('');
-      
-      // Redirect to home if they logged in from the wholesale request page
       if (pathname === '/wholesale-request') {
           router.push('/');
       }
@@ -107,16 +101,13 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             
-            {/* Left Section: Logo & Products Nav */}
             <div className="flex items-center gap-8 h-full">
-              {/* Logo */}
               <div className="flex items-center">
                 <Link href="/" onClick={closeMenu} style={{ textDecoration: 'none' }}>
                   <img src={getFbUrl('images/f55-pros-logo.jpg')} alt="Floors 55 for Pros" className="h-12 md:h-16 w-auto" />
                 </Link>
               </div>
 
-              {/* Desktop Nav */}
               <div className="hidden md:flex space-x-8 text-sm font-bold uppercase tracking-widest h-full items-center">
                 <div className="group relative h-full flex items-center">
                   <button className="hover:text-gold transition flex items-center gap-1 py-8 text-black bg-transparent border-none font-bold uppercase cursor-pointer outline-none">
@@ -126,7 +117,6 @@ export default function Header() {
                     <Link href="/category" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
                       All Collections
                     </Link>
-                    {/* Hot Buys restricted to logged-in Pros */}
                     {user && !user.isAnonymous && hasSaleItems && (
                       <Link href="/category/hot-buys" className="block w-full text-left px-6 py-4 hover:bg-red-50 hover:text-red-700 border-b border-gray-50 text-xs text-red-600 font-bold" style={{ textDecoration: 'none' }}>
                         🔥 Hot Buys
@@ -142,11 +132,13 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-6">
               <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">
                 {user && !user.isAnonymous ? (
-                  <button onClick={handleLogout} className="hover:text-gold transition uppercase tracking-widest outline-none text-[#c5a059] bg-transparent border-none font-bold cursor-pointer">Sign Out</button>
+                  <div className="flex items-center gap-4">
+                     <Link href="/my-account" className="hover:text-gold transition uppercase tracking-widest outline-none text-gray-900 font-bold cursor-pointer" style={{ textDecoration: 'none' }}>My Account</Link>
+                     <button onClick={handleLogout} className="hover:text-gold transition uppercase tracking-widest outline-none text-[#c5a059] bg-transparent border-none font-bold cursor-pointer">Sign Out</button>
+                  </div>
                 ) : (
                   <button onClick={() => setIsLoginModalOpen(true)} className="hover:text-gold transition uppercase tracking-widest outline-none bg-transparent border-none font-bold cursor-pointer text-gray-500">Sign In</button>
                 )}
@@ -157,7 +149,6 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Mobile Menu Toggle */}
             <div className="md:hidden flex items-center">
               <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-gray-900 hover:text-gold p-2 focus:outline-none bg-transparent border-none cursor-pointer">
                 <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} /></svg>
@@ -166,12 +157,10 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile Nav */}
         {isMobileMenuOpen && (
           <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-2xl h-screen overflow-y-auto pb-32 z-50">
             <div className="px-6 pt-4 pb-6 space-y-1">
               <Link href="/category" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>All Collections</Link>
-              {/* Hot Buys restricted to logged-in Pros */}
               {user && !user.isAnonymous && hasSaleItems && (
                 <Link href="/category/hot-buys" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-red-600 border-b border-gray-50 animate-pulse" style={{ textDecoration: 'none' }}>🔥 Hot Buys</Link>
               )}
@@ -179,7 +168,10 @@ export default function Header() {
                 <Link key={cat} href={getCategorySlug(cat)} onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>{cat}</Link>
               ))}
               {user && !user.isAnonymous ? (
-                <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="block w-full text-left py-4 text-sm font-bold uppercase tracking-widest text-[#c5a059] border-b border-gray-50 outline-none bg-transparent cursor-pointer">Sign Out</button>
+                <>
+                  <Link href="/my-account" onClick={() => setIsMobileMenuOpen(false)} className="block w-full text-left py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>My Account</Link>
+                  <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="block w-full text-left py-4 text-sm font-bold uppercase tracking-widest text-[#c5a059] border-b border-gray-50 outline-none bg-transparent cursor-pointer">Sign Out</button>
+                </>
               ) : (
                 <button onClick={() => { setIsLoginModalOpen(true); setIsMobileMenuOpen(false); }} className="block w-full text-left py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50 outline-none bg-transparent cursor-pointer">Sign In</button>
               )}
@@ -192,7 +184,6 @@ export default function Header() {
         )}
       </nav>
 
-      {/* Login Modal */}
       {isLoginModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center px-4 transition-opacity">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
