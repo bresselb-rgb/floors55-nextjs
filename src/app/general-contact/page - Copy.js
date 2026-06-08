@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db, appId } from "../../lib/firebase";
 
@@ -11,15 +11,8 @@ export default function GeneralContactPage() {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   
-  const [clientBrand, setClientBrand] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setClientBrand(sessionStorage.getItem('client_brand'));
-    }
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,7 +20,6 @@ export default function GeneralContactPage() {
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'general_inquiries'), {
         name, phone, email, subject, message,
-        proPartner: clientBrand || null,
         timestamp: serverTimestamp(),
         status: 'new'
       });

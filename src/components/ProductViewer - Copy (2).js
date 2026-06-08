@@ -254,12 +254,12 @@ function ProductViewerContent({ initialProduct }) {
                 </div>
             )}
 
-            <div className="flex gap-4 mt-6">
-                {!isClientMode && (
+            {!isClientMode && (
+                <div className="flex gap-4 mt-6">
                     <Link href={`/quote?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-black text-white text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-gold transition-colors border-2 border-black hover:border-gold" style={{ textDecoration: 'none' }}>Request Quote</Link>
-                )}
-                <Link href={`/order-sample?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
-            </div>
+                    <Link href={`/order-sample?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
+                </div>
+            )}
           </div>
 
           <div className="flex-1 min-w-[320px]">

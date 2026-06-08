@@ -4,15 +4,16 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db, appId } from "../../lib/firebase";
 
-export default function OrderSamplePage() {
+export default function QuotePage() {
   const [product, setProduct] = useState('');
   const [color, setColor] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
+  const [sqft, setSqft] = useState('');
+  const [installationNeeded, setInstallationNeeded] = useState(false);
+  const [message, setMessage] = useState('');
   
-  const [clientBrand, setClientBrand] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -21,9 +22,6 @@ export default function OrderSamplePage() {
       const params = new URLSearchParams(window.location.search);
       if (params.has('product')) setProduct(params.get('product'));
       if (params.has('color')) setColor(params.get('color'));
-      
-      // Secretly grab the Pro's business name if in Client Mode
-      setClientBrand(sessionStorage.getItem('client_brand'));
     }
   }, []);
 
@@ -31,16 +29,15 @@ export default function OrderSamplePage() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'sample_requests'), {
-        name, phone, email, address, product, color,
-        proPartner: clientBrand || null,
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'quote_requests'), {
+        name, phone, email, product, color, sqft, installationNeeded, message,
         timestamp: serverTimestamp(),
         status: 'new'
       });
       setIsSuccess(true);
-      setName(''); setPhone(''); setEmail(''); setAddress('');
+      setName(''); setPhone(''); setEmail(''); setSqft(''); setInstallationNeeded(false); setMessage('');
     } catch (err) {
-      alert("Error submitting sample request: " + err.message);
+      alert("Error submitting request: " + err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -52,20 +49,20 @@ export default function OrderSamplePage() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 md:p-12 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-2 bg-gold"></div>
             
-            <h1 className="text-3xl font-black tracking-tight mb-2">Order a Physical Sample</h1>
-            <p className="text-gray-500 mb-8">Experience the quality in person. We'll ship it right to your door.</p>
+            <h1 className="text-3xl font-black tracking-tight mb-2">Request Estimate</h1>
+            <p className="text-gray-500 mb-8">Secure your pricing with the project details below. Our team will verify stock and prepare a competitive, customized quote for your materials.</p>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Material Required</label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Product Interest </label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm text-gray-700 mb-1">Product Style *</label>
-                            <input type="text" required value={product} onChange={e => setProduct(e.target.value)} className="w-full px-4 py-2 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold text-sm" placeholder="e.g. Castlewood Oak" />
+                            <label className="block text-sm text-gray-700 mb-1">Product Style</label>
+                            <input type="text" value={product} onChange={e => setProduct(e.target.value)} className="w-full px-4 py-2 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold text-sm" placeholder="e.g. Wonderland I" />
                         </div>
                         <div>
-                            <label className="block text-sm text-gray-700 mb-1">Color Variant *</label>
-                            <input type="text" required value={color} onChange={e => setColor(e.target.value)} className="w-full px-4 py-2 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold text-sm" placeholder="e.g. Renaissance" />
+                            <label className="block text-sm text-gray-700 mb-1">Color Variant</label>
+                            <input type="text" value={color} onChange={e => setColor(e.target.value)} className="w-full px-4 py-2 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold text-sm" placeholder="e.g. Slate" />
                         </div>
                     </div>
                 </div>
@@ -86,18 +83,31 @@ export default function OrderSamplePage() {
                     <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Sq.Ft Needed</label>
+                        <input type="number" value={sqft} onChange={e => setSqft(e.target.value)} placeholder="e.g. 500" className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
+                    </div>
+                    <div className="flex items-center pt-6">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" checked={installationNeeded} onChange={e => setInstallationNeeded(e.target.checked)} className="w-5 h-5 accent-gold cursor-pointer" />
+                            <span className="text-sm font-bold text-gray-700">Installation Needed</span>
+                        </label>
+                    </div>
+                </div>
+
                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Shipping Address *</label>
-                    <textarea required rows="3" value={address} onChange={e => setAddress(e.target.value)} placeholder="1234 Main St&#10;City, State, Zip" className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors resize-none"></textarea>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Additional Project Details</label>
+                    <textarea rows="4" value={message} onChange={e => setMessage(e.target.value)} placeholder="Tell us about timelines, underlayment needs, or stairs..." className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors resize-none"></textarea>
                 </div>
 
                 <button type="submit" disabled={isSubmitting} className="w-full bg-black hover:bg-gold text-white hover:text-black font-black uppercase tracking-widest py-4 rounded-xl transition duration-300 shadow-md disabled:bg-gray-400 disabled:text-gray-100 disabled:cursor-not-allowed">
-                    {isSubmitting ? "Processing..." : "Request Sample Shipment"}
+                    {isSubmitting ? "Submitting..." : "Submit Request"}
                 </button>
                 
                 {isSuccess && (
                   <div className="text-emerald-600 font-bold text-center mt-4 bg-emerald-50 py-3 rounded-xl border border-emerald-100">
-                      Sample request placed! We will process it shortly.
+                      Quote request received! We will contact you shortly.
                   </div>
                 )}
             </form>

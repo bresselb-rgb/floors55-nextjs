@@ -3,9 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, sendPasswordResetEmail } from "firebase/auth";
-import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db, appId } from "../../lib/firebase";
-import Link from 'next/link';
 
 export default function MyAccountPage() {
     const router = useRouter();
@@ -14,12 +13,14 @@ export default function MyAccountPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
     const [resetMessage, setResetMessage] = useState('');
+    const [copied, setCopied] = useState(false);
 
     const [formData, setFormData] = useState({
         name: '',
         business: '',
         phone: '',
-        address: ''
+        address: '',
+        clientMargin: 20 // Default 20% markup
     });
 
     const [activityHistory, setActivityHistory] = useState([]);
@@ -42,11 +43,12 @@ export default function MyAccountPage() {
                         name: data.name || '',
                         business: data.business || '',
                         phone: data.phone || '',
-                        address: data.address || ''
+                        address: data.address || '',
+                        clientMargin: data.clientMargin !== undefined ? data.clientMargin : 20
                     });
                 }
 
-                // 2. Fetch Recent Activity (Quotes & Samples matching their email)
+                // 2. Fetch Recent Activity
                 const quotesQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'quote_requests'), where("email", "==", currentUser.email));
                 const samplesQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'sample_requests'), where("email", "==", currentUser.email));
                 
@@ -56,7 +58,6 @@ export default function MyAccountPage() {
                 quotesSnap.forEach(d => history.push({ type: 'Quote Estimate', id: d.id, ...d.data() }));
                 samplesSnap.forEach(d => history.push({ type: 'Sample Order', id: d.id, ...d.data() }));
                 
-                // Sort by newest first
                 history.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
                 setActivityHistory(history);
 
@@ -76,13 +77,23 @@ export default function MyAccountPage() {
         setSaveMessage('');
         
         try {
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), formData);
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), formData, { merge: true });
             setSaveMessage('Profile successfully updated.');
             setTimeout(() => setSaveMessage(''), 3000);
         } catch (err) {
-            alert("Error saving profile: " + err.message);
+            console.error(err);
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleSaveMargin = async () => {
+        try {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { clientMargin: formData.clientMargin }, { merge: true });
+            setSaveMessage('Markup saved successfully.');
+            setTimeout(() => setSaveMessage(''), 3000);
+        } catch (err) {
+            console.error(err);
         }
     };
 
@@ -93,9 +104,25 @@ export default function MyAccountPage() {
             setResetMessage('A password reset link has been sent to your email.');
             setTimeout(() => setResetMessage(''), 5000);
         } catch (err) {
-            alert("Error sending reset email: " + err.message);
+            console.error(err);
         }
     };
+
+    const copyClientLink = () => {
+        const encodedMargin = btoa(formData.clientMargin.toString());
+        const link = `${window.location.origin}/category?cm=${encodedMargin}`;
+        navigator.clipboard.writeText(link);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const activateClientModeLocal = () => {
+        sessionStorage.setItem('client_margin', formData.clientMargin);
+        router.push('/category');
+    };
+
+    // Mathematically convert Markup to Gross Profit Margin
+    const grossMarginPct = ((formData.clientMargin / 100) / (1 + formData.clientMargin / 100) * 100).toFixed(1);
 
     if (isLoading) {
         return (
@@ -167,6 +194,42 @@ export default function MyAccountPage() {
                 {/* Right Column: Activity & Tools */}
                 <div className="w-full lg:w-[400px] shrink-0 flex flex-col gap-6">
                     
+                    {/* Client Presentation Mode Tool */}
+                    <div className="bg-gray-900 rounded-2xl shadow-xl p-8 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-6 opacity-5 text-6xl pointer-events-none group-hover:scale-110 transition-transform duration-500">🤝</div>
+                        <h3 className="text-white font-bold text-xl mb-2">Client Presentation Mode</h3>
+                        <p className="text-gray-400 text-xs leading-relaxed mb-6">Set your desired retail markup. Share the Magic Link with your clients or activate it on this device to safely browse the catalog together. Wholesale badges and manufacturers will be hidden.</p>
+                        
+                        <div className="bg-gray-800 rounded-xl p-5 border border-gray-700 mb-5">
+                            <div className="flex justify-between items-center mb-3">
+                                <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider">Your Retail Markup</span>
+                                <span className="text-lg font-black text-gold">+{formData.clientMargin}%</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                min="0" max="100" step="5"
+                                value={formData.clientMargin}
+                                onChange={(e) => setFormData({...formData, clientMargin: parseInt(e.target.value)})}
+                                onMouseUp={handleSaveMargin}
+                                onTouchEnd={handleSaveMargin}
+                                className="w-full accent-gold cursor-pointer"
+                            />
+                            {/* NEW: True Margin Calculator display */}
+                            <div className="text-right text-[10px] text-gray-400 font-bold mt-3">
+                                That's a <span className="text-white bg-gray-700 px-1.5 py-0.5 rounded">{grossMarginPct}%</span> Gross Profit Margin
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-3">
+                            <button onClick={copyClientLink} className="w-full bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors border border-gray-700">
+                                {copied ? "✓ Link Copied!" : "🔗 Copy Client Magic Link"}
+                            </button>
+                            <button onClick={activateClientModeLocal} className="w-full bg-gold hover:bg-white text-black py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-colors">
+                                Activate on this device
+                            </button>
+                        </div>
+                    </div>
+
                     {/* Activity Feed */}
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-fit">
                         <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
@@ -193,26 +256,6 @@ export default function MyAccountPage() {
                         </div>
                     </div>
 
-                    {/* Coming Soon: Client Mode */}
-                    <div className="bg-gray-900 rounded-2xl shadow-xl p-8 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-6 opacity-5 text-6xl pointer-events-none group-hover:scale-110 transition-transform duration-500">🤝</div>
-                        <h3 className="text-white font-bold text-xl mb-2">Client Presentation Mode</h3>
-                        <p className="text-gray-400 text-xs leading-relaxed mb-6">Soon, you will be able to generate a custom, white-labeled link to send directly to your clients. Hide wholesale badges and automatically add your custom margin to all prices site-wide.</p>
-                        
-                        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-[10px] uppercase font-black text-gray-500 tracking-wider">Your Margin</span>
-                                <span className="text-xs font-bold text-gray-300">+20%</span>
-                            </div>
-                            <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                                <div className="w-[20%] h-full bg-gold"></div>
-                            </div>
-                        </div>
-
-                        <div className="mt-6 flex items-center justify-center border border-gray-700 bg-gray-800/30 text-gray-400 py-3 rounded-lg text-xs font-bold uppercase tracking-widest">
-                            🚀 Coming Soon
-                        </div>
-                    </div>
                 </div>
 
             </div>

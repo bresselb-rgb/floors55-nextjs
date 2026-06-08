@@ -14,6 +14,7 @@ export default function QuotePage() {
   const [installationNeeded, setInstallationNeeded] = useState(false);
   const [message, setMessage] = useState('');
   
+  const [clientBrand, setClientBrand] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -22,6 +23,7 @@ export default function QuotePage() {
       const params = new URLSearchParams(window.location.search);
       if (params.has('product')) setProduct(params.get('product'));
       if (params.has('color')) setColor(params.get('color'));
+      setClientBrand(sessionStorage.getItem('client_brand'));
     }
   }, []);
 
@@ -31,6 +33,7 @@ export default function QuotePage() {
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'quote_requests'), {
         name, phone, email, product, color, sqft, installationNeeded, message,
+        proPartner: clientBrand || null,
         timestamp: serverTimestamp(),
         status: 'new'
       });

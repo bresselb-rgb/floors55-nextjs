@@ -12,8 +12,8 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
   const [user, setUser] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   
-  // Client Presentation Mode State
   const [clientMargin, setClientMargin] = useState(null);
+  const [isMagicLink, setIsMagicLink] = useState(false);
 
   const [liveProductsRaw, setLiveProductsRaw] = useState([]);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
@@ -28,29 +28,51 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
   const [activePreviews, setActivePreviews] = useState({});
 
   useEffect(() => {
-      setActiveCategory(initialCategory);
-  }, [initialCategory]);
-
-  // Client Presentation Mode Bootstrapper
-  useEffect(() => {
       if (typeof window !== 'undefined') {
-          // Check URL for magic link parameter
           const params = new URLSearchParams(window.location.search);
+          const prog = params.get('program');
+          if (prog === 'propmgt' || prog === 'contractor') {
+              setSelectedPrograms([prog]);
+          }
+
+          // Decode and activate Client Presentation Mode from URL
           const cmParam = params.get('cm');
+          const cbParam = params.get('cb');
+          let shouldReplace = false;
+
           if (cmParam) {
               try {
                   const decoded = parseInt(atob(cmParam), 10);
                   if (!isNaN(decoded)) {
                       sessionStorage.setItem('client_margin', decoded);
-                      router.replace(window.location.pathname, { scroll: false }); // Clean URL
+                      sessionStorage.setItem('magic_link_client', 'true');
+                      shouldReplace = true;
                   }
               } catch(e) {}
           }
-          // Read active session
-          const stored = sessionStorage.getItem('client_margin');
-          if (stored !== null) setClientMargin(parseInt(stored, 10));
+          
+          if (cbParam) {
+              try {
+                  const decodedBrand = atob(cbParam);
+                  sessionStorage.setItem('client_brand', decodedBrand);
+                  shouldReplace = true;
+              } catch(e) {}
+          }
+
+          if (shouldReplace) {
+              window.location.replace(window.location.pathname);
+          }
+
+          const storedMargin = sessionStorage.getItem('client_margin');
+          if (storedMargin !== null) setClientMargin(parseInt(storedMargin, 10));
+
+          if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
       }
-  }, [router]);
+  }, []);
+
+  useEffect(() => {
+      setActiveCategory(initialCategory);
+  }, [initialCategory]);
 
   useEffect(() => {
     let isMounted = true;
@@ -86,9 +108,7 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
     
     let isMounted = true;
     const failsafeTimeout = setTimeout(() => {
-        if (isMounted && !isDataLoaded) {
-            setIsDataLoaded(true);
-        }
+        if (isMounted && !isDataLoaded) setIsDataLoaded(true);
     }, 4000);
 
     const unsubDb = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'), (snap) => {
@@ -113,7 +133,7 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
       setIsDataLoaded(true);
       clearTimeout(failsafeTimeout);
     }, (error) => {
-      setIsDataLoaded(true);
+      if (isMounted) setIsDataLoaded(true);
       clearTimeout(failsafeTimeout);
     });
     
@@ -251,10 +271,15 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
 
   return (
     <main className="bg-gray-50 text-gray-900 font-sans flex flex-col flex-1">
-      {/* Client Mode Exit Button */}
-      {isClientMode && (
+      {/* Hide the exit button if they are a homeowner using a Magic Link */}
+      {isClientMode && !isMagicLink && (
           <button 
-              onClick={() => { sessionStorage.removeItem('client_margin'); window.location.reload(); }} 
+              onClick={() => { 
+                  sessionStorage.removeItem('client_margin'); 
+                  sessionStorage.removeItem('client_brand'); 
+                  sessionStorage.removeItem('magic_link_client');
+                  window.location.reload(); 
+              }} 
               className="fixed bottom-6 left-6 bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-full font-bold text-xs uppercase tracking-widest shadow-2xl z-[200] transition-colors flex items-center gap-2"
           >
               <span>✕</span> Exit Client Mode
@@ -291,9 +316,12 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
                         <button onClick={() => handleCategorySwitch('All Products')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === 'All Products' ? 'bg-gold text-black font-black' : 'text-gray-500 hover:bg-gray-100'}`}>🌐 All Collections</button>
+                        
+                        {/* Hidden from Clients */}
                         {!isClientMode && isWholesale && (
                             <button onClick={() => handleCategorySwitch('Hot Buys')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === 'Hot Buys' ? 'bg-red-50 text-red-700 font-black' : 'text-gray-500 hover:bg-gray-100'}`}>🔥 Hot Buys (On Sale)</button>
                         )}
+                        
                         {uniqueCategoriesList.map(cat => (
                             <button key={cat} onClick={() => handleCategorySwitch(cat)} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === cat ? 'bg-gold text-black font-black' : 'text-gray-500 hover:bg-gray-100'}`}>{cat}</button>
                         ))}
@@ -366,7 +394,6 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                 ) : (
                     <div className={isListView ? "flex flex-col gap-4" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"}>
                         {filteredProducts.map(p => {
-                            // Client Mode Price Calculation
                             const finalPrice = isClientMode 
                                 ? (p.price * (1 + clientMargin / 100)).toFixed(2)
                                 : (isWholesale ? p.price.toFixed(2) : (p.retailPrice ? parseFloat(p.retailPrice).toFixed(2) : (p.price * 2.2).toFixed(2)));
@@ -397,7 +424,7 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                                     {!isClientMode && (
                                         <div className={`absolute z-10 flex flex-col items-start ${isListView ? 'top-2 left-2 gap-1' : 'top-4 left-4 gap-1.5'}`}>
                                             {p.isSale && <div className={`bg-red-600 text-white font-black rounded-full uppercase tracking-widest shadow-md ${isListView ? 'text-[9px] px-2.5 py-1' : 'text-[9px] px-3 py-1.5 flex items-center gap-1 animate-pulse'}`}><span>🔥</span> HOT BUY</div>}
-                                            {p.isPropMgt && <div className={`bg-black text-gold font-black rounded-full uppercase tracking-widest shadow-md flex items-center border border-gold/30 ${isListView ? 'text-[9px] px-2.5 py-1 gap-1.5' : 'text-[9px] px-3 py-1.5 gap-1.5'}`}><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏠</span> Prop Mgt</div>}
+                                            {p.isPropMgt && <div className={`bg-black text-gold font-black rounded-full uppercase tracking-widest shadow-md flex items-center border border-gold/30 ${isListView ? 'text-[9px] px-2.5 py-1 gap-1.5' : 'text-[9px] px-3 py-1.5 gap-1.5'}`}><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</div>}
                                             {p.isContractor && <div className={`bg-purple-100 text-purple-800 font-black rounded-full uppercase tracking-widest shadow-md flex items-center ${isListView ? 'text-[9px] px-2.5 py-1 gap-1' : 'text-[9px] px-3 py-1.5 gap-1'}`}><span>🛠️</span> Pro Select</div>}
                                         </div>
                                     )}
@@ -426,7 +453,6 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                                         <div className={isListView ? "flex items-center justify-center sm:justify-start gap-2 mt-4 sm:mt-0" : "space-y-1 mb-4"}>
                                             <div className={isListView ? "flex items-center gap-2" : "flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider"}>
                                                 <span className={isListView ? "text-[10px] font-black text-gold uppercase tracking-widest" : ""}>{p.category}</span>
-                                                {/* Hide SKU in client mode */}
                                                 {!isClientMode && <span className={isListView ? "text-[10px] text-gray-400 font-bold uppercase font-mono" : ""}>{p.sku}</span>}
                                             </div>
                                             {!isListView && (
@@ -459,7 +485,6 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
 
                                         <div className={isListView ? "w-full sm:w-44 border-t sm:border-t-0 sm:border-l border-gray-100 pt-4 sm:pt-0 sm:pl-6 text-center sm:text-right shrink-0 flex flex-col justify-center" : "space-y-3 pt-3 border-t border-gray-50"}>
                                             
-                                            {/* PRICING BLOCK */}
                                             {isClientMode ? (
                                                 isListView ? (
                                                     <>
@@ -514,7 +539,7 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
         </div>
       </section>
 
-      {/* MOBILE DRAWER */}
+      {/* Mobile Drawer */}
       {isMobileDrawerOpen && (
           <div className="fixed inset-0 bg-black/70 z-[100] flex justify-end transition-opacity duration-300">
             <div className="w-full max-w-sm bg-white h-full overflow-y-auto p-6 flex flex-col space-y-6 shadow-2xl animate-in slide-in-from-right duration-300">
