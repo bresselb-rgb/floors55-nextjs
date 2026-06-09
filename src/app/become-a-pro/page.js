@@ -3,8 +3,8 @@ import Link from 'next/link';
 
 // Inject perfect SEO tags for this specific page
 export const metadata = {
-  title: "Become a Pro | Floors 55",
-  description: "Gain exclusive access to wholesale flooring, dedicated account management, and trade-only showrooms in Portland and Lake Oswego.",
+  title: "Open a Wholesale Flooring Account | Floors 55 Pro Portland",
+  description: "Apply for a trade-only flooring account. Get wholesale pricing, a dedicated account manager, and access to our Portland and Lake Oswego showrooms.",
 };
 
 export default function BecomeAProPage() {
@@ -39,6 +39,7 @@ export default function BecomeAProPage() {
         </div>
       </header>
 
+      {}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
         
         {/* Value Proposition Section */}
@@ -53,6 +54,7 @@ export default function BecomeAProPage() {
             </p>
         </section>
 
+        {}
         {/* 3-Column Process Section */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
             
@@ -89,6 +91,7 @@ export default function BecomeAProPage() {
 
         </section>
 
+        {}
         {/* Booking Section */}
         <section id="consultation" className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 md:p-16 text-center max-w-5xl mx-auto scroll-mt-24">
             <h2 className="text-3xl font-black mb-4">Ready to Talk Specs?</h2>
@@ -96,15 +99,10 @@ export default function BecomeAProPage() {
                 Select a time below to connect with an Account Manager. Choose a quick introductory phone call, or schedule a private, trade-only visit at our Portland or Lake Oswego showrooms to review samples.<br/><span className="text-xs italic mt-2 block">(Physical addresses will be provided in your secure confirmation email).</span>
             </p>
             
-            {/* Embedded Calendar Widget (Calendly Example) */}
+            {/* Embedded Calendar Widget */}
             <div className="w-full bg-white border border-gray-200 rounded-2xl overflow-hidden h-[700px] shadow-inner relative">
-                {/* 
-                  NOTE FOR BYRON:
-                  When you create your free Calendly account, just change the URL in the 'src' below to your specific link! 
-                  (e.g. https://calendly.com/floors55) 
-                */}
                 <iframe 
-                    src="https://calendly.com" 
+                    src="https://calendly.com/floors55pro/30min" 
                     width="100%" 
                     height="100%" 
                     frameBorder="0" 
