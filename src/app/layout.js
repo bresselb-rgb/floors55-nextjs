@@ -18,11 +18,6 @@ export const metadata = {
   title: "Floors 55 Pro | Wholesale Flooring for Portland Contractors",
   description: "Portland's premier wholesale flooring broker. Exclusive pricing on LVP, hardwood, and carpet for contractors, builders, and property managers in the PNW.",
   keywords: "wholesale flooring Portland, contractor flooring supplier, LVP wholesale Oregon, property management flooring, Floors 55 pro, trade flooring account",
-  icons: {
-    icon: '/images/f55-favicon.svg',
-    shortcut: '/images/f55-favicon.svg',
-    apple: '/images/f55-favicon.svg',
-  },
   openGraph: {
     title: 'Floors 55 Pro | Wholesale Flooring',
     description: 'Exclusive wholesale flooring for Portland contractors and designers.',
