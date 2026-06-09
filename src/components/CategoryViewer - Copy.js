@@ -13,6 +13,7 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
   const [isAuthReady, setIsAuthReady] = useState(false);
   
   const [clientMargin, setClientMargin] = useState(null);
+  const [isMagicLink, setIsMagicLink] = useState(false);
 
   const [liveProductsRaw, setLiveProductsRaw] = useState([]);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
@@ -44,6 +45,7 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                   const decoded = parseInt(atob(cmParam), 10);
                   if (!isNaN(decoded)) {
                       sessionStorage.setItem('client_margin', decoded);
+                      sessionStorage.setItem('magic_link_client', 'true');
                       shouldReplace = true;
                   }
               } catch(e) {}
@@ -58,13 +60,15 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
           }
 
           if (shouldReplace) {
-              router.replace(window.location.pathname, { scroll: false });
+              window.location.replace(window.location.pathname);
           }
 
           const storedMargin = sessionStorage.getItem('client_margin');
           if (storedMargin !== null) setClientMargin(parseInt(storedMargin, 10));
+
+          if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
       }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
       setActiveCategory(initialCategory);
@@ -267,12 +271,13 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
 
   return (
     <main className="bg-gray-50 text-gray-900 font-sans flex flex-col flex-1">
-      {/* Client Mode Exit Button completely wipes the session brand to revert to normal */}
-      {isClientMode && (
+      {/* Hide the exit button if they are a homeowner using a Magic Link */}
+      {isClientMode && !isMagicLink && (
           <button 
               onClick={() => { 
                   sessionStorage.removeItem('client_margin'); 
                   sessionStorage.removeItem('client_brand'); 
+                  sessionStorage.removeItem('magic_link_client');
                   window.location.reload(); 
               }} 
               className="fixed bottom-6 left-6 bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-full font-bold text-xs uppercase tracking-widest shadow-2xl z-[200] transition-colors flex items-center gap-2"
@@ -419,7 +424,7 @@ export default function CategoryViewer({ initialCategory = 'All Products' }) {
                                     {!isClientMode && (
                                         <div className={`absolute z-10 flex flex-col items-start ${isListView ? 'top-2 left-2 gap-1' : 'top-4 left-4 gap-1.5'}`}>
                                             {p.isSale && <div className={`bg-red-600 text-white font-black rounded-full uppercase tracking-widest shadow-md ${isListView ? 'text-[9px] px-2.5 py-1' : 'text-[9px] px-3 py-1.5 flex items-center gap-1 animate-pulse'}`}><span>🔥</span> HOT BUY</div>}
-                                            {p.isPropMgt && <div className={`bg-black text-gold font-black rounded-full uppercase tracking-widest shadow-md flex items-center border border-gold/30 ${isListView ? 'text-[9px] px-2.5 py-1 gap-1.5' : 'text-[9px] px-3 py-1.5 gap-1.5'}`}><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏠</span> Prop Mgt</div>}
+                                            {p.isPropMgt && <div className={`bg-black text-gold font-black rounded-full uppercase tracking-widest shadow-md flex items-center border border-gold/30 ${isListView ? 'text-[9px] px-2.5 py-1 gap-1.5' : 'text-[9px] px-3 py-1.5 gap-1.5'}`}><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</div>}
                                             {p.isContractor && <div className={`bg-purple-100 text-purple-800 font-black rounded-full uppercase tracking-widest shadow-md flex items-center ${isListView ? 'text-[9px] px-2.5 py-1 gap-1' : 'text-[9px] px-3 py-1.5 gap-1'}`}><span>🛠️</span> Pro Select</div>}
                                         </div>
                                     )}

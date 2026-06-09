@@ -10,7 +10,12 @@ export default function OrderSamplePage() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
+  
+  // New split address states
+  const [street, setStreet] = useState('');
+  const [city, setCity] = useState('');
+  const [addrState, setAddrState] = useState('');
+  const [zip, setZip] = useState('');
   
   const [clientBrand, setClientBrand] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,7 +27,6 @@ export default function OrderSamplePage() {
       if (params.has('product')) setProduct(params.get('product'));
       if (params.has('color')) setColor(params.get('color'));
       
-      // Secretly grab the Pro's business name if in Client Mode
       setClientBrand(sessionStorage.getItem('client_brand'));
     }
   }, []);
@@ -30,15 +34,21 @@ export default function OrderSamplePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    
+    // Combine the fields into a perfect multi-line string for the admin panel
+    const formattedAddress = `${street}\n${city}, ${addrState} ${zip}`;
+
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'sample_requests'), {
-        name, phone, email, address, product, color,
+        name, phone, email, product, color,
+        address: formattedAddress,
         proPartner: clientBrand || null,
         timestamp: serverTimestamp(),
         status: 'new'
       });
       setIsSuccess(true);
-      setName(''); setPhone(''); setEmail(''); setAddress('');
+      setName(''); setPhone(''); setEmail(''); 
+      setStreet(''); setCity(''); setAddrState(''); setZip('');
     } catch (err) {
       alert("Error submitting sample request: " + err.message);
     } finally {
@@ -86,12 +96,33 @@ export default function OrderSamplePage() {
                     <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
                 </div>
 
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Shipping Address *</label>
-                    <textarea required rows="3" value={address} onChange={e => setAddress(e.target.value)} placeholder="1234 Main St&#10;City, State, Zip" className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors resize-none"></textarea>
+                <div className="pt-4 border-t border-gray-100">
+                    <h3 className="text-sm font-bold text-gray-900 mb-4">Shipping Destination</h3>
+                    
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Street Address *</label>
+                            <input type="text" required value={street} onChange={e => setStreet(e.target.value)} placeholder="1234 Main St" className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-bold text-gray-700 mb-1">City *</label>
+                                <input type="text" required value={city} onChange={e => setCity(e.target.value)} className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">State *</label>
+                                <input type="text" required value={addrState} onChange={e => setAddrState(e.target.value)} placeholder="OR" className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Zip Code *</label>
+                                <input type="text" required value={zip} onChange={e => setZip(e.target.value)} className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <button type="submit" disabled={isSubmitting} className="w-full bg-black hover:bg-gold text-white hover:text-black font-black uppercase tracking-widest py-4 rounded-xl transition duration-300 shadow-md disabled:bg-gray-400 disabled:text-gray-100 disabled:cursor-not-allowed">
+                <button type="submit" disabled={isSubmitting} className="w-full bg-black hover:bg-gold text-white hover:text-black font-black uppercase tracking-widest py-4 rounded-xl transition duration-300 shadow-md disabled:bg-gray-400 disabled:text-gray-100 disabled:cursor-not-allowed mt-4">
                     {isSubmitting ? "Processing..." : "Request Sample Shipment"}
                 </button>
                 

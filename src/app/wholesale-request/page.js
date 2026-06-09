@@ -8,10 +8,15 @@ export default function WholesaleRequestPage() {
   const [name, setName] = useState('');
   const [business, setBusiness] = useState('');
   const [ccb, setCcb] = useState('');
-  const [address, setAddress] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [trade, setTrade] = useState('');
+  
+  // New split address states
+  const [street, setStreet] = useState('');
+  const [city, setCity] = useState('');
+  const [addrState, setAddrState] = useState('');
+  const [zip, setZip] = useState('');
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -19,14 +24,20 @@ export default function WholesaleRequestPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    
+    // Combine the fields into a perfect multi-line string for the admin panel
+    const formattedAddress = `${street}\n${city}, ${addrState} ${zip}`;
+
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'wholesale_requests'), {
-        name, business, ccb, address, email, phone, trade,
+        name, business, ccb, email, phone, trade,
+        address: formattedAddress,
         timestamp: serverTimestamp(),
         status: 'pending'
       });
       setIsSuccess(true);
-      setName(''); setBusiness(''); setCcb(''); setAddress(''); setEmail(''); setPhone(''); setTrade('');
+      setName(''); setBusiness(''); setCcb(''); setEmail(''); setPhone(''); setTrade('');
+      setStreet(''); setCity(''); setAddrState(''); setZip('');
     } catch (err) {
       alert("Error submitting application: " + err.message);
     } finally {
@@ -62,7 +73,7 @@ export default function WholesaleRequestPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-1">CCB / License Number</label>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">CCB / License Number (Optional)</label>
                         <input type="text" value={ccb} onChange={e => setCcb(e.target.value)} placeholder="e.g. 123456" className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
                     </div>
                     <div>
@@ -90,12 +101,33 @@ export default function WholesaleRequestPage() {
                     </div>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Business Address *</label>
-                    <textarea required rows="2" value={address} onChange={e => setAddress(e.target.value)} placeholder="1234 Main St, City, State, Zip" className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors resize-none"></textarea>
+                <div className="pt-2 border-t border-gray-100">
+                    <h3 className="text-sm font-bold text-gray-900 mb-4 mt-4">Business Address</h3>
+                    
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Street Address *</label>
+                            <input type="text" required value={street} onChange={e => setStreet(e.target.value)} placeholder="1234 Main St" className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-bold text-gray-700 mb-1">City *</label>
+                                <input type="text" required value={city} onChange={e => setCity(e.target.value)} className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">State *</label>
+                                <input type="text" required value={addrState} onChange={e => setAddrState(e.target.value)} placeholder="OR" className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Zip Code *</label>
+                                <input type="text" required value={zip} onChange={e => setZip(e.target.value)} className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <button type="submit" disabled={isSubmitting} className="w-full bg-gold hover:bg-black text-black hover:text-white font-black uppercase tracking-widest py-4 rounded-xl transition duration-300 shadow-md disabled:bg-gray-400 disabled:text-gray-100 disabled:cursor-not-allowed">
+                <button type="submit" disabled={isSubmitting} className="w-full bg-gold hover:bg-black text-black hover:text-white font-black uppercase tracking-widest py-4 rounded-xl transition duration-300 shadow-md disabled:bg-gray-400 disabled:text-gray-100 disabled:cursor-not-allowed mt-4">
                     {isSubmitting ? "Applying..." : "Submit Application"}
                 </button>
                 

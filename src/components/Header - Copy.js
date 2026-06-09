@@ -16,9 +16,19 @@ export default function Header() {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  
+  // NEW: Track Client Presentation Mode branding
+  const [clientBrand, setClientBrand] = useState(null);
 
   const pathname = usePathname();
   const router = useRouter();
+
+  // NEW: Read Client Brand from session storage on load
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        setClientBrand(sessionStorage.getItem('client_brand'));
+    }
+  }, []);
 
   useEffect(() => {
     const handleOpenLogin = () => setIsLoginModalOpen(true);
@@ -101,13 +111,23 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             
+            {/* Left Section: Logo & Products Nav */}
             <div className="flex items-center gap-8 h-full">
+              {/* Logo */}
               <div className="flex items-center">
-                <Link href="/" onClick={closeMenu} style={{ textDecoration: 'none' }}>
-                  <img src={getFbUrl('images/f55-pros-logo.jpg')} alt="Floors 55 for Pros" className="h-12 md:h-16 w-auto" />
+                <Link href="/" onClick={closeMenu} className="flex items-center gap-3 group" style={{ textDecoration: 'none' }}>
+                  {clientBrand ? (
+                      <div className="flex flex-col justify-center">
+                          <span className="text-xl md:text-2xl font-black uppercase tracking-tighter text-gray-900 group-hover:text-gold transition-colors leading-none">{clientBrand}</span>
+                          <span className="text-red-600 text-sm md:text-base font-black italic tracking-tight mt-0.5">Premium Floor Portal</span>
+                      </div>
+                  ) : (
+                      <img src={getFbUrl('images/f55-pros-logo.jpg')} alt="Floors 55 for Pros" className="h-12 md:h-16 w-auto" />
+                  )}
                 </Link>
               </div>
 
+              {/* Desktop Nav */}
               <div className="hidden md:flex space-x-8 text-sm font-bold uppercase tracking-widest h-full items-center">
                 <div className="group relative h-full flex items-center">
                   <button className="hover:text-gold transition flex items-center gap-1 py-8 text-black bg-transparent border-none font-bold uppercase cursor-pointer outline-none">
@@ -132,23 +152,29 @@ export default function Header() {
               </div>
             </div>
 
+            {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-6">
-              <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                {user && !user.isAnonymous ? (
-                  <div className="flex items-center gap-4">
-                     <Link href="/my-account" className="hover:text-gold transition uppercase tracking-widest outline-none text-gray-900 font-bold cursor-pointer" style={{ textDecoration: 'none' }}>My Account</Link>
-                     <button onClick={handleLogout} className="hover:text-gold transition uppercase tracking-widest outline-none text-[#c5a059] bg-transparent border-none font-bold cursor-pointer">Sign Out</button>
-                  </div>
-                ) : (
-                  <button onClick={() => setIsLoginModalOpen(true)} className="hover:text-gold transition uppercase tracking-widest outline-none bg-transparent border-none font-bold cursor-pointer text-gray-500">Sign In</button>
-                )}
-              </div>
+              {!clientBrand && (
+                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                  {user && !user.isAnonymous ? (
+                    <div className="flex items-center gap-4">
+                       <Link href="/my-account" className="hover:text-gold transition uppercase tracking-widest outline-none text-gray-900 font-bold cursor-pointer" style={{ textDecoration: 'none' }}>My Account</Link>
+                       <button onClick={handleLogout} className="hover:text-gold transition uppercase tracking-widest outline-none text-[#c5a059] bg-transparent border-none font-bold cursor-pointer">Sign Out</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setIsLoginModalOpen(true)} className="hover:text-gold transition uppercase tracking-widest outline-none bg-transparent border-none font-bold cursor-pointer text-gray-500">Sign In</button>
+                  )}
+                </div>
+              )}
               <div className="flex items-center gap-3">
-                <Link href="/become-a-pro" className="bg-gold text-black px-6 py-3 rounded-full text-xs font-bold uppercase hover:bg-black hover:text-white transition-all shadow-md" style={{ textDecoration: 'none' }}>Become a Pro</Link>
+                {!clientBrand && (
+                  <Link href="/become-a-pro" className="bg-gold text-black px-6 py-3 rounded-full text-xs font-bold uppercase hover:bg-black hover:text-white transition-all shadow-md" style={{ textDecoration: 'none' }}>Become a Pro</Link>
+                )}
                 <Link href="/general-contact" className="bg-black text-white px-6 py-3 rounded-full text-xs font-bold uppercase hover:bg-gold hover:text-black transition-all shadow-md" style={{ textDecoration: 'none' }}>Contact Us</Link>
               </div>
             </div>
 
+            {/* Mobile Menu Toggle */}
             <div className="md:hidden flex items-center">
               <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-gray-900 hover:text-gold p-2 focus:outline-none bg-transparent border-none cursor-pointer">
                 <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} /></svg>
@@ -157,6 +183,7 @@ export default function Header() {
           </div>
         </div>
 
+        {/* Mobile Nav */}
         {isMobileMenuOpen && (
           <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-2xl h-screen overflow-y-auto pb-32 z-50">
             <div className="px-6 pt-4 pb-6 space-y-1">
@@ -167,16 +194,24 @@ export default function Header() {
               {categories.map(cat => (
                 <Link key={cat} href={getCategorySlug(cat)} onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>{cat}</Link>
               ))}
-              {user && !user.isAnonymous ? (
+              
+              {!clientBrand && (
                 <>
-                  <Link href="/my-account" onClick={() => setIsMobileMenuOpen(false)} className="block w-full text-left py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>My Account</Link>
-                  <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="block w-full text-left py-4 text-sm font-bold uppercase tracking-widest text-[#c5a059] border-b border-gray-50 outline-none bg-transparent cursor-pointer">Sign Out</button>
+                  {user && !user.isAnonymous ? (
+                    <>
+                      <Link href="/my-account" onClick={() => setIsMobileMenuOpen(false)} className="block w-full text-left py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>My Account</Link>
+                      <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="block w-full text-left py-4 text-sm font-bold uppercase tracking-widest text-[#c5a059] border-b border-gray-50 outline-none bg-transparent cursor-pointer">Sign Out</button>
+                    </>
+                  ) : (
+                    <button onClick={() => { setIsLoginModalOpen(true); setIsMobileMenuOpen(false); }} className="block w-full text-left py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50 outline-none bg-transparent cursor-pointer">Sign In</button>
+                  )}
                 </>
-              ) : (
-                <button onClick={() => { setIsLoginModalOpen(true); setIsMobileMenuOpen(false); }} className="block w-full text-left py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50 outline-none bg-transparent cursor-pointer">Sign In</button>
               )}
+
               <div className="pt-4 space-y-3">
-                <Link href="/become-a-pro" onClick={() => setIsMobileMenuOpen(false)} className="block w-full bg-gold text-black text-center px-6 py-4 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-md" style={{ textDecoration: 'none' }}>Become a Pro</Link>
+                {!clientBrand && (
+                  <Link href="/become-a-pro" onClick={() => setIsMobileMenuOpen(false)} className="block w-full bg-gold text-black text-center px-6 py-4 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-md" style={{ textDecoration: 'none' }}>Become a Pro</Link>
+                )}
                 <Link href="/general-contact" onClick={() => setIsMobileMenuOpen(false)} className="block w-full bg-black text-white text-center px-6 py-4 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-gold hover:text-black transition-all shadow-md" style={{ textDecoration: 'none' }}>Contact Us</Link>
               </div>
             </div>
@@ -184,6 +219,7 @@ export default function Header() {
         )}
       </nav>
 
+      {/* Login Modal */}
       {isLoginModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center px-4 transition-opacity">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">

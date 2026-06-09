@@ -28,6 +28,7 @@ function ProductViewerContent({ initialProduct }) {
     
     const [clientMargin, setClientMargin] = useState(null);
     const [copied, setCopied] = useState(false);
+    const [isMagicLink, setIsMagicLink] = useState(false);
 
     const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
@@ -42,6 +43,7 @@ function ProductViewerContent({ initialProduct }) {
                     const decoded = parseInt(atob(cmParam), 10);
                     if (!isNaN(decoded)) {
                         sessionStorage.setItem('client_margin', decoded);
+                        sessionStorage.setItem('magic_link_client', 'true');
                         updated = true;
                     }
                 } catch(e) {}
@@ -56,13 +58,15 @@ function ProductViewerContent({ initialProduct }) {
 
             if (updated) {
                 const colorParam = urlColorSku ? `?color=${urlColorSku}` : '';
-                router.replace(`${window.location.pathname}${colorParam}`, { scroll: false });
+                window.location.replace(`${window.location.pathname}${colorParam}`);
             }
 
             const storedMargin = sessionStorage.getItem('client_margin');
             if (storedMargin !== null) setClientMargin(parseInt(storedMargin, 10));
+            
+            if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
         }
-    }, [searchParams, router, urlColorSku]);
+    }, [searchParams, urlColorSku]);
 
     useEffect(() => {
         let isMounted = true;
@@ -202,11 +206,13 @@ function ProductViewerContent({ initialProduct }) {
     return (
         <div className="flex-1 max-w-[1400px] mx-auto px-4 py-10 w-full flex flex-col md:flex-row gap-10 relative">
           
-          {isClientMode && (
+          {/* Hide the exit button if they are a homeowner using a Magic Link */}
+          {isClientMode && !isMagicLink && (
               <button 
                   onClick={() => { 
                       sessionStorage.removeItem('client_margin'); 
                       sessionStorage.removeItem('client_brand'); 
+                      sessionStorage.removeItem('magic_link_client');
                       window.location.reload(); 
                   }} 
                   className="fixed bottom-6 left-6 bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-full font-bold text-xs uppercase tracking-widest shadow-2xl z-[200] transition-colors flex items-center gap-2"
@@ -248,12 +254,12 @@ function ProductViewerContent({ initialProduct }) {
                 </div>
             )}
 
-            {!isClientMode && (
-                <div className="flex gap-4 mt-6">
+            <div className="flex gap-4 mt-6">
+                {!isClientMode && (
                     <Link href={`/quote?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-black text-white text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-gold transition-colors border-2 border-black hover:border-gold" style={{ textDecoration: 'none' }}>Request Quote</Link>
-                    <Link href={`/order-sample?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
-                </div>
-            )}
+                )}
+                <Link href={`/order-sample?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
+            </div>
           </div>
 
           <div className="flex-1 min-w-[320px]">

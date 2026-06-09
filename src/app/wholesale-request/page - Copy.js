@@ -7,6 +7,8 @@ import { db, appId } from "../../lib/firebase";
 export default function WholesaleRequestPage() {
   const [name, setName] = useState('');
   const [business, setBusiness] = useState('');
+  const [ccb, setCcb] = useState('');
+  const [address, setAddress] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [trade, setTrade] = useState('');
@@ -19,12 +21,12 @@ export default function WholesaleRequestPage() {
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'wholesale_requests'), {
-        name, business, email, phone, trade,
+        name, business, ccb, address, email, phone, trade,
         timestamp: serverTimestamp(),
         status: 'pending'
       });
       setIsSuccess(true);
-      setName(''); setBusiness(''); setEmail(''); setPhone(''); setTrade('');
+      setName(''); setBusiness(''); setCcb(''); setAddress(''); setEmail(''); setPhone(''); setTrade('');
     } catch (err) {
       alert("Error submitting application: " + err.message);
     } finally {
@@ -39,7 +41,12 @@ export default function WholesaleRequestPage() {
             <div className="absolute top-0 left-0 w-full h-2 bg-black"></div>
             
             <h1 className="text-3xl font-black tracking-tight mb-2">Trade Partner Application</h1>
-            <p className="text-gray-500 mb-8">Apply for an exclusive Floors 55 Pro account to unlock direct wholesale pricing, dedicated account management, and priority order fulfillment.</p>
+            <p className="text-gray-500 mb-8">
+                Apply for an exclusive Floors 55 Pro account to unlock direct wholesale pricing, dedicated account management, and priority order fulfillment.
+                <span className="block mt-3 text-sm text-gray-600">
+                    Already a Pro Partner? <button type="button" onClick={() => window.dispatchEvent(new Event('open-login-modal'))} className="text-gold font-bold underline bg-transparent border-none cursor-pointer p-0 text-sm hover:text-black transition-colors outline-none">Log in here</button>
+                </span>
+            </p>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -55,6 +62,25 @@ export default function WholesaleRequestPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">CCB / License Number</label>
+                        <input type="text" value={ccb} onChange={e => setCcb(e.target.value)} placeholder="e.g. 123456" className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Primary Trade *</label>
+                        <select required value={trade} onChange={e => setTrade(e.target.value)} className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors text-gray-700">
+                            <option value="" disabled>Select your industry segment...</option>
+                            <option value="General Contractor">General Contractor</option>
+                            <option value="Flooring Installer">Flooring Installer</option>
+                            <option value="Interior Designer">Interior Designer</option>
+                            <option value="Property Management">Property Management</option>
+                            <option value="Real Estate">Real Estate / Developer</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Email Address *</label>
                         <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
                     </div>
@@ -65,16 +91,8 @@ export default function WholesaleRequestPage() {
                 </div>
 
                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Primary Trade *</label>
-                    <select required value={trade} onChange={e => setTrade(e.target.value)} className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors text-gray-700">
-                        <option value="" disabled>Select your industry segment...</option>
-                        <option value="General Contractor">General Contractor</option>
-                        <option value="Flooring Installer">Flooring Installer</option>
-                        <option value="Interior Designer">Interior Designer</option>
-                        <option value="Property Management">Property Management</option>
-                        <option value="Real Estate">Real Estate / Developer</option>
-                        <option value="Other">Other</option>
-                    </select>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Business Address *</label>
+                    <textarea required rows="2" value={address} onChange={e => setAddress(e.target.value)} placeholder="1234 Main St, City, State, Zip" className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors resize-none"></textarea>
                 </div>
 
                 <button type="submit" disabled={isSubmitting} className="w-full bg-gold hover:bg-black text-black hover:text-white font-black uppercase tracking-widest py-4 rounded-xl transition duration-300 shadow-md disabled:bg-gray-400 disabled:text-gray-100 disabled:cursor-not-allowed">

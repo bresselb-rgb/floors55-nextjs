@@ -12,6 +12,7 @@ export default function OrderSamplePage() {
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   
+  const [clientBrand, setClientBrand] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -20,6 +21,9 @@ export default function OrderSamplePage() {
       const params = new URLSearchParams(window.location.search);
       if (params.has('product')) setProduct(params.get('product'));
       if (params.has('color')) setColor(params.get('color'));
+      
+      // Secretly grab the Pro's business name if in Client Mode
+      setClientBrand(sessionStorage.getItem('client_brand'));
     }
   }, []);
 
@@ -29,6 +33,7 @@ export default function OrderSamplePage() {
     try {
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'sample_requests'), {
         name, phone, email, address, product, color,
+        proPartner: clientBrand || null,
         timestamp: serverTimestamp(),
         status: 'new'
       });
