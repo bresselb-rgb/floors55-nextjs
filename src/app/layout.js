@@ -13,10 +13,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// This includes your Pro SEO, keywords, AND the new Favicon links
 export const metadata = {
   title: "Floors 55 Pro | Wholesale Flooring for Portland Contractors",
   description: "Portland's premier wholesale flooring broker. Exclusive pricing on LVP, hardwood, and carpet for contractors, builders, and property managers in the PNW.",
   keywords: "wholesale flooring Portland, contractor flooring supplier, LVP wholesale Oregon, property management flooring, Floors 55 pro, trade flooring account",
+  icons: {
+    icon: '/images/f55-favicon.svg',
+    shortcut: '/images/f55-favicon.svg',
+    apple: '/images/f55-favicon.svg',
+  },
   openGraph: {
     title: 'Floors 55 Pro | Wholesale Flooring',
     description: 'Exclusive wholesale flooring for Portland contractors and designers.',
@@ -25,6 +31,7 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  // Your Local SEO Schema is perfectly preserved here
   const localBusinessSchema = {
     "@context": "https://schema.org",
     "@type": "WholesaleStore",
@@ -56,7 +63,6 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="min-h-full flex flex-col">
-        {/* Header is now globally applied to all pages */}
         <Header />
         {children}
         <Footer />
