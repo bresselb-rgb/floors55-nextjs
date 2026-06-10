@@ -1,23 +1,23 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-// Next.js specific imports are commented out for the preview environment
-// import Link from 'next/link';
-// import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, signInAnonymously, sendPasswordResetEmail } from "firebase/auth";
 import { collection, onSnapshot } from "firebase/firestore";
-// Corrected relative path for firebase config based on standard project structure
-// import { auth, db, appId } from "../lib/firebase";
+import { auth, db, appId } from "../lib/firebase";
 
-// Mocking Next.js Link and navigation for preview purposes
-const Link = ({ href, children, ...props }) => <a href={href} {...props}>{children}</a>;
-const usePathname = () => window.location.pathname;
-const useRouter = () => ({ push: (url) => { window.location.href = url; } });
-
-// --- Mock Firebase (Preview Environment Only) ---
-const auth = { currentUser: null };
-const db = {};
-const appId = "preview-app";
+export default function Header() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [hasSaleItems, setHasSaleItems] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
+  
   const [clientBrand, setClientBrand] = useState(null);
 
   const pathname = usePathname();

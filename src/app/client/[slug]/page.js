@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { auth, db, appId } from "../../../lib/firebase";
 
-export default function ClientBoardPage({ params }) {
-    // Safely unwrap the URL parameters for Next.js
-    const unwrappedParams = use(params);
-    const slug = unwrappedParams.slug;
+export default function ClientBoardPage() {
+    const params = useParams();
+    const slug = params?.slug;
 
     const [board, setBoard] = useState(null);
     const [proProfile, setProProfile] = useState(null);
@@ -98,7 +98,7 @@ export default function ClientBoardPage({ params }) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 text-center">
                 <h1 className="text-3xl font-black mb-2">Project Not Found</h1>
-                <p className="text-gray-500 max-w-md">We couldn't locate this project board. The link may be invalid or the project was removed by the contractor.</p>
+                <p className="text-gray-500 max-w-md">We couldn&apos;t locate this project board. The link may be invalid or the project was removed by the contractor.</p>
             </div>
         );
     }
@@ -106,9 +106,13 @@ export default function ClientBoardPage({ params }) {
     const businessName = proProfile?.business || "Your Flooring Professional";
     const margin = proProfile?.clientMargin || 20;
     
-    // Encode state to pass to product page via URL
-    const cmToken = btoa(margin.toString());
-    const cbToken = btoa(businessName);
+    // Safely encode state to pass to product page via URL
+    let cmToken = '';
+    let cbToken = '';
+    try {
+        cmToken = btoa(margin.toString());
+        cbToken = btoa(businessName);
+    } catch(e) {}
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans flex flex-col">
