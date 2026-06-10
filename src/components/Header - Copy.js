@@ -114,7 +114,7 @@ export default function Header() {
   };
 
   const handleLogout = async () => {
-    try { await signOut(auth); } catch (err) {}
+    try { await signOut(auth); window.location.href = '/'; } catch (err) {}
   };
 
   const closeMenu = () => {
@@ -142,6 +142,8 @@ export default function Header() {
               </div>
 
               <div className="hidden md:flex space-x-8 text-sm font-bold uppercase tracking-widest h-full items-center">
+                
+                {/* Products Dropdown */}
                 <div className="group relative h-full flex items-center">
                   <button className="hover:text-gold transition flex items-center gap-1 py-8 text-black bg-transparent border-none font-bold uppercase cursor-pointer outline-none">
                     Products ▾
@@ -162,6 +164,34 @@ export default function Header() {
                     ))}
                   </div>
                 </div>
+
+                {/* Resources Dropdown Expanded */}
+                <div className="group relative h-full flex items-center">
+                  <button className="hover:text-gold transition flex items-center gap-1 py-8 text-black bg-transparent border-none font-bold uppercase cursor-pointer outline-none">
+                    Resources ▾
+                  </button>
+                  <div className="absolute top-full left-0 bg-white shadow-2xl border border-gray-100 min-w-[240px] hidden group-hover:block animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+                    <Link href="/choosing-your-floor" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
+                      Choosing Your Floor
+                    </Link>
+                    <Link href="/floor-care" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
+                      Floor Care Guide
+                    </Link>
+                    <Link href="/installation-prep" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
+                      Installation Prep
+                    </Link>
+                    <Link href="/flooring-glossary" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
+                      Flooring Glossary
+                    </Link>
+                    <Link href="/warranties" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
+                      Understanding Warranties
+                    </Link>
+                    <Link href="/faq" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold text-xs text-gray-900" style={{ textDecoration: 'none' }}>
+                      FAQ
+                    </Link>
+                  </div>
+                </div>
+
               </div>
             </div>
 
@@ -197,6 +227,8 @@ export default function Header() {
         {isMobileMenuOpen && (
           <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-2xl h-screen overflow-y-auto pb-32 z-50">
             <div className="px-6 pt-4 pb-6 space-y-1">
+              
+              <p className="px-0 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400">Products</p>
               <Link href="/category" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>All Collections</Link>
               {user && !user.isAnonymous && hasSaleItems && (
                 <Link href="/category/hot-buys" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-red-600 border-b border-gray-50 animate-pulse" style={{ textDecoration: 'none' }}>🔥 Hot Buys</Link>
@@ -205,8 +237,18 @@ export default function Header() {
                 <Link key={cat} href={getCategorySlug(cat)} onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>{cat}</Link>
               ))}
               
+              <div className="pt-4 mt-2">
+                <p className="px-0 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400">Resources</p>
+                <Link href="/choosing-your-floor" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>Choosing Your Floor</Link>
+                <Link href="/floor-care" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>Floor Care Guide</Link>
+                <Link href="/installation-prep" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>Installation Prep</Link>
+                <Link href="/flooring-glossary" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>Glossary</Link>
+                <Link href="/warranties" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>Warranties</Link>
+                <Link href="/faq" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>FAQ</Link>
+              </div>
+
               {!clientBrand && (
-                <>
+                <div className="pt-4 border-t border-gray-100 mt-2">
                   {user && !user.isAnonymous ? (
                     <>
                       <Link href="/my-account" onClick={() => setIsMobileMenuOpen(false)} className="block w-full text-left py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>My Account</Link>
@@ -215,10 +257,10 @@ export default function Header() {
                   ) : (
                     <button onClick={() => { setIsLoginModalOpen(true); setIsMobileMenuOpen(false); }} className="block w-full text-left py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50 outline-none bg-transparent cursor-pointer">Sign In</button>
                   )}
-                </>
+                </div>
               )}
 
-              <div className="pt-4 space-y-3">
+              <div className="pt-6 space-y-3">
                 {!clientBrand && (
                   <Link href="/become-a-pro" onClick={() => setIsMobileMenuOpen(false)} className="block w-full bg-gold text-black text-center px-6 py-4 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-md" style={{ textDecoration: 'none' }}>Become a Pro</Link>
                 )}

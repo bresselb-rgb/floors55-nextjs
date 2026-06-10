@@ -1,20 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
 
 export default function Footer() {
   const [clientBrand, setClientBrand] = useState(null);
-  const pathname = usePathname();
 
   useEffect(() => {
       if (typeof window !== 'undefined') {
           setClientBrand(sessionStorage.getItem('client_brand'));
       }
   }, []);
-
-  // Completely hide the footer on white-labeled Client Presentation boards
-  if (pathname && pathname.startsWith('/client/')) return null;
 
   return (
     <footer className="bg-black text-white py-16 shrink-0 mt-auto">
