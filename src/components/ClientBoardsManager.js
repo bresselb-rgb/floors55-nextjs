@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { collection, addDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, doc } from "firebase/firestore";
 import { db, appId } from "../lib/firebase";
 
 export default function ClientBoardsManager({ proId }) {
@@ -64,6 +64,18 @@ export default function ClientBoardsManager({ proId }) {
     setTimeout(() => setCopiedSlug(null), 2000);
   };
 
+  const handleDeleteBoard = async (boardId, boardName) => {
+    if (window.confirm(`Are you sure you want to delete the board "${boardName}"? This action cannot be undone.`)) {
+      try {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'client_boards', boardId));
+        setBoards(boards.filter(b => b.id !== boardId));
+      } catch (err) {
+        console.error("Error deleting board:", err);
+        alert("Failed to delete board.");
+      }
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-fit mt-6 relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-1.5 bg-black"></div>
@@ -102,12 +114,19 @@ export default function ClientBoardsManager({ proId }) {
                   {board.products?.length || 0} Products Saved
                 </p>
               </div>
-              <div className="flex flex-col items-start sm:items-end w-full sm:w-auto shrink-0">
+              <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                 <button 
                   onClick={() => copyToClipboard(board.slug)}
-                  className="text-[10px] font-black uppercase tracking-widest bg-white border border-gray-200 hover:border-gold px-3 py-1.5 rounded transition-colors w-full sm:w-auto text-center"
+                  className="flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest bg-white border border-gray-200 hover:border-gold px-3 py-1.5 rounded transition-colors text-center"
                 >
                   {copiedSlug === board.slug ? "✓ Copied Link!" : "🔗 Copy Share Link"}
+                </button>
+                <button
+                  onClick={() => handleDeleteBoard(board.id, board.name)}
+                  className="text-gray-400 hover:text-red-600 p-1.5 border border-transparent hover:border-red-200 hover:bg-red-50 rounded transition-all outline-none cursor-pointer shrink-0 flex items-center justify-center"
+                  title="Delete Board"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
               </div>
             </div>
