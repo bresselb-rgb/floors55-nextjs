@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { collection, addDoc, query, where, getDocs, serverTimestamp, deleteDoc, doc } from "firebase/firestore";
 import { db, appId } from "../lib/firebase";
 
-export default function ClientBoardsManager({ proId }) {
+export default function ClientBoardsManager({ proId, currentMargin = 20, businessName = "Premium Flooring Portal" }) {
   const [boards, setBoards] = useState([]);
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -42,6 +42,8 @@ export default function ClientBoardsManager({ proId }) {
       name: newBoardName,
       slug: slug,
       products: [], // Starts empty!
+      margin: currentMargin, // Snapshot the slider right now!
+      businessName: businessName, // Snapshot the business name right now!
       createdAt: serverTimestamp(),
     };
 
@@ -112,6 +114,10 @@ export default function ClientBoardsManager({ proId }) {
                 <h4 className="font-bold text-gray-900 text-sm leading-tight">{board.name}</h4>
                 <p className="text-xs text-gold font-bold mt-0.5">
                   {board.products?.length || 0} Products Saved
+                </p>
+                {/* Visual indicator of the locked margin for the Pro */}
+                <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider font-black">
+                  Locked Margin: +{board.margin !== undefined ? board.margin : 20}%
                 </p>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">

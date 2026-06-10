@@ -263,7 +263,8 @@ export default function MyAccountPage() {
                     </div>
 
                     {/* NEW: Client Boards Component rendered right here */}
-                    {user && <ClientBoardsManager proId={user.uid} />}
+                    {/* It passes the current slider margin and business name down! */}
+                    {user && <ClientBoardsManager proId={user.uid} currentMargin={formData.clientMargin} businessName={formData.business} />}
 
                 </div>
 

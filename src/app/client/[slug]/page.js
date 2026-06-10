@@ -35,7 +35,7 @@ export default function ClientBoardPage() {
                 const boardData = boardDoc.data();
                 if (isMounted) setBoard(boardData);
 
-                // 2. Fetch the Pro's Profile (for Margin and Business Name)
+                // 2. Fetch the Pro's Profile (as a fallback)
                 if (boardData.proId) {
                     const proRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', boardData.proId);
                     const proSnap = await getDoc(proRef);
@@ -98,15 +98,16 @@ export default function ClientBoardPage() {
         return (
             <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 text-center">
                 <h1 className="text-3xl font-black mb-2">Project Not Found</h1>
-                <p className="text-gray-500 max-w-md">We couldn&apos;t locate this project board. The link may be invalid or the project was removed by the contractor.</p>
+                <p className="text-gray-500 max-w-md">We couldn't locate this project board. The link may be invalid or the project was removed by the contractor.</p>
             </div>
         );
     }
 
-    const businessName = proProfile?.business || "Your Flooring Professional";
-    const margin = proProfile?.clientMargin || 20;
+    // NEW FIX: Prioritize the board's locked margin/name. If it's an old board that doesn't have it, fallback to the live profile.
+    const businessName = board?.businessName || proProfile?.business || "Your Flooring Professional";
+    const margin = board?.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
     
-    // Safely encode state to pass to product page via URL
+    // Encode state to pass to product page via URL
     let cmToken = '';
     let cbToken = '';
     try {
@@ -133,6 +134,7 @@ export default function ClientBoardPage() {
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                         {products.map(p => {
+                            // Calculate the retail price using the LOCKED margin
                             const finalPrice = (p.price * (1 + margin / 100)).toFixed(2);
                             
                             const safeDesc = p.desc || 'Premium flooring collection.';
