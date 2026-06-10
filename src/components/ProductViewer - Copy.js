@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db, appId } from "../lib/firebase";
 
 function ProductViewerContent({ initialProduct }) {
@@ -29,6 +29,12 @@ function ProductViewerContent({ initialProduct }) {
     const [clientMargin, setClientMargin] = useState(null);
     const [copied, setCopied] = useState(false);
     const [isMagicLink, setIsMagicLink] = useState(false);
+
+    // NEW: State for Client Boards
+    const [proBoards, setProBoards] = useState([]);
+    const [isBoardsMenuOpen, setIsBoardsMenuOpen] = useState(false);
+    const [isSavingToBoard, setIsSavingToBoard] = useState(false);
+    const [boardSaveMessage, setBoardSaveMessage] = useState('');
 
     const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
@@ -116,6 +122,22 @@ function ProductViewerContent({ initialProduct }) {
          }
     }, [urlColorSku, productData, activeColor]);
 
+    useEffect(() => {
+        if (user && !user.isAnonymous) {
+            const fetchBoards = async () => {
+                try {
+                    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'client_boards'), where("proId", "==", user.uid));
+                    const snapshot = await getDocs(q);
+                    const boardsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    setProBoards(boardsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0)));
+                } catch (e) {
+                    console.error("Error fetching boards", e);
+                }
+            };
+            fetchBoards();
+        }
+    }, [user]);
+
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
         const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -171,6 +193,36 @@ function ProductViewerContent({ initialProduct }) {
             navigator.clipboard.writeText(url);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
+    const handleSaveToBoard = async (boardId, boardName) => {
+        setIsSavingToBoard(true);
+        try {
+            // Save the essential product details needed for the client page
+            const productToSave = {
+                productId: productData.id,
+                name: productData.displayTitle,
+                colorSku: activeColor?.sku || '',
+                colorName: activeColor?.name || '',
+                category: productData.category || '',
+                imgPrefix: productData.imgPrefix || '',
+                addedAt: new Date().toISOString()
+            };
+
+            const boardRef = doc(db, 'artifacts', appId, 'public', 'data', 'client_boards', boardId);
+            await updateDoc(boardRef, {
+                products: arrayUnion(productToSave)
+            });
+            
+            setBoardSaveMessage(`Saved to ${boardName}!`);
+            setIsBoardsMenuOpen(false);
+            setTimeout(() => setBoardSaveMessage(''), 3000);
+        } catch (err) {
+            console.error("Error saving to board", err);
+            alert("Failed to save to board.");
+        } finally {
+            setIsSavingToBoard(false);
         }
     };
 
@@ -263,7 +315,7 @@ function ProductViewerContent({ initialProduct }) {
           </div>
 
           <div className="flex-1 min-w-[320px]">
-            <div className="flex justify-between items-start mb-2">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-2 gap-4">
                 <div>
                     <h1 className="text-3xl font-bold m-0 leading-tight">{productData.displayTitle}</h1>
                     <div className="flex flex-wrap items-center gap-2 mt-2 mb-4">
@@ -280,10 +332,54 @@ function ProductViewerContent({ initialProduct }) {
                         {!isClientMode && productData.isVisible === false && <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-[10px] font-black uppercase tracking-widest">⚠️ Unlisted Draft</span>}
                     </div>
                 </div>
-                <button onClick={shareProduct} className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-full transition-all shadow-sm text-sm font-bold shrink-0 mt-1 cursor-pointer outline-none">
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316M15 12a3 3 0 100 6 3 3 0 000-6zm0-6a3 3 0 100 6 3 3 0 000-6z"></path></svg>
-                    {copied ? "Copied!" : "Share"}
-                </button>
+
+                <div className="flex flex-wrap items-center gap-2 shrink-0 relative">
+                    <button onClick={shareProduct} className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-full transition-all shadow-sm text-sm font-bold cursor-pointer outline-none">
+                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316M15 12a3 3 0 100 6 3 3 0 000-6zm0-6a3 3 0 100 6 3 3 0 000-6z"></path></svg>
+                        {copied ? "Copied!" : "Share"}
+                    </button>
+
+                    {/* NEW: Save to Client Board Button (Pro Only) */}
+                    {!isClientMode && user && !user.isAnonymous && (
+                        <div className="relative">
+                            <button 
+                                onClick={() => setIsBoardsMenuOpen(!isBoardsMenuOpen)}
+                                className="flex items-center gap-2 px-4 py-2 bg-black hover:bg-gold text-white hover:text-black border border-transparent rounded-full transition-all shadow-sm text-sm font-bold cursor-pointer outline-none"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
+                                {boardSaveMessage ? "✓ Saved!" : "Save"}
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {isBoardsMenuOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setIsBoardsMenuOpen(false)}></div>
+                                    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-4 py-2 border-b border-gray-100 mb-2">Save to Client Board</h4>
+                                        {proBoards.length === 0 ? (
+                                            <div className="px-4 py-3 text-xs text-gray-500 italic">
+                                                No boards yet. Go to <Link href="/my-account" className="text-gold font-bold hover:underline" style={{textDecoration:'none'}}>My Account</Link> to create one!
+                                            </div>
+                                        ) : (
+                                            <div className="max-h-48 overflow-y-auto">
+                                                {proBoards.map(b => (
+                                                    <button 
+                                                        key={b.id} 
+                                                        onClick={() => handleSaveToBoard(b.id, b.name)}
+                                                        disabled={isSavingToBoard}
+                                                        className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm font-bold text-gray-800 transition-colors flex items-center gap-2"
+                                                    >
+                                                        <span className="text-gold">📁</span> {b.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
 
             <p className="text-[1.05rem] text-gray-500 mb-6 italic">{productData.desc || 'Premium flooring collection.'}</p>

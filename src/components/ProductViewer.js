@@ -30,7 +30,7 @@ function ProductViewerContent({ initialProduct }) {
     const [copied, setCopied] = useState(false);
     const [isMagicLink, setIsMagicLink] = useState(false);
 
-    // NEW: State for Client Boards
+    // State for Client Boards
     const [proBoards, setProBoards] = useState([]);
     const [isBoardsMenuOpen, setIsBoardsMenuOpen] = useState(false);
     const [isSavingToBoard, setIsSavingToBoard] = useState(false);
@@ -256,7 +256,7 @@ function ProductViewerContent({ initialProduct }) {
     const calcTotal = isCarpet ? (totalWithWaste / 9).toFixed(2) : Math.ceil(totalWithWaste / cartonSqft);
 
     return (
-        <div className="flex-1 max-w-[1400px] mx-auto px-4 py-10 w-full flex flex-col md:flex-row gap-10 relative">
+        <div className="flex-1 max-w-[1400px] mx-auto px-4 py-10 w-full flex flex-col lg:flex-row gap-10 relative">
           
           {/* Hide the exit button if they are a homeowner using a Magic Link */}
           {isClientMode && !isMagicLink && (
@@ -273,7 +273,8 @@ function ProductViewerContent({ initialProduct }) {
               </button>
           )}
 
-          <div className="flex-1 min-w-[350px] sticky top-24 self-start z-10">
+          {/* Changed to md:sticky so phones and tablets scroll naturally */}
+          <div className="flex-1 w-full lg:min-w-[450px] md:sticky md:top-24 self-start z-10">
             <div
                 className="w-full aspect-[4/3] rounded-lg bg-gray-50 border border-gray-200 overflow-hidden relative cursor-zoom-in group"
                 onClick={() => activeView !== 'VIDEO' && setIsLightboxOpen(true)}
@@ -314,8 +315,8 @@ function ProductViewerContent({ initialProduct }) {
             </div>
           </div>
 
-          <div className="flex-1 min-w-[320px]">
-            <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-2 gap-4">
+          <div className="flex-1 w-full lg:min-w-[400px]">
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start mb-2 gap-4">
                 <div>
                     <h1 className="text-3xl font-bold m-0 leading-tight">{productData.displayTitle}</h1>
                     <div className="flex flex-wrap items-center gap-2 mt-2 mb-4">
@@ -339,7 +340,7 @@ function ProductViewerContent({ initialProduct }) {
                         {copied ? "Copied!" : "Share"}
                     </button>
 
-                    {/* NEW: Save to Client Board Button (Pro Only) */}
+                    {/* Save to Client Board Button (Pro Only) */}
                     {!isClientMode && user && !user.isAnonymous && (
                         <div className="relative">
                             <button 
