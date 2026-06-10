@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { auth, db, appId } from "../../../lib/firebase";
 
-export default function ClientBoardPage() {
-    const params = useParams();
-    const slug = params?.slug;
+export default function ClientBoardPage({ params }) {
+    // Safely unwrap the URL parameters for Next.js
+    const unwrappedParams = use(params);
+    const slug = unwrappedParams.slug;
 
     const [board, setBoard] = useState(null);
     const [proProfile, setProProfile] = useState(null);
@@ -35,7 +35,7 @@ export default function ClientBoardPage() {
                 const boardData = boardDoc.data();
                 if (isMounted) setBoard(boardData);
 
-                // 2. Fetch the Pro's Profile (as a fallback)
+                // 2. Fetch the Pro's Profile (for Margin and Business Name)
                 if (boardData.proId) {
                     const proRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', boardData.proId);
                     const proSnap = await getDoc(proRef);
@@ -103,7 +103,6 @@ export default function ClientBoardPage() {
         );
     }
 
-    // NEW FIX: Prioritize the board's locked margin/name. If it's an old board that doesn't have it, fallback to the live profile.
     const businessName = board?.businessName || proProfile?.business || "Your Flooring Professional";
     const margin = board?.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
     
@@ -134,7 +133,8 @@ export default function ClientBoardPage() {
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                         {products.map(p => {
-                            // Calculate the retail price using the LOCKED margin
+                            // Calculate proper display title!
+                            const displayTitle = (p.usePrivateName && p.privateName) ? p.privateName : (p.name || 'Unnamed Product');
                             const finalPrice = (p.price * (1 + margin / 100)).toFixed(2);
                             
                             const safeDesc = p.desc || 'Premium flooring collection.';
@@ -170,7 +170,7 @@ export default function ClientBoardPage() {
                                                 <span>{p.category}</span>
                                             </div>
                                             <h3 className="text-xl font-black text-gray-900 leading-tight">
-                                                <Link href={productLink} style={{ textDecoration: 'none', color: 'inherit' }}>{p.displayTitle}</Link>
+                                                <Link href={productLink} style={{ textDecoration: 'none', color: 'inherit' }}>{displayTitle}</Link>
                                             </h3>
                                             <p className="text-gray-500 text-sm line-clamp-2 mt-2">{safeDesc}</p>
                                         </div>
