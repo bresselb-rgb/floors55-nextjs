@@ -110,7 +110,8 @@ export default function MyAccountPage() {
 
     const copyClientLink = () => {
         const encodedMargin = btoa(formData.clientMargin.toString());
-        const link = `${window.location.origin}/category?cm=${encodedMargin}`;
+        const encodedBrand = btoa(formData.business || 'Premium Flooring Portal'); // White-label name
+        const link = `${window.location.origin}/category?cm=${encodedMargin}&cb=${encodedBrand}`;
         navigator.clipboard.writeText(link);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -118,10 +119,12 @@ export default function MyAccountPage() {
 
     const activateClientModeLocal = () => {
         sessionStorage.setItem('client_margin', formData.clientMargin);
-        router.push('/category');
+        // FIX: Always set a brand, even if the business name input is blank!
+        sessionStorage.setItem('client_brand', formData.business || 'Premium Flooring Portal');
+        // We force a hard reload here to instantly refresh the Header and Footer branding!
+        window.location.href = '/category';
     };
 
-    // Mathematically convert Markup to Gross Profit Margin
     const grossMarginPct = ((formData.clientMargin / 100) / (1 + formData.clientMargin / 100) * 100).toFixed(1);
 
     if (isLoading) {
@@ -214,7 +217,6 @@ export default function MyAccountPage() {
                                 onTouchEnd={handleSaveMargin}
                                 className="w-full accent-gold cursor-pointer"
                             />
-                            {/* NEW: True Margin Calculator display */}
                             <div className="text-right text-[10px] text-gray-400 font-bold mt-3">
                                 That's a <span className="text-white bg-gray-700 px-1.5 py-0.5 rounded">{grossMarginPct}%</span> Gross Profit Margin
                             </div>
