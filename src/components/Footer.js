@@ -1,25 +1,39 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+
+let usePathname = () => '';
+
+try {
+    const nextNav = 'next/navigation';
+    const nav = require(nextNav);
+    usePathname = nav.usePathname;
+} catch (e) {
+    usePathname = () => typeof window !== 'undefined' ? window.location.pathname : '';
+}
 
 export default function Footer() {
-  const [clientBrand, setClientBrand] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('client_brand') : null);
-  const [clientLogo, setClientLogo] = useState(() => {
-      if (typeof window !== 'undefined') {
-          const logo = sessionStorage.getItem('client_logo');
-          return (logo && logo !== "undefined" && logo !== "null") ? logo : null;
-      }
-      return null;
-  });
-  const [brandBg, setBrandBg] = useState(() => typeof window !== 'undefined' ? (sessionStorage.getItem('client_bg') || '#ffffff') : '#ffffff');
-  const [brandText, setBrandText] = useState(() => typeof window !== 'undefined' ? (sessionStorage.getItem('client_text') || '#000000') : '#000000');
+  const [clientBrand, setClientBrand] = useState(null);
+  const [clientLogo, setClientLogo] = useState(null);
+  const [brandBg, setBrandBg] = useState('#ffffff');
+  const [brandText, setBrandText] = useState('#000000');
+  
+  // FIX: Supress default footer rendering instantly if the URL is a magic link
+  const [isProcessingMagicLink, setIsProcessingMagicLink] = useState(true);
 
   const pathname = usePathname();
 
-  // Watch pathname so custom branding stays applied as the user clicks between pages!
   useEffect(() => {
       if (typeof window !== 'undefined') {
+          const search = window.location.search;
+          
+          // If the URL has pro tags, keep the footer hidden until the redirect runs!
+          if (search.includes('pro=') || search.includes('cb=')) {
+              setIsProcessingMagicLink(true);
+              return;
+          }
+
+          setIsProcessingMagicLink(false);
           setClientBrand(sessionStorage.getItem('client_brand'));
           const logo = sessionStorage.getItem('client_logo');
           if (logo && logo !== "undefined" && logo !== "null") setClientLogo(logo);
@@ -29,12 +43,13 @@ export default function Footer() {
       }
   }, [pathname]);
 
-  // Completely hide the footer on white-labeled Client Presentation boards
   if (pathname && pathname.startsWith('/client/')) return null;
+  
+  // FIX: Intercept rendering entirely to prevent the brief branding flash
+  if (isProcessingMagicLink) return null;
 
   return (
-    // Added suppressHydrationWarning here as well!
-    <footer suppressHydrationWarning className="py-16 shrink-0 mt-auto transition-colors duration-300" style={clientBrand ? { backgroundColor: brandBg, color: brandText } : { backgroundColor: '#000000', color: '#ffffff' }}>
+    <footer className="py-16 shrink-0 mt-auto transition-colors duration-300" style={clientBrand ? { backgroundColor: brandBg, color: brandText } : { backgroundColor: '#000000', color: '#ffffff' }}>
         <div className="max-w-7xl mx-auto px-4 text-center md:text-left">
             <div className="flex flex-col md:flex-row justify-between items-center border-b pb-12 mb-12" style={{ borderColor: clientBrand ? `${brandText}20` : '#1f2937' }}>
                 <div className="flex items-baseline justify-center md:justify-start gap-2">

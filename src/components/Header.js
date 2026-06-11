@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, signInAnonymously, sendPasswordResetEmail } from "firebase/auth";
 import { collection, onSnapshot } from "firebase/firestore";
 
-// Dynamic fallback for build environments and sandbox previews
 let Link;
 let usePathname = () => '';
 let useRouter = () => ({ push: () => {} });
@@ -44,24 +43,28 @@ export default function Header() {
   const [loginError, setLoginError] = useState('');
   const [resetMessage, setResetMessage] = useState('');
   
-  // Synchronous initialization to prevent flashing!
-  const [clientBrand, setClientBrand] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('client_brand') : null);
-  const [clientLogo, setClientLogo] = useState(() => {
-      if (typeof window !== 'undefined') {
-          const logo = sessionStorage.getItem('client_logo');
-          return (logo && logo !== "undefined" && logo !== "null") ? logo : null;
-      }
-      return null;
-  });
-  const [brandBg, setBrandBg] = useState(() => typeof window !== 'undefined' ? (sessionStorage.getItem('client_bg') || '#ffffff') : '#ffffff');
-  const [brandText, setBrandText] = useState(() => typeof window !== 'undefined' ? (sessionStorage.getItem('client_text') || '#000000') : '#000000');
+  const [clientBrand, setClientBrand] = useState(null);
+  const [clientLogo, setClientLogo] = useState(null);
+  const [brandBg, setBrandBg] = useState('#ffffff');
+  const [brandText, setBrandText] = useState('#000000');
+  
+  // FIX: Supress default header rendering instantly if the URL is a magic link
+  const [isProcessingMagicLink, setIsProcessingMagicLink] = useState(true);
 
   const pathname = usePathname();
   const router = useRouter();
 
-  // Watch pathname so custom branding stays applied as the user clicks between pages!
   useEffect(() => {
     if (typeof window !== 'undefined') {
+        const search = window.location.search;
+        
+        // If the URL has pro tags, keep the header hidden until the redirect runs!
+        if (search.includes('pro=') || search.includes('cb=')) {
+            setIsProcessingMagicLink(true);
+            return;
+        }
+
+        setIsProcessingMagicLink(false);
         setClientBrand(sessionStorage.getItem('client_brand'));
         const logo = sessionStorage.getItem('client_logo');
         if (logo && logo !== "undefined" && logo !== "null") setClientLogo(logo);
@@ -163,17 +166,16 @@ export default function Header() {
     try { await signOut(auth); window.location.href = '/'; } catch (err) {}
   };
 
-  const closeMenu = () => {
-    setIsMobileMenuOpen(false);
-  };
+  const closeMenu = () => setIsMobileMenuOpen(false);
 
-  // Completely hide the header on white-labeled Client Presentation boards
   if (pathname && pathname.startsWith('/client/')) return null;
+  
+  // FIX: Intercept rendering entirely to prevent the brief branding flash
+  if (isProcessingMagicLink) return null; 
 
   return (
     <>
-      {/* Added suppressHydrationWarning so Next.js doesn't complain about our instant client branding update */}
-      <nav suppressHydrationWarning className="sticky top-0 z-50 shadow-sm transition-colors duration-300" style={clientBrand ? { backgroundColor: brandBg, color: brandText, borderBottom: `1px solid ${brandText}20` } : { backgroundColor: '#ffffff', borderBottom: '1px solid #f3f4f6' }}>
+      <nav className="sticky top-0 z-50 shadow-sm transition-colors duration-300" style={clientBrand ? { backgroundColor: brandBg, color: brandText, borderBottom: `1px solid ${brandText}20` } : { backgroundColor: '#ffffff', borderBottom: '1px solid #f3f4f6' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             
@@ -323,7 +325,6 @@ export default function Header() {
         )}
       </nav>
 
-      {}
       {isLoginModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center px-4 transition-opacity">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">

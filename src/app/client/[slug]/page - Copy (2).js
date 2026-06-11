@@ -105,6 +105,9 @@ export default function ClientBoardPage({ params }) {
 
     const businessName = board?.businessName || proProfile?.business || "Your Flooring Professional";
     const margin = board?.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
+    const logoUrl = board?.logoUrl || proProfile?.logoUrl || "";
+    const brandBgColor = board?.brandBgColor || proProfile?.brandBgColor || "#ffffff";
+    const brandTextColor = board?.brandTextColor || proProfile?.brandTextColor || "#000000";
     
     // Encode state to pass to product page via URL
     let cmToken = '';
@@ -117,9 +120,13 @@ export default function ClientBoardPage({ params }) {
     return (
         <div className="min-h-screen bg-gray-50 font-sans flex flex-col">
             {/* Custom White-Labeled Header */}
-            <header className="bg-white border-b border-gray-200 py-6 px-6 text-center shadow-sm">
-                <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-gray-900 leading-none">{businessName}</h1>
-                <p className="text-red-600 text-[10px] md:text-xs font-black italic tracking-widest uppercase mt-1">Curated Project Presentation</p>
+            <header className="border-b border-gray-200 py-6 px-6 text-center shadow-sm" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
+                {logoUrl ? (
+                    <img src={logoUrl} alt={businessName} className="h-16 md:h-20 w-auto mx-auto object-contain" />
+                ) : (
+                    <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none">{businessName}</h1>
+                )}
+                <p className="text-[10px] md:text-xs font-black italic tracking-widest uppercase mt-2 opacity-80">Curated Project Presentation</p>
             </header>
 
             <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
@@ -180,7 +187,7 @@ export default function ClientBoardPage({ params }) {
                                                 <span className="text-xs text-gray-400 uppercase font-black tracking-wider">Project Price</span>
                                                 <span className="text-xl font-black text-gray-900 font-mono">${finalPrice} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
                                             </div>
-                                            <Link href={productLink} className="w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-3 rounded-xl transition text-xs tracking-widest" style={{ textDecoration: 'none' }}>
+                                            <Link href={productLink} className="w-full block text-center hover:bg-gold hover:text-black font-black uppercase py-3 rounded-xl transition text-xs tracking-widest" style={{ textDecoration: 'none', backgroundColor: brandBgColor, color: brandTextColor, border: `1px solid ${brandTextColor}` }}>
                                                 View Details & Photos
                                             </Link>
                                         </div>
@@ -192,8 +199,11 @@ export default function ClientBoardPage({ params }) {
                 )}
             </main>
 
-            <footer className="bg-black text-white py-12 text-center mt-auto">
-                <p className="text-gray-400 text-xs uppercase tracking-widest font-bold">
+            <footer className="py-12 text-center mt-auto border-t border-gray-200" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
+                {logoUrl && (
+                    <img src={logoUrl} alt={businessName} className="h-12 w-auto mx-auto object-contain mb-4 opacity-80" style={{ filter: brandBgColor.toLowerCase() === '#ffffff' ? 'none' : 'brightness(0) invert(1) opacity(0.8)' }} />
+                )}
+                <p className="text-xs uppercase tracking-widest font-bold opacity-80">
                     © {new Date().getFullYear()} {businessName}. All Rights Reserved.
                 </p>
             </footer>

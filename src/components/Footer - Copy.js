@@ -4,28 +4,37 @@ import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
 export default function Footer() {
-  const [clientBrand, setClientBrand] = useState(null);
-  const [clientLogo, setClientLogo] = useState(null);
-  const [brandBg, setBrandBg] = useState('#ffffff');
-  const [brandText, setBrandText] = useState('#000000');
+  const [clientBrand, setClientBrand] = useState(() => typeof window !== 'undefined' ? sessionStorage.getItem('client_brand') : null);
+  const [clientLogo, setClientLogo] = useState(() => {
+      if (typeof window !== 'undefined') {
+          const logo = sessionStorage.getItem('client_logo');
+          return (logo && logo !== "undefined" && logo !== "null") ? logo : null;
+      }
+      return null;
+  });
+  const [brandBg, setBrandBg] = useState(() => typeof window !== 'undefined' ? (sessionStorage.getItem('client_bg') || '#ffffff') : '#ffffff');
+  const [brandText, setBrandText] = useState(() => typeof window !== 'undefined' ? (sessionStorage.getItem('client_text') || '#000000') : '#000000');
 
   const pathname = usePathname();
 
+  // Watch pathname so custom branding stays applied as the user clicks between pages!
   useEffect(() => {
       if (typeof window !== 'undefined') {
           setClientBrand(sessionStorage.getItem('client_brand'));
           const logo = sessionStorage.getItem('client_logo');
           if (logo && logo !== "undefined" && logo !== "null") setClientLogo(logo);
+          else setClientLogo(null);
           setBrandBg(sessionStorage.getItem('client_bg') || '#ffffff');
           setBrandText(sessionStorage.getItem('client_text') || '#000000');
       }
-  }, []);
+  }, [pathname]);
 
   // Completely hide the footer on white-labeled Client Presentation boards
   if (pathname && pathname.startsWith('/client/')) return null;
 
   return (
-    <footer className="py-16 shrink-0 mt-auto transition-colors duration-300" style={clientBrand ? { backgroundColor: brandBg, color: brandText } : { backgroundColor: '#000000', color: '#ffffff' }}>
+    // Added suppressHydrationWarning here as well!
+    <footer suppressHydrationWarning className="py-16 shrink-0 mt-auto transition-colors duration-300" style={clientBrand ? { backgroundColor: brandBg, color: brandText } : { backgroundColor: '#000000', color: '#ffffff' }}>
         <div className="max-w-7xl mx-auto px-4 text-center md:text-left">
             <div className="flex flex-col md:flex-row justify-between items-center border-b pb-12 mb-12" style={{ borderColor: clientBrand ? `${brandText}20` : '#1f2937' }}>
                 <div className="flex items-baseline justify-center md:justify-start gap-2">
