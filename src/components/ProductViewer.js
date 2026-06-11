@@ -394,7 +394,10 @@ function ProductViewerContent({ initialProduct }) {
     const renderColorSwatches = (isDesktop) => (
         <div className={`${isDesktop ? 'hidden lg:block my-6' : 'block lg:hidden mt-8'}`}>
             <h2 className="text-xl font-bold mb-4">Select a Color: {activeColor?.name}</h2>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(85px,1fr))] gap-3 mb-6">
+            <div className={isDesktop 
+                ? "grid grid-cols-[repeat(auto-fill,minmax(85px,1fr))] gap-3 mb-6" 
+                : "flex overflow-x-auto gap-3 pb-4 snap-x snap-mandatory scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            }>
                 {productData.colors?.map(c => {
                     const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
                     const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -408,7 +411,7 @@ function ProductViewerContent({ initialProduct }) {
                     const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
 
                     return (
-                        <div key={c.sku} className="cursor-pointer text-center group" onClick={() => {
+                        <div key={c.sku} className={`cursor-pointer text-center group ${isDesktop ? '' : 'shrink-0 w-[90px] snap-start'}`} onClick={() => {
                             router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
                             setActiveColor(c);
                         }}>
