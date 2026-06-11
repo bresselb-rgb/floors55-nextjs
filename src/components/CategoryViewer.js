@@ -56,7 +56,11 @@ function CategoryViewerContent({ initialCategory }) {
                             if (cmParam) {
                                 const decoded = parseInt(atob(cmParam), 10);
                                 if (!isNaN(decoded)) sessionStorage.setItem('client_margin', decoded);
+                            } else if (pData.clientMargin !== undefined) {
+                                // Robust Fallback: If URL doesn't have &cm, use the Pro's database default!
+                                sessionStorage.setItem('client_margin', pData.clientMargin);
                             }
+                            
                             sessionStorage.setItem('magic_link_client', 'true');
                             window.location.replace(window.location.pathname);
                         }

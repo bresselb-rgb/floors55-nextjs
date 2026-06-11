@@ -1,35 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc } from "firebase/firestore";
-
-// Dynamic fallback for build environments and sandbox previews
-let Link;
-let useRouter = () => ({ push: () => {}, replace: () => {} });
-let useSearchParams = () => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-let auth, db, appId;
-
-try {
-    const nextLink = 'next/link';
-    Link = require(nextLink).default || require(nextLink);
-    const nextNav = 'next/navigation';
-    const nav = require(nextNav);
-    useRouter = nav.useRouter;
-    useSearchParams = nav.useSearchParams;
-} catch (e) {
-    Link = ({ href, children, className, style, onClick }) => <a href={href} className={className} style={style} onClick={onClick}>{children}</a>;
-}
-
-try {
-    const fbPath = '../lib/firebase';
-    const fb = require(fbPath);
-    auth = fb.auth;
-    db = fb.db;
-    appId = fb.appId;
-} catch (e) {
-    console.warn("Firebase lib not found in current environment context.");
-}
+import { auth, db, appId } from "../lib/firebase";
 
 function ProductViewerContent({ initialProduct }) {
     const router = useRouter();
@@ -53,9 +29,6 @@ function ProductViewerContent({ initialProduct }) {
     const [clientMargin, setClientMargin] = useState(null);
     const [copied, setCopied] = useState(false);
     const [isMagicLink, setIsMagicLink] = useState(false);
-    
-    // NEW: State to manage the visibility of the toast notification
-    const [showToast, setShowToast] = useState(false);
 
     const [proBoards, setProBoards] = useState([]);
     const [isBoardsMenuOpen, setIsBoardsMenuOpen] = useState(false);
@@ -73,7 +46,6 @@ function ProductViewerContent({ initialProduct }) {
             if (proParam) {
                 const fetchProBranding = async () => {
                     try {
-                        if (!db) return;
                         const proDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', proParam));
                         if (proDoc.exists()) {
                             const pData = proDoc.data();
@@ -87,7 +59,11 @@ function ProductViewerContent({ initialProduct }) {
                             if (cmParam) {
                                 const decoded = parseInt(atob(cmParam), 10);
                                 if (!isNaN(decoded)) sessionStorage.setItem('client_margin', decoded);
+                            } else if (pData.clientMargin !== undefined) {
+                                // Robust Fallback: If URL doesn't have &cm, use the Pro's database default!
+                                sessionStorage.setItem('client_margin', pData.clientMargin);
                             }
+                            
                             sessionStorage.setItem('magic_link_client', 'true');
                             
                             const colorParam = urlColorSku ? `?color=${urlColorSku}` : '';
@@ -133,8 +109,6 @@ function ProductViewerContent({ initialProduct }) {
 
     useEffect(() => {
         let isMounted = true;
-        if (!auth) return;
-
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (isMounted) setUser(currentUser);
         });
@@ -154,7 +128,6 @@ function ProductViewerContent({ initialProduct }) {
     }, []);
 
     useEffect(() => {
-        if (!db) return;
         const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', initialProduct.id), (docSnap) => {
             if (docSnap.exists()) {
                 const dbData = docSnap.data();
@@ -183,7 +156,6 @@ function ProductViewerContent({ initialProduct }) {
     }, [urlColorSku, productData, activeColor]);
 
     useEffect(() => {
-        if (!db) return;
         if (user && !user.isAnonymous) {
             const fetchBoards = async () => {
                 try {
@@ -253,46 +225,16 @@ function ProductViewerContent({ initialProduct }) {
             }
         }
 
-        const triggerToast = () => {
-            setCopied(true);
-            setShowToast(true);
-            setTimeout(() => {
-                setCopied(false);
-                setShowToast(false);
-            }, 3000); // Hide toast after 3 seconds
-        };
-
         if (navigator.share) {
             navigator.share({ title: `${productData.displayTitle}`, url }).catch(console.error);
         } else {
-            // Modern Async Clipboard API
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(url).then(triggerToast).catch(err => {
-                    console.error('Failed to copy: ', err);
-                });
-            } else {
-                // Fallback for older browsers or HTTP (local dev)
-                const textArea = document.createElement("textarea");
-                textArea.value = url;
-                textArea.style.position = "fixed";
-                textArea.style.left = "-999999px";
-                textArea.style.top = "-999999px";
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    triggerToast();
-                } catch (err) {
-                    console.error('Fallback copy failed', err);
-                }
-                document.body.removeChild(textArea);
-            }
+            navigator.clipboard.writeText(url);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
         }
     };
 
     const handleSaveToBoard = async (boardId, boardName) => {
-        if (!db) return;
         setIsSavingToBoard(true);
         try {
             const productToSave = {
@@ -657,12 +599,6 @@ function ProductViewerContent({ initialProduct }) {
                   </div>
               </div>
           )}
-
-          {/* NEW: Toast Notification Element */}
-          <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-              <span className="font-black text-gold">✓</span>
-              <p className="font-bold text-xs uppercase tracking-widest m-0">Link Copied</p>
-          </div>
         </div>
     );
 }

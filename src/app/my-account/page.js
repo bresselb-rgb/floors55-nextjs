@@ -118,17 +118,19 @@ export default function MyAccountPage() {
         }, 3000);
     };
 
+    // Dynamically calculate the magic link so it always respects the current slider!
+    const encodedMargin = btoa((profile.clientMargin !== undefined ? profile.clientMargin : 20).toString());
+    const portalLink = user ? `${typeof window !== 'undefined' ? window.location.origin : ''}/category?pro=${user.uid}&cm=${encodedMargin}` : '';
+
     const copyMagicLink = () => {
-        const url = `${window.location.origin}/category?pro=${user?.uid}`;
-        
         if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(url).then(triggerToast).catch(err => {
+            navigator.clipboard.writeText(portalLink).then(triggerToast).catch(err => {
                 console.error('Failed to copy: ', err);
             });
         } else {
             // Fallback
             const textArea = document.createElement("textarea");
-            textArea.value = url;
+            textArea.value = portalLink;
             textArea.style.position = "fixed";
             textArea.style.left = "-999999px";
             textArea.style.top = "-999999px";
@@ -185,7 +187,7 @@ export default function MyAccountPage() {
                     </div>
                 </div>
 
-                {}
+                {/* Business Profile Settings */}
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-black"></div>
                     <h2 className="text-xl font-black mb-6 uppercase tracking-tight">Business Profile</h2>
@@ -218,7 +220,7 @@ export default function MyAccountPage() {
                     </button>
                 </div>
 
-                {}
+                {/* White-Label Branding */}
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-gold"></div>
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
@@ -270,14 +272,12 @@ export default function MyAccountPage() {
                     </button>
                 </div>
 
-                {}
+                {/* Client Pricing Command Center */}
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-100 pb-6 gap-4">
                         <div>
-                            <div className="flex items-center gap-3 mb-1">
-                                <h2 className="text-xl font-black uppercase tracking-tight">Client Pricing</h2>
-                            </div>
-                            <p className="text-sm text-gray-500 max-w-md">Set the markup percentage applied to wholesale prices when presenting catalog items to your clients.</p>
+                            <h2 className="text-xl font-black uppercase tracking-tight">Client Pricing</h2>
+                            <p className="text-sm text-gray-500 mt-1 max-w-md">Set the markup percentage applied to wholesale prices when presenting catalog items to your clients.</p>
                         </div>
                         <div className="text-left md:text-right shrink-0 bg-gray-50 p-4 rounded-xl border border-gray-200 min-w-[200px]">
                             <div className="text-3xl font-black text-gold leading-none">{markupVal}% <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Markup</span></div>
@@ -285,13 +285,7 @@ export default function MyAccountPage() {
                         </div>
                     </div>
                     
-                    <input 
-                        type="range" 
-                        min="0" max="100" step="5" 
-                        value={profile.clientMargin} 
-                        onChange={e => setProfile({...profile, clientMargin: e.target.value})} 
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black mb-8" 
-                    />
+                    <input type="range" min="0" max="100" step="5" value={profile.clientMargin} onChange={e => setProfile({...profile, clientMargin: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black mb-8" />
                     
                     <div className="flex gap-4 mb-8">
                         <button onClick={handleSave} disabled={isSaving} className="flex-1 bg-black text-white px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors">
@@ -301,14 +295,14 @@ export default function MyAccountPage() {
                             Preview Portal
                         </button>
                     </div>
-                    
+
                     {/* The Portal Link Box */}
                     <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
                         <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Your Custom Portal Link</h3>
                         <p className="text-xs text-gray-500 mb-4">Share this link directly with your clients. It will automatically load the entire catalog securely masked with your logo, colors, and your custom client pricing margin.</p>
                         
                         <div className="flex flex-col md:flex-row gap-3">
-                            <input type="text" readOnly value={user ? `${typeof window !== 'undefined' ? window.location.origin : ''}/category?pro=${user.uid}` : ''} className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-mono text-gray-600 outline-none" />
+                            <input type="text" readOnly value={portalLink} className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-mono text-gray-600 outline-none" />
                             <button onClick={copyMagicLink} className="bg-gold hover:bg-black text-black hover:text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap">
                                 Copy Link
                             </button>
@@ -321,7 +315,7 @@ export default function MyAccountPage() {
 
             </div>
 
-            {}
+            {/* Toast Notification */}
             <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
                 <span className="font-black text-gold">✓</span>
                 <p className="font-bold text-xs uppercase tracking-widest m-0">Link Copied</p>
