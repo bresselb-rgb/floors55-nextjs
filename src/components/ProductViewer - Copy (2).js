@@ -1,35 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc } from "firebase/firestore";
-
-// Dynamic fallback for build environments and sandbox previews
-let Link;
-let useRouter = () => ({ push: () => {}, replace: () => {} });
-let useSearchParams = () => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-let auth, db, appId;
-
-try {
-    const nextLink = 'next/link';
-    Link = require(nextLink).default || require(nextLink);
-    const nextNav = 'next/navigation';
-    const nav = require(nextNav);
-    useRouter = nav.useRouter;
-    useSearchParams = nav.useSearchParams;
-} catch (e) {
-    Link = ({ href, children, className, style, onClick }) => <a href={href} className={className} style={style} onClick={onClick}>{children}</a>;
-}
-
-try {
-    const fbPath = '../lib/firebase';
-    const fb = require(fbPath);
-    auth = fb.auth;
-    db = fb.db;
-    appId = fb.appId;
-} catch (e) {
-    console.warn("Firebase lib not found in current environment context.");
-}
+import { auth, db, appId } from "../lib/firebase";
 
 function ProductViewerContent({ initialProduct }) {
     const router = useRouter();
@@ -70,7 +46,6 @@ function ProductViewerContent({ initialProduct }) {
             if (proParam) {
                 const fetchProBranding = async () => {
                     try {
-                        if (!db) return;
                         const proDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', proParam));
                         if (proDoc.exists()) {
                             const pData = proDoc.data();
@@ -130,8 +105,6 @@ function ProductViewerContent({ initialProduct }) {
 
     useEffect(() => {
         let isMounted = true;
-        if (!auth) return;
-
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (isMounted) setUser(currentUser);
         });
@@ -151,7 +124,6 @@ function ProductViewerContent({ initialProduct }) {
     }, []);
 
     useEffect(() => {
-        if (!db) return;
         const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', initialProduct.id), (docSnap) => {
             if (docSnap.exists()) {
                 const dbData = docSnap.data();
@@ -180,7 +152,6 @@ function ProductViewerContent({ initialProduct }) {
     }, [urlColorSku, productData, activeColor]);
 
     useEffect(() => {
-        if (!db) return;
         if (user && !user.isAnonymous) {
             const fetchBoards = async () => {
                 try {
@@ -260,7 +231,6 @@ function ProductViewerContent({ initialProduct }) {
     };
 
     const handleSaveToBoard = async (boardId, boardName) => {
-        if (!db) return;
         setIsSavingToBoard(true);
         try {
             const productToSave = {
@@ -278,7 +248,7 @@ function ProductViewerContent({ initialProduct }) {
                 products: arrayUnion(productToSave)
             });
             
-            setBoardSaveMessage(`Saved to ${boardName}`);
+            setBoardSaveMessage(`Saved to ${boardName}!`);
             setIsBoardsMenuOpen(false);
             setTimeout(() => setBoardSaveMessage(''), 3000);
         } catch (err) {
@@ -341,6 +311,7 @@ function ProductViewerContent({ initialProduct }) {
                 </div>
             </div>
 
+            {/* Changed from z-50 to z-20 so it does not overlap the site Header's mobile menu */}
             <div className="flex flex-wrap items-center gap-2 shrink-0 relative z-20">
                 <button onClick={shareProduct} className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-full transition-all shadow-sm text-sm font-bold shrink-0 cursor-pointer outline-none">
                     <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316M15 12a3 3 0 100 6 3 3 0 000-6zm0-6a3 3 0 100 6 3 3 0 000-6z"></path></svg>
@@ -390,42 +361,6 @@ function ProductViewerContent({ initialProduct }) {
         </div>
     );
 
-    // Reusable Color Swatches Block (Displays on Left for Mobile, Right for Desktop)
-    const renderColorSwatches = (isDesktop) => (
-        <div className={`${isDesktop ? 'hidden lg:block my-6' : 'block lg:hidden mt-8'}`}>
-            <h2 className="text-xl font-bold mb-4">Select a Color: {activeColor?.name}</h2>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(85px,1fr))] gap-3 mb-6">
-                {productData.colors?.map(c => {
-                    const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
-                    const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    let folderName = 'images';
-                    if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-                    else if (safeName) folderName = safeName;
-                    folderName = folderName.replace(/-+$/, '');
-
-                    const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${c.sku}_${swatchType}.jpg`.toLowerCase();
-                    const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
-
-                    return (
-                        <div key={c.sku} className="cursor-pointer text-center group" onClick={() => {
-                            router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
-                            setActiveColor(c);
-                        }}>
-                            <img 
-                                src={fbPath} 
-                                onError={(e) => e.target.src = TBD_IMG} 
-                                className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} 
-                                alt={c.name} 
-                            />
-                            <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
-
     return (
         <div className="flex-1 max-w-[1400px] mx-auto px-4 py-10 w-full flex flex-col lg:flex-row gap-10 relative">
           
@@ -450,7 +385,7 @@ function ProductViewerContent({ initialProduct }) {
           {/* MOBILE TITLE BLOCK (Hidden on Desktop) */}
           {renderTitleBlock(false)}
 
-          {/* LEFT COLUMN: IMAGE VIEWER & MOBILE SWATCHES */}
+          {/* LEFT COLUMN: IMAGE VIEWER & SWATCHES */}
           <div className="flex-1 w-full lg:min-w-[450px] lg:sticky lg:top-24 self-start z-10">
             <div
                 className="w-full aspect-[4/3] rounded-lg bg-gray-50 border border-gray-200 overflow-hidden relative cursor-zoom-in group"
@@ -491,8 +426,39 @@ function ProductViewerContent({ initialProduct }) {
                 <Link href={`/order-sample?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
             </div>
 
-            {/* COLOR SWATCHES - Displays only on Mobile/Tablet */}
-            {renderColorSwatches(false)}
+            {/* COLOR SWATCHES - Moved underneath the action buttons */}
+            <div className="mt-8">
+                <h2 className="text-xl font-bold mb-4">Select a Color: {activeColor?.name}</h2>
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(85px,1fr))] gap-3 mb-6">
+                    {productData.colors?.map(c => {
+                        const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
+                        const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                        const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                        let folderName = 'images';
+                        if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                        else if (safeName) folderName = safeName;
+                        folderName = folderName.replace(/-+$/, '');
+
+                        const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${c.sku}_${swatchType}.jpg`.toLowerCase();
+                        const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+
+                        return (
+                            <div key={c.sku} className="cursor-pointer text-center group" onClick={() => {
+                                router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
+                                setActiveColor(c);
+                            }}>
+                                <img 
+                                    src={fbPath} 
+                                    onError={(e) => e.target.src = TBD_IMG} 
+                                    className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} 
+                                    alt={c.name} 
+                                />
+                                <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
 
           </div>
 
@@ -542,9 +508,6 @@ function ProductViewerContent({ initialProduct }) {
                     </>
                 )}
             </div>
-
-            {/* COLOR SWATCHES - Displays only on Desktop */}
-            {renderColorSwatches(true)}
 
             {productData.specs && productData.specs.length > 0 && (
                 <div className="bg-gray-50 p-6 rounded-lg mt-8 border border-gray-200">
