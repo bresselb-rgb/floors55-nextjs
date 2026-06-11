@@ -53,6 +53,9 @@ function ProductViewerContent({ initialProduct }) {
     const [clientMargin, setClientMargin] = useState(null);
     const [copied, setCopied] = useState(false);
     const [isMagicLink, setIsMagicLink] = useState(false);
+    
+    // NEW: State to manage the visibility of the toast notification
+    const [showToast, setShowToast] = useState(false);
 
     const [proBoards, setProBoards] = useState([]);
     const [isBoardsMenuOpen, setIsBoardsMenuOpen] = useState(false);
@@ -250,12 +253,41 @@ function ProductViewerContent({ initialProduct }) {
             }
         }
 
+        const triggerToast = () => {
+            setCopied(true);
+            setShowToast(true);
+            setTimeout(() => {
+                setCopied(false);
+                setShowToast(false);
+            }, 3000); // Hide toast after 3 seconds
+        };
+
         if (navigator.share) {
             navigator.share({ title: `${productData.displayTitle}`, url }).catch(console.error);
         } else {
-            navigator.clipboard.writeText(url);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+            // Modern Async Clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(url).then(triggerToast).catch(err => {
+                    console.error('Failed to copy: ', err);
+                });
+            } else {
+                // Fallback for older browsers or HTTP (local dev)
+                const textArea = document.createElement("textarea");
+                textArea.value = url;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                textArea.style.top = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    triggerToast();
+                } catch (err) {
+                    console.error('Fallback copy failed', err);
+                }
+                document.body.removeChild(textArea);
+            }
         }
     };
 
@@ -625,6 +657,12 @@ function ProductViewerContent({ initialProduct }) {
                   </div>
               </div>
           )}
+
+          {/* NEW: Toast Notification Element */}
+          <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+              <span className="font-black text-gold">✓</span>
+              <p className="font-bold text-xs uppercase tracking-widest m-0">Link Copied</p>
+          </div>
         </div>
     );
 }
