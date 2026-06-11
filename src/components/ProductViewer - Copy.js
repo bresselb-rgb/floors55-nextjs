@@ -393,10 +393,17 @@ function ProductViewerContent({ initialProduct }) {
     // Reusable Color Swatches Block (Displays on Left for Mobile, Right for Desktop)
     const renderColorSwatches = (isDesktop) => (
         <div className={`${isDesktop ? 'hidden lg:block my-6' : 'block lg:hidden mt-8'}`}>
-            <h2 className="text-xl font-bold mb-4">Select a Color: {activeColor?.name}</h2>
+            <div className="flex justify-between items-end mb-4 pr-2">
+                <h2 className="text-xl font-bold">Select a Color: {activeColor?.name}</h2>
+                {!isDesktop && (productData.colors?.length > 3) && (
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1 animate-pulse">
+                        Swipe <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                    </span>
+                )}
+            </div>
             <div className={isDesktop 
                 ? "grid grid-cols-[repeat(auto-fill,minmax(85px,1fr))] gap-3 mb-6" 
-                : "flex overflow-x-auto gap-3 pb-4 snap-x snap-mandatory scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                : "flex overflow-x-auto gap-3 pb-4 snap-x snap-mandatory scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pr-6"
             }>
                 {productData.colors?.map(c => {
                     const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
