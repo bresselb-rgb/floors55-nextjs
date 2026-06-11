@@ -19,7 +19,6 @@ export default function GlossaryPage() {
     { term: "Mil", def: "A unit of measurement used for the 'Wear Layer' on vinyl flooring. One mil is one-thousandth of an inch (not a millimeter). 12-mil is standard residential, while 20-mil or higher is commercial grade." },
     { term: "SPC (Stone Polymer Composite)", def: "A type of rigid-core LVP where the core is made from a mixture of limestone powder and plastic. It makes the floor incredibly dense, highly dent-resistant, and 100% waterproof." },
     { term: "Subfloor", def: "The structural layer (usually plywood or concrete) beneath your finished flooring. A flat, clean, and structurally sound subfloor is the most critical component of a successful installation." },
-    { term: "T-Molding", def: "A transition piece used to connect two floors of the same height (like in a doorway), allowing the floating floors room to naturally expand and contract." },
     { term: "Wear Layer", def: "The clear, protective urethane coating applied to the very top of LVP and Laminate flooring. It is the invisible shield that protects the printed wood image from scratches, stains, and scuffs." },
     { term: "WPC (Wood Polymer Composite)", def: "A type of rigid-core LVP where the core includes foaming agents. It is 100% waterproof like SPC, but feels slightly softer and warmer underfoot, and has superior sound-dampening qualities." }
   ];
