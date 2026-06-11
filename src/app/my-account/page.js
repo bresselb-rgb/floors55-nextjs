@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, sendPasswordResetEmail } from "firebase/auth";
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { auth, db, appId } from "../../lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { auth, db, storage, appId } from "../../lib/firebase";
 
 // Import our new Client Boards Manager component
 import ClientBoardsManager from "../../components/ClientBoardsManager";
@@ -24,8 +25,12 @@ export default function MyAccountPage() {
         phone: '',
         address: '',
         clientMargin: 20, // Default 20% markup
-        accountManager: null // Holds the assigned AM data
+        accountManager: null, // Holds the assigned AM data
+        logoUrl: '',
+        brandBgColor: '#ffffff',
+        brandTextColor: '#000000'
     });
+    const [isUploading, setIsUploading] = useState(false);
 
     const [activityHistory, setActivityHistory] = useState([]);
 
@@ -49,7 +54,10 @@ export default function MyAccountPage() {
                         phone: data.phone || '',
                         address: data.address || '',
                         clientMargin: data.clientMargin !== undefined ? data.clientMargin : 20,
-                        accountManager: data.accountManager || null
+                        accountManager: data.accountManager || null,
+                        logoUrl: data.logoUrl || '',
+                        brandBgColor: data.brandBgColor || '#ffffff',
+                        brandTextColor: data.brandTextColor || '#000000'
                     });
                 }
 
@@ -113,6 +121,28 @@ export default function MyAccountPage() {
         }
     };
 
+    const handleLogoUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file || !user) return;
+        setIsUploading(true);
+        try {
+            const fileRef = ref(storage, `logos/${user.uid}_${Date.now()}_${file.name}`);
+            await uploadBytes(fileRef, file);
+            const url = await getDownloadURL(fileRef);
+            setFormData(prev => ({ ...prev, logoUrl: url }));
+            
+            // Auto-save the logo to the database immediately
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { logoUrl: url }, { merge: true });
+            setSaveMessage('Logo uploaded successfully!');
+            setTimeout(() => setSaveMessage(''), 3000);
+        } catch (err) {
+            console.error("Error uploading logo:", err);
+            alert("Failed to upload logo. Ensure image is under 5MB.");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     const copyClientLink = () => {
         const encodedMargin = btoa(formData.clientMargin.toString());
         const encodedBrand = btoa(formData.business || 'Premium Flooring Portal'); // White-label name
@@ -125,6 +155,9 @@ export default function MyAccountPage() {
     const activateClientModeLocal = () => {
         sessionStorage.setItem('client_margin', formData.clientMargin);
         sessionStorage.setItem('client_brand', formData.business || 'Premium Flooring Portal');
+        if (formData.logoUrl) sessionStorage.setItem('client_logo', formData.logoUrl);
+        sessionStorage.setItem('client_bg_color', formData.brandBgColor);
+        sessionStorage.setItem('client_text_color', formData.brandTextColor);
         window.location.href = '/category';
     };
 
@@ -209,6 +242,54 @@ export default function MyAccountPage() {
                                 {saveMessage && <span className="text-emerald-600 font-bold text-xs">{saveMessage}</span>}
                             </div>
                         </form>
+
+                        {/* NEW: White-Label Branding Section */}
+                        <div className="mt-10 pt-6 border-t border-gray-100">
+                            <h3 className="text-xl font-bold mb-4">White-Label Branding</h3>
+                            <p className="text-xs text-gray-500 mb-6">Customize the header and footer of your client presentation boards to match your company's brand identity.</p>
+                            
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Company Logo</label>
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden shrink-0">
+                                            {formData.logoUrl ? (
+                                                <img src={formData.logoUrl} alt="Logo" className="w-full h-full object-contain p-2" />
+                                            ) : (
+                                                <span className="text-2xl opacity-20">📷</span>
+                                            )}
+                                        </div>
+                                        <div className="flex-1">
+                                            <input type="file" accept="image/*" id="logo-upload" onChange={handleLogoUpload} className="hidden" />
+                                            <label htmlFor="logo-upload" className="bg-white border border-gray-200 text-gray-700 hover:border-gold hover:text-gold px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest cursor-pointer transition-colors inline-block mb-2">
+                                                {isUploading ? "Uploading..." : "Upload New Logo"}
+                                            </label>
+                                            <p className="text-[10px] text-gray-400">For best results, use a transparent PNG or high-res JPG.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Header Background Color</label>
+                                        <div className="flex items-center gap-3">
+                                            <input type="color" value={formData.brandBgColor} onChange={e => setFormData({...formData, brandBgColor: e.target.value})} className="w-12 h-12 p-1 bg-white border border-gray-200 rounded cursor-pointer" />
+                                            <input type="text" value={formData.brandBgColor} onChange={e => setFormData({...formData, brandBgColor: e.target.value})} className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold text-sm font-mono" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Header Text Color</label>
+                                        <div className="flex items-center gap-3">
+                                            <input type="color" value={formData.brandTextColor} onChange={e => setFormData({...formData, brandTextColor: e.target.value})} className="w-12 h-12 p-1 bg-white border border-gray-200 rounded cursor-pointer" />
+                                            <input type="text" value={formData.brandTextColor} onChange={e => setFormData({...formData, brandTextColor: e.target.value})} className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold text-sm font-mono" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <button onClick={handleSaveProfile} disabled={isSaving} className="bg-gray-100 hover:bg-gold text-gray-800 hover:text-black font-bold uppercase tracking-widest text-[10px] px-6 py-2.5 rounded transition duration-300 cursor-pointer">
+                                    Save Branding Colors
+                                </button>
+                            </div>
+                        </div>
 
                         <div className="mt-10 pt-6 border-t border-gray-100">
                             <h3 className="text-sm font-bold mb-2">Security</h3>

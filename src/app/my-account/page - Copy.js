@@ -23,7 +23,8 @@ export default function MyAccountPage() {
         business: '',
         phone: '',
         address: '',
-        clientMargin: 20 // Default 20% markup
+        clientMargin: 20, // Default 20% markup
+        accountManager: null // Holds the assigned AM data
     });
 
     const [activityHistory, setActivityHistory] = useState([]);
@@ -47,7 +48,8 @@ export default function MyAccountPage() {
                         business: data.business || '',
                         phone: data.phone || '',
                         address: data.address || '',
-                        clientMargin: data.clientMargin !== undefined ? data.clientMargin : 20
+                        clientMargin: data.clientMargin !== undefined ? data.clientMargin : 20,
+                        accountManager: data.accountManager || null
                     });
                 }
 
@@ -147,8 +149,30 @@ export default function MyAccountPage() {
                 
                 {/* Left Column: Profile Editor & Activity Feed */}
                 <div className="flex-1 flex flex-col gap-6">
+                    
+                    {/* NEW: Dedicated Account Manager Card */}
+                    {formData.accountManager && (
+                        <div className="bg-gray-900 text-white rounded-2xl shadow-sm p-8 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-6 opacity-5 text-6xl pointer-events-none group-hover:scale-110 transition-transform duration-500">🤝</div>
+                            <div className="absolute top-0 left-0 w-full h-1.5 bg-gold"></div>
+                            
+                            <h3 className="font-bold text-xl mb-1 text-gold">Dedicated Account Manager</h3>
+                            <p className="text-gray-400 text-xs leading-relaxed mb-6">Your direct point of contact for priority quotes, stock checks, and logistics.</p>
+                            
+                            <div className="space-y-3">
+                                <p className="font-black text-2xl">{formData.accountManager.name}</p>
+                                <p className="text-sm text-gray-300 flex items-center gap-2">
+                                    <span className="text-lg">📞</span> <a href={`tel:${formData.accountManager.phone}`} className="hover:text-gold transition-colors">{formData.accountManager.phone}</a>
+                                </p>
+                                <p className="text-sm text-gray-300 flex items-center gap-2">
+                                    <span className="text-lg">✉️</span> <a href={`mailto:${formData.accountManager.email}`} className="hover:text-gold transition-colors">{formData.accountManager.email}</a>
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 md:p-10 relative overflow-hidden h-fit">
-                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gold"></div>
+                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gray-200"></div>
                         <h2 className="text-2xl font-bold mb-6">Business Profile</h2>
                         
                         <form onSubmit={handleSaveProfile} className="space-y-5">
@@ -228,7 +252,7 @@ export default function MyAccountPage() {
                 <div className="w-full lg:w-[420px] shrink-0 flex flex-col">
                     
                     {/* General Client Presentation Mode Tool */}
-                    <div className="bg-gray-900 rounded-2xl shadow-xl p-8 relative overflow-hidden group">
+                    <div className="bg-gray-900 rounded-2xl shadow-xl p-8 relative overflow-hidden group mb-8">
                         <div className="absolute top-0 right-0 p-6 opacity-5 text-6xl pointer-events-none group-hover:scale-110 transition-transform duration-500">🤝</div>
                         <h3 className="text-white font-bold text-xl mb-2">General Client Link</h3>
                         <p className="text-gray-400 text-xs leading-relaxed mb-6">Set your desired retail markup and share a link to your white-labeled version of the <strong>entire</strong> flooring catalog.</p>
@@ -262,8 +286,7 @@ export default function MyAccountPage() {
                         </div>
                     </div>
 
-                    {/* NEW: Client Boards Component rendered right here */}
-                    {/* It passes the current slider margin and business name down! */}
+                    {/* Client Boards Component rendered right here */}
                     {user && <ClientBoardsManager proId={user.uid} currentMargin={formData.clientMargin} businessName={formData.business} />}
 
                 </div>

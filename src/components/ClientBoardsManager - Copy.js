@@ -53,10 +53,6 @@ export default function ClientBoardsManager({ proId }) {
     // Fetch the absolute latest margin directly from the database right now
     let lockedMargin = 20;
     let lockedBusiness = "Your Flooring Professional";
-    let lockedLogo = "";
-    let lockedBgColor = "#ffffff";
-    let lockedTextColor = "#000000";
-
     try {
         const proRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', proId);
         const proSnap = await getDoc(proRef);
@@ -64,9 +60,6 @@ export default function ClientBoardsManager({ proId }) {
             const data = proSnap.data();
             if (data.clientMargin !== undefined) lockedMargin = Number(data.clientMargin);
             if (data.business) lockedBusiness = data.business;
-            if (data.logoUrl) lockedLogo = data.logoUrl;
-            if (data.brandBgColor) lockedBgColor = data.brandBgColor;
-            if (data.brandTextColor) lockedTextColor = data.brandTextColor;
         }
     } catch(err) {
         console.error("Could not fetch pro profile for margin locking:", err);
@@ -79,9 +72,6 @@ export default function ClientBoardsManager({ proId }) {
       products: [],
       margin: lockedMargin, // Permanently snapshotted!
       businessName: lockedBusiness,
-      logoUrl: lockedLogo,
-      brandBgColor: lockedBgColor,
-      brandTextColor: lockedTextColor,
       createdAt: serverTimestamp(),
     };
 
