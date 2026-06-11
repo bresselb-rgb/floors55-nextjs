@@ -15,8 +15,22 @@ function ProductViewerContent({ initialProduct }) {
     const [user, setUser] = useState(null);
     const [productData, setProductData] = useState(initialProduct);
 
-    const [activeColor, setActiveColor] = useState(null);
-    const [activeView, setActiveView] = useState('MAIN');
+    // FIX: Evaluate active color instantly on first render to prevent TBD flashing
+    const [activeColor, setActiveColor] = useState(() => {
+        if (initialProduct?.colors && initialProduct.colors.length > 0) {
+            if (urlColorSku) {
+                const found = initialProduct.colors.find(c => c.sku === urlColorSku);
+                if (found) return found;
+            }
+            return initialProduct.colors[0];
+        }
+        return null;
+    });
+    
+    // FIX: Evaluate active view instantly as well
+    const [activeView, setActiveView] = useState(() => {
+        return (initialProduct?.views && initialProduct.views[0]) || 'MAIN';
+    });
 
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     const [isCalcOpen, setIsCalcOpen] = useState(false);
@@ -60,7 +74,6 @@ function ProductViewerContent({ initialProduct }) {
                                 const decoded = parseInt(atob(cmParam), 10);
                                 if (!isNaN(decoded)) sessionStorage.setItem('client_margin', decoded);
                             } else if (pData.clientMargin !== undefined) {
-                                // Robust Fallback: If URL doesn't have &cm, use the Pro's database default!
                                 sessionStorage.setItem('client_margin', pData.clientMargin);
                             }
                             

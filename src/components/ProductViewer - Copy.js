@@ -1,35 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc } from "firebase/firestore";
-
-// Dynamic fallback for build environments and sandbox previews
-let Link;
-let useRouter = () => ({ push: () => {}, replace: () => {} });
-let useSearchParams = () => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-let auth, db, appId;
-
-try {
-    const nextLink = 'next/link';
-    Link = require(nextLink).default || require(nextLink);
-    const nextNav = 'next/navigation';
-    const nav = require(nextNav);
-    useRouter = nav.useRouter;
-    useSearchParams = nav.useSearchParams;
-} catch (e) {
-    Link = ({ href, children, className, style, onClick }) => <a href={href} className={className} style={style} onClick={onClick}>{children}</a>;
-}
-
-try {
-    const fbPath = '../lib/firebase';
-    const fb = require(fbPath);
-    auth = fb.auth;
-    db = fb.db;
-    appId = fb.appId;
-} catch (e) {
-    console.warn("Firebase lib not found in current environment context.");
-}
+import { auth, db, appId } from "../lib/firebase";
 
 function ProductViewerContent({ initialProduct }) {
     const router = useRouter();
@@ -70,7 +46,6 @@ function ProductViewerContent({ initialProduct }) {
             if (proParam) {
                 const fetchProBranding = async () => {
                     try {
-                        if (!db) return;
                         const proDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', proParam));
                         if (proDoc.exists()) {
                             const pData = proDoc.data();
@@ -84,7 +59,11 @@ function ProductViewerContent({ initialProduct }) {
                             if (cmParam) {
                                 const decoded = parseInt(atob(cmParam), 10);
                                 if (!isNaN(decoded)) sessionStorage.setItem('client_margin', decoded);
+                            } else if (pData.clientMargin !== undefined) {
+                                // Robust Fallback: If URL doesn't have &cm, use the Pro's database default!
+                                sessionStorage.setItem('client_margin', pData.clientMargin);
                             }
+                            
                             sessionStorage.setItem('magic_link_client', 'true');
                             
                             const colorParam = urlColorSku ? `?color=${urlColorSku}` : '';
@@ -130,8 +109,6 @@ function ProductViewerContent({ initialProduct }) {
 
     useEffect(() => {
         let isMounted = true;
-        if (!auth) return;
-
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (isMounted) setUser(currentUser);
         });
@@ -151,7 +128,6 @@ function ProductViewerContent({ initialProduct }) {
     }, []);
 
     useEffect(() => {
-        if (!db) return;
         const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', initialProduct.id), (docSnap) => {
             if (docSnap.exists()) {
                 const dbData = docSnap.data();
@@ -180,7 +156,6 @@ function ProductViewerContent({ initialProduct }) {
     }, [urlColorSku, productData, activeColor]);
 
     useEffect(() => {
-        if (!db) return;
         if (user && !user.isAnonymous) {
             const fetchBoards = async () => {
                 try {
@@ -260,7 +235,6 @@ function ProductViewerContent({ initialProduct }) {
     };
 
     const handleSaveToBoard = async (boardId, boardName) => {
-        if (!db) return;
         setIsSavingToBoard(true);
         try {
             const productToSave = {
