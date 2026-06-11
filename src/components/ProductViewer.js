@@ -1,11 +1,35 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc } from "firebase/firestore";
-import { auth, db, appId } from "../lib/firebase";
+
+// Dynamic fallback for build environments and sandbox previews
+let Link;
+let useRouter = () => ({ push: () => {}, replace: () => {} });
+let useSearchParams = () => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+let auth, db, appId;
+
+try {
+    const nextLink = 'next/link';
+    Link = require(nextLink).default || require(nextLink);
+    const nextNav = 'next/navigation';
+    const nav = require(nextNav);
+    useRouter = nav.useRouter;
+    useSearchParams = nav.useSearchParams;
+} catch (e) {
+    Link = ({ href, children, className, style, onClick }) => <a href={href} className={className} style={style} onClick={onClick}>{children}</a>;
+}
+
+try {
+    const fbPath = '../lib/firebase';
+    const fb = require(fbPath);
+    auth = fb.auth;
+    db = fb.db;
+    appId = fb.appId;
+} catch (e) {
+    console.warn("Firebase lib not found in current environment context.");
+}
 
 function ProductViewerContent({ initialProduct }) {
     const router = useRouter();
@@ -41,10 +65,9 @@ function ProductViewerContent({ initialProduct }) {
         if (typeof window !== 'undefined') {
             const cmParam = searchParams.get('cm');
             const proParam = searchParams.get('pro');
-            const cbParam = searchParams.get('cb'); // Fallback for old links
+            const cbParam = searchParams.get('cb'); 
 
             if (proParam) {
-                // Fetch the Pro's live branding directly from the database!
                 const fetchProBranding = async () => {
                     try {
                         if (!db) return;
@@ -108,7 +131,7 @@ function ProductViewerContent({ initialProduct }) {
     useEffect(() => {
         let isMounted = true;
         if (!auth) return;
-        
+
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (isMounted) setUser(currentUser);
         });
@@ -219,11 +242,9 @@ function ProductViewerContent({ initialProduct }) {
             const encodedMargin = btoa(clientMargin.toString());
             url += `&cm=${encodedMargin}`;
             
-            // Generate the clean pro-fetcher link!
             if (user && !user.isAnonymous) {
                 url += `&pro=${user.uid}`;
             } else {
-                // Fallback if Pro happens to be logged out but in client mode
                 const storedBrand = sessionStorage.getItem('client_brand');
                 if (storedBrand) url += `&cb=${btoa(storedBrand)}`;
             }
@@ -257,7 +278,7 @@ function ProductViewerContent({ initialProduct }) {
                 products: arrayUnion(productToSave)
             });
             
-            setBoardSaveMessage(`Saved to ${boardName}!`);
+            setBoardSaveMessage(`Saved to ${boardName}`);
             setIsBoardsMenuOpen(false);
             setTimeout(() => setBoardSaveMessage(''), 3000);
         } catch (err) {
@@ -297,14 +318,81 @@ function ProductViewerContent({ initialProduct }) {
     const totalWithWaste = calcNet * parseFloat(calcWaste);
     const calcTotal = isCarpet ? (totalWithWaste / 9).toFixed(2) : Math.ceil(totalWithWaste / cartonSqft);
 
-    // Fetch dynamic client button color for the Exit button
     const exitBtnBg = typeof window !== 'undefined' ? (sessionStorage.getItem('client_bg') || '#ef4444') : '#ef4444';
     const exitBtnText = typeof window !== 'undefined' ? (sessionStorage.getItem('client_text') || '#ffffff') : '#ffffff';
+
+    // Reusable Title Block for both Mobile and Desktop placement
+    const renderTitleBlock = (isDesktop) => (
+        <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 lg:mb-2 gap-4 ${isDesktop ? 'hidden lg:flex' : 'flex lg:hidden'}`}>
+            <div className="flex-1 min-w-0">
+                <h1 className="text-3xl font-bold m-0 leading-tight text-gray-900">{productData.displayTitle}</h1>
+                <div className="flex flex-wrap items-center gap-2 mt-2 mb-2 sm:mb-4">
+                    <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0">{productData.category}</span>
+                    
+                    {!isClientMode && user && !user.isAnonymous && productData.manufacturer && (
+                        <span className="inline-block px-3 py-1 bg-[#fdfdfd] border border-gray-200 text-gray-700 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm shrink-0">
+                            <span className="text-gray-400 font-normal mr-1">Mfg:</span> {productData.manufacturer} {productData.sku ? `(${productData.sku})` : ''}
+                        </span>
+                    )}
+                    {productData.isSale && <span className="inline-block px-3 py-1 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse shrink-0">🔥 HOT BUY</span>}
+                    {productData.isPropMgt && <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-gold border border-gold/30 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm shrink-0"><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</span>}
+                    {productData.isContractor && <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm shrink-0"><span>🛠️</span> Pro Select</span>}
+                    {productData.isVisible === false && <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0">⚠️ Unlisted Draft</span>}
+                </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0 relative z-50">
+                <button onClick={shareProduct} className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-full transition-all shadow-sm text-sm font-bold shrink-0 cursor-pointer outline-none">
+                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316M15 12a3 3 0 100 6 3 3 0 000-6zm0-6a3 3 0 100 6 3 3 0 000-6z"></path></svg>
+                    {copied ? "Copied!" : "Share"}
+                </button>
+
+                {!isClientMode && user && !user.isAnonymous && (
+                    <div className="relative">
+                        <button 
+                            onClick={() => setIsBoardsMenuOpen(!isBoardsMenuOpen)}
+                            className="flex items-center gap-2 px-4 py-2 bg-black hover:bg-gold text-white hover:text-black border border-transparent rounded-full transition-all shadow-sm text-sm font-bold cursor-pointer outline-none max-w-[200px]"
+                        >
+                            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
+                            <span className="truncate">{boardSaveMessage ? `✓ ${boardSaveMessage}` : "Save"}</span>
+                        </button>
+
+                        {isBoardsMenuOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsBoardsMenuOpen(false)}></div>
+                                <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 origin-top-right">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-4 py-2 border-b border-gray-100 mb-2">Save to Client Board</h4>
+                                    {proBoards.length === 0 ? (
+                                        <div className="px-4 py-3 text-xs text-gray-500 italic">
+                                            No boards yet. Go to <Link href="/my-account" className="text-gold font-bold hover:underline" style={{textDecoration:'none'}}>My Account</Link> to create one!
+                                        </div>
+                                    ) : (
+                                        <div className="max-h-48 overflow-y-auto">
+                                            {proBoards.map(b => (
+                                                <button 
+                                                    key={b.id} 
+                                                    onClick={() => handleSaveToBoard(b.id, b.name)}
+                                                    disabled={isSavingToBoard}
+                                                    className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm font-bold text-gray-800 transition-colors flex items-center gap-2"
+                                                >
+                                                    <span className="text-gold shrink-0">📁</span> 
+                                                    <span className="truncate">{b.name}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 
     return (
         <div className="flex-1 max-w-[1400px] mx-auto px-4 py-10 w-full flex flex-col lg:flex-row gap-10 relative">
           
-          {/* Hide the exit button if they are a homeowner using a Magic Link */}
           {isClientMode && !isMagicLink && (
               <button 
                   onClick={() => { 
@@ -323,7 +411,11 @@ function ProductViewerContent({ initialProduct }) {
               </button>
           )}
 
-          <div className="flex-1 w-full lg:min-w-[450px] lg:sticky lg:top-24 self-start z-10 order-1 lg:order-1">
+          {/* MOBILE TITLE BLOCK (Hidden on Desktop) */}
+          {renderTitleBlock(false)}
+
+          {/* LEFT COLUMN: IMAGE VIEWER */}
+          <div className="flex-1 w-full lg:min-w-[450px] lg:sticky lg:top-24 self-start z-10">
             <div
                 className="w-full aspect-[4/3] rounded-lg bg-gray-50 border border-gray-200 overflow-hidden relative cursor-zoom-in group"
                 onClick={() => activeView !== 'VIDEO' && setIsLightboxOpen(true)}
@@ -364,113 +456,16 @@ function ProductViewerContent({ initialProduct }) {
             </div>
           </div>
 
-          <div className="flex-1 w-full lg:min-w-[400px] flex flex-col order-2 lg:order-2">
+          {/* RIGHT COLUMN: DETAILS */}
+          <div className="flex-1 w-full lg:min-w-[400px]">
             
-            {/* Title Block - Always at top on mobile */}
-            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start mb-2 gap-4 -order-1 lg:order-none pb-4 lg:pb-0">
-                <div>
-                    <h1 className="text-3xl font-bold m-0 leading-tight">{productData.displayTitle}</h1>
-                    <div className="flex flex-wrap items-center gap-2 mt-2 mb-4">
-                        <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-[10px] font-black uppercase tracking-widest">{productData.category}</span>
-                        
-                        {!isClientMode && user && !user.isAnonymous && productData.manufacturer && (
-                            <span className="inline-block px-3 py-1 bg-[#fdfdfd] border border-gray-200 text-gray-700 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm">
-                                <span className="text-gray-400 font-normal mr-1">Mfg:</span> {productData.manufacturer} {productData.sku ? `(${productData.sku})` : ''}
-                            </span>
-                        )}
-                        {!isClientMode && user && !user.isAnonymous && productData.isSale && <span className="inline-block px-3 py-1 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse">🔥 HOT BUY</span>}
-                        {!isClientMode && productData.isPropMgt && <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-gold border border-gold/30 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</span>}
-                        {!isClientMode && productData.isContractor && <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm"><span>🛠️</span> Pro Select</span>}
-                        {!isClientMode && productData.isVisible === false && <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-[10px] font-black uppercase tracking-widest">⚠️ Unlisted Draft</span>}
-                    </div>
-                </div>
+            {/* DESKTOP TITLE BLOCK (Hidden on Mobile) */}
+            {renderTitleBlock(true)}
 
-                <div className="flex flex-wrap items-center gap-2 shrink-0 relative">
-                    <button onClick={shareProduct} className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-full transition-all shadow-sm text-sm font-bold cursor-pointer outline-none">
-                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316M15 12a3 3 0 100 6 3 3 0 000-6zm0-6a3 3 0 100 6 3 3 0 000-6z"></path></svg>
-                        {copied ? "Copied!" : "Share"}
-                    </button>
+            <p className="text-[1.05rem] text-gray-500 mb-6 italic mt-4 lg:mt-0">{productData.desc || 'Premium flooring collection.'}</p>
+            <h2 className="text-xl font-bold mb-4">Select a Color: {activeColor?.name}</h2>
 
-                    {/* Save to Client Board Button (Pro Only) */}
-                    {!isClientMode && user && !user.isAnonymous && (
-                        <div className="relative">
-                            <button 
-                                onClick={() => setIsBoardsMenuOpen(!isBoardsMenuOpen)}
-                                className="flex items-center gap-2 px-4 py-2 bg-black hover:bg-gold text-white hover:text-black border border-transparent rounded-full transition-all shadow-sm text-sm font-bold cursor-pointer outline-none"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
-                                {boardSaveMessage ? "✓ Saved!" : "Save"}
-                            </button>
-
-                            {/* Dropdown Menu */}
-                            {isBoardsMenuOpen && (
-                                <>
-                                    <div className="fixed inset-0 z-40" onClick={() => setIsBoardsMenuOpen(false)}></div>
-                                    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
-                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-4 py-2 border-b border-gray-100 mb-2">Save to Client Board</h4>
-                                        {proBoards.length === 0 ? (
-                                            <div className="px-4 py-3 text-xs text-gray-500 italic">
-                                                No boards yet. Go to <Link href="/my-account" className="text-gold font-bold hover:underline" style={{textDecoration:'none'}}>My Account</Link> to create one!
-                                            </div>
-                                        ) : (
-                                            <div className="max-h-48 overflow-y-auto">
-                                                {proBoards.map(b => (
-                                                    <button 
-                                                        key={b.id} 
-                                                        onClick={() => handleSaveToBoard(b.id, b.name)}
-                                                        disabled={isSavingToBoard}
-                                                        className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm font-bold text-gray-800 transition-colors flex items-center gap-2"
-                                                    >
-                                                        <span className="text-gold">📁</span> {b.name}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Colors Section - Jumps up on mobile */}
-            <div className="-order-none lg:order-none">
-                <h2 className="text-xl font-bold mb-4">Select a Color: {activeColor?.name}</h2>
-
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(85px,1fr))] gap-3 my-6">
-                    {productData.colors?.map(c => {
-                        const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
-                        const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                        const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                        let folderName = 'images';
-                        if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-                        else if (safeName) folderName = safeName;
-                        folderName = folderName.replace(/-+$/, '');
-
-                        const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${c.sku}_${swatchType}.jpg`.toLowerCase();
-                        const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
-
-                        return (
-                            <div key={c.sku} className="cursor-pointer text-center group" onClick={() => {
-                                router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
-                                setActiveColor(c);
-                            }}>
-                                <img 
-                                    src={fbPath} 
-                                    onError={(e) => e.target.src = TBD_IMG} 
-                                    className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} 
-                                    alt={c.name} 
-                                />
-                                <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* Price Block */}
-            <div className="my-5 p-4 border-l-4 border-gold bg-[#fdfdfd] relative overflow-hidden order-last lg:order-none">
+            <div className="my-5 p-4 border-l-4 border-gold bg-[#fdfdfd] relative overflow-hidden">
                 {isClientMode ? (
                     <>
                         <div className="absolute top-0 right-0 bg-gray-900 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-widest shadow-sm">
@@ -509,24 +504,48 @@ function ProductViewerContent({ initialProduct }) {
                 )}
             </div>
 
-            {/* Description & Specs */}
-            <div className="order-last lg:order-none">
-                <p className="text-[1.05rem] text-gray-500 mb-6 italic">{productData.desc || 'Premium flooring collection.'}</p>
-                
-                {productData.specs && productData.specs.length > 0 && (
-                    <div className="bg-gray-50 p-6 rounded-lg mt-8 border border-gray-200">
-                        <h4 className="mt-0 uppercase tracking-widest text-gold text-sm font-bold mb-4">Technical Specifications</h4>
-                        <ul className="list-disc pl-5 space-y-2 text-gray-600 text-sm">
-                            {productData.specs.map((s, i) => {
-                                const [label, ...rest] = s.split(':');
-                                if (rest.length === 0) return <li key={i}>{s}</li>;
-                                return <li key={i}><strong>{label}:</strong> {rest.join(':')}</li>;
-                            })}
-                        </ul>
-                    </div>
-                )}
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(85px,1fr))] gap-3 my-6">
+                {productData.colors?.map(c => {
+                    const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
+                    const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                    const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                    let folderName = 'images';
+                    if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                    else if (safeName) folderName = safeName;
+                    folderName = folderName.replace(/-+$/, '');
+
+                    const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${c.sku}_${swatchType}.jpg`.toLowerCase();
+                    const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+
+                    return (
+                        <div key={c.sku} className="cursor-pointer text-center group" onClick={() => {
+                            router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
+                            setActiveColor(c);
+                        }}>
+                            <img 
+                                src={fbPath} 
+                                onError={(e) => e.target.src = TBD_IMG} 
+                                className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} 
+                                alt={c.name} 
+                            />
+                            <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
+                        </div>
+                    );
+                })}
             </div>
 
+            {productData.specs && productData.specs.length > 0 && (
+                <div className="bg-gray-50 p-6 rounded-lg mt-8 border border-gray-200">
+                    <h4 className="mt-0 uppercase tracking-widest text-gold text-sm font-bold mb-4">Technical Specifications</h4>
+                    <ul className="list-disc pl-5 space-y-2 text-gray-600 text-sm">
+                        {productData.specs.map((s, i) => {
+                            const [label, ...rest] = s.split(':');
+                            if (rest.length === 0) return <li key={i}>{s}</li>;
+                            return <li key={i}><strong>{label}:</strong> {rest.join(':')}</li>;
+                        })}
+                    </ul>
+                </div>
+            )}
           </div>
 
           {/* Calc and Lightbox Logic */}
