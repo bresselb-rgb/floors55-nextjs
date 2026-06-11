@@ -4,26 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-
-// Dynamic fallback for build environments and sandbox previews
-let auth, db, storage, appId;
-try {
-    const fbPath = '../../lib/firebase';
-    const fb = require(fbPath);
-    auth = fb.auth;
-    db = fb.db;
-    storage = fb.storage;
-    appId = fb.appId;
-} catch (e) {
-    console.warn("Firebase lib not found in current environment context.");
-}
-
-let ClientBoardsManager;
-try {
-    ClientBoardsManager = require("../../components/ClientBoardsManager").default;
-} catch (e) {
-    ClientBoardsManager = () => <div>Client Boards Manager (Preview)</div>;
-}
+import { auth, db, storage, appId } from "../../lib/firebase";
+import ClientBoardsManager from "../../components/ClientBoardsManager";
 
 export default function MyAccountPage() {
     const [user, setUser] = useState(null);
@@ -41,26 +23,21 @@ export default function MyAccountPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [marginSaveStatus, setMarginSaveStatus] = useState(''); // '', 'saving', 'saved'
 
     useEffect(() => {
-        if (!auth) {
-            setIsLoading(false);
-            return;
-        }
         const unsub = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser && !currentUser.isAnonymous) {
                 setUser(currentUser);
-                if (db) {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
-                    const docSnap = await getDoc(docRef);
-                    if (docSnap.exists()) {
-                        setProfile({ ...profile, ...docSnap.data() });
-                    } else {
-                        await setDoc(docRef, { business: 'Flooring Pro', clientMargin: 20 });
-                    }
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    setProfile({ ...profile, ...docSnap.data() });
+                } else {
+                    await setDoc(docRef, { business: 'Flooring Pro', clientMargin: 20 });
                 }
             } else {
-                if (typeof window !== 'undefined') window.location.href = '/';
+                window.location.href = '/';
             }
             setIsLoading(false);
         });
@@ -68,7 +45,6 @@ export default function MyAccountPage() {
     }, []);
 
     const handleSave = async () => {
-        if (!db) return;
         setIsSaving(true);
         try {
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
@@ -88,8 +64,23 @@ export default function MyAccountPage() {
         setIsSaving(false);
     };
 
+    // Auto-save logic specifically for the Slider when released
+    const handleMarginRelease = async () => {
+        if (!db || !user) return;
+        setMarginSaveStatus('saving');
+        try {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
+                clientMargin: Number(profile.clientMargin)
+            });
+            setMarginSaveStatus('saved');
+            setTimeout(() => setMarginSaveStatus(''), 2000);
+        } catch (error) {
+            console.error("Failed to auto-save margin", error);
+            setMarginSaveStatus('');
+        }
+    };
+
     const handleLogoUpload = async (e) => {
-        if (!storage || !db) return;
         const file = e.target.files[0];
         if (!file) return;
         setIsUploading(true);
@@ -109,7 +100,6 @@ export default function MyAccountPage() {
     };
 
     const handlePurgeAndReset = async () => {
-        if (!db) return;
         if (!window.confirm("Are you sure you want to remove your custom logo and reset to default colors?")) return;
         try {
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
@@ -133,11 +123,11 @@ export default function MyAccountPage() {
         else sessionStorage.removeItem('client_logo');
         sessionStorage.setItem('client_bg', profile.brandBgColor || '#ffffff');
         sessionStorage.setItem('client_text', profile.brandTextColor || '#000000');
-        if (typeof window !== 'undefined') window.location.href = '/category';
+        window.location.href = '/category';
     };
 
     const copyMagicLink = () => {
-        const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/category?pro=${user?.uid}`;
+        const url = `${window.location.origin}/category?pro=${user?.uid}`;
         if (navigator.clipboard) {
             navigator.clipboard.writeText(url);
             alert("Portal Link copied to clipboard!");
@@ -159,7 +149,7 @@ export default function MyAccountPage() {
                         <h1 className="text-3xl font-black tracking-tight mb-2">Pro Dashboard</h1>
                         <p className="text-gray-500">Manage your business details, pricing, and client boards.</p>
                     </div>
-                    <button onClick={() => auth && signOut(auth)} className="text-red-500 font-bold uppercase tracking-widest text-xs hover:text-red-700">Sign Out</button>
+                    <button onClick={() => signOut(auth)} className="text-red-500 font-bold uppercase tracking-widest text-xs hover:text-red-700">Sign Out</button>
                 </div>
 
                 {/* Dedicated Account Manager Card */}
@@ -269,12 +259,16 @@ export default function MyAccountPage() {
                     </button>
                 </div>
 
-                {/* Margin Slider */}
+                {/* Combined Client Pricing & Portal Link Command Center */}
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-100 pb-6 gap-4">
                         <div>
-                            <h2 className="text-xl font-black uppercase tracking-tight">Retail Pricing Model</h2>
-                            <p className="text-sm text-gray-500 mt-1 max-w-md">Set the markup percentage applied to wholesale prices when presenting catalog items to your clients.</p>
+                            <div className="flex items-center gap-3 mb-1">
+                                <h2 className="text-xl font-black uppercase tracking-tight">Client Pricing</h2>
+                                {marginSaveStatus === 'saving' && <span className="text-xs font-bold text-gold animate-pulse">Saving...</span>}
+                                {marginSaveStatus === 'saved' && <span className="text-xs font-bold text-emerald-500">✓ Saved</span>}
+                            </div>
+                            <p className="text-sm text-gray-500 max-w-md">Set the markup percentage applied to wholesale prices when presenting catalog items to your clients. Your changes save automatically when you adjust the slider.</p>
                         </div>
                         <div className="text-left md:text-right shrink-0 bg-gray-50 p-4 rounded-xl border border-gray-200 min-w-[200px]">
                             <div className="text-3xl font-black text-gold leading-none">{markupVal}% <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Markup</span></div>
@@ -282,33 +276,36 @@ export default function MyAccountPage() {
                         </div>
                     </div>
                     
-                    <input type="range" min="0" max="100" step="5" value={profile.clientMargin} onChange={e => setProfile({...profile, clientMargin: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black mb-8" />
+                    <input 
+                        type="range" 
+                        min="0" max="100" step="5" 
+                        value={profile.clientMargin} 
+                        onChange={e => setProfile({...profile, clientMargin: e.target.value})} 
+                        onMouseUp={handleMarginRelease}
+                        onTouchEnd={handleMarginRelease}
+                        onKeyUp={handleMarginRelease}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black mb-8" 
+                    />
                     
-                    <div className="flex gap-4">
-                        <button onClick={handleSave} disabled={isSaving} className="flex-1 bg-black text-white px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors">
-                            Save Pricing Model
-                        </button>
-                        <button onClick={enableClientMode} className="flex-1 bg-gray-100 text-black px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors border border-gray-200">
-                            Preview Portal
-                        </button>
-                    </div>
-                </div>
-
-                {/* Your Custom Portal Link */}
-                <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                    <h2 className="text-xl font-black uppercase tracking-tight mb-2">Your Custom Portal Link</h2>
-                    <p className="text-sm text-gray-500 mb-6">Share this link directly with your clients. It will automatically load the entire catalog securely masked with your logo, colors, and your custom retail pricing margin.</p>
-                    
-                    <div className="flex flex-col md:flex-row gap-3">
-                        <input type="text" readOnly value={user ? `${typeof window !== 'undefined' ? window.location.origin : ''}/category?pro=${user.uid}` : ''} className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono text-gray-600 outline-none" />
-                        <button onClick={copyMagicLink} className="bg-gold hover:bg-black text-black hover:text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap">
-                            Copy Link
-                        </button>
+                    {/* The Portal Link Box */}
+                    <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
+                        <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Your Custom Portal Link</h3>
+                        <p className="text-xs text-gray-500 mb-4">Share this link directly with your clients. It will automatically load the entire catalog securely masked with your logo, colors, and your custom client pricing margin.</p>
+                        
+                        <div className="flex flex-col md:flex-row gap-3">
+                            <input type="text" readOnly value={user ? `${typeof window !== 'undefined' ? window.location.origin : ''}/category?pro=${user.uid}` : ''} className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-mono text-gray-600 outline-none" />
+                            <button onClick={copyMagicLink} className="bg-gold hover:bg-black text-black hover:text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap">
+                                Copy Link
+                            </button>
+                            <button onClick={enableClientMode} className="bg-white text-black px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-colors border border-gray-200 shrink-0 whitespace-nowrap">
+                                Preview Portal
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 {/* Client Boards */}
-                {user && <ClientBoardsManager proId={user.uid} />}
+                <ClientBoardsManager proId={user.uid} />
 
             </div>
         </main>

@@ -1,27 +1,16 @@
 "use client";
 
-// =====================================================================
-// LATEST UPDATE: ADDED "HOW TO USE" MODAL & ENHANCED MARGIN BADGES
-// =====================================================================
-
 import React, { useState, useEffect } from "react";
 import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, serverTimestamp } from "firebase/firestore";
-
-// Using dynamic require fallback to ensure smooth compilation across environments
-let db, appId;
-try {
-  const firebaseConfig = require("../lib/firebase");
-  db = firebaseConfig.db;
-  appId = firebaseConfig.appId;
-} catch (error) {
-  console.warn("Firebase lib not found in current environment context.");
-}
+import { db, appId } from "../lib/firebase";
 
 export default function ClientBoardsManager({ proId }) {
   const [boards, setBoards] = useState([]);
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const [isInfoOpen, setIsInfoOpen] = useState(false); // State for our new Info Modal
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
+  
+  const [showToast, setShowToast] = useState(false);
 
   // Load the Pro's existing boards
   useEffect(() => {
@@ -41,7 +30,6 @@ export default function ClientBoardsManager({ proId }) {
     fetchBoards();
   }, [proId]);
 
-  // Create a new board
   const handleCreateBoard = async (e) => {
     e.preventDefault();
     if (!newBoardName.trim() || !db) return;
@@ -50,7 +38,7 @@ export default function ClientBoardsManager({ proId }) {
     const randomString = Math.random().toString(36).substring(2, 6);
     const slug = `${newBoardName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${randomString}`;
 
-    // Fetch the absolute latest margin directly from the database right now
+    // Fetch the absolute latest margin AND branding directly from the database right now
     let lockedMargin = 20;
     let lockedBusiness = "Your Flooring Professional";
     let lockedLogo = "";
@@ -109,19 +97,32 @@ export default function ClientBoardsManager({ proId }) {
       }
   };
 
+  const triggerToast = () => {
+      setShowToast(true);
+      setTimeout(() => {
+          setShowToast(false);
+      }, 3000);
+  };
+
   const copyToClipboard = (slug) => {
       const url = `${window.location.origin}/client/${slug}`;
       if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(url);
+          navigator.clipboard.writeText(url).then(triggerToast).catch(err => {
+              console.error('Failed to copy', err);
+          });
       } else {
           const tempInput = document.createElement("input");
           tempInput.value = url;
           document.body.appendChild(tempInput);
           tempInput.select();
-          document.execCommand("copy");
+          try {
+              document.execCommand("copy");
+              triggerToast();
+          } catch (err) {
+              console.error('Fallback copy failed', err);
+          }
           document.body.removeChild(tempInput);
       }
-      alert("Link copied to clipboard!");
   };
 
   return (
@@ -159,7 +160,7 @@ export default function ClientBoardsManager({ proId }) {
         </button>
       </form>
 
-      {/* List Existing Boards */}
+      {}
       <div className="space-y-4">
         {boards.length === 0 ? (
           <p className="text-gray-400 text-sm italic text-center py-6 bg-gray-50 rounded-xl border border-gray-100">No client boards created yet.</p>
@@ -198,6 +199,12 @@ export default function ClientBoardsManager({ proId }) {
         )}
       </div>
 
+      {}
+      <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+          <span className="font-black text-gold">✓</span>
+          <p className="font-bold text-xs uppercase tracking-widest m-0">Link Copied</p>
+      </div>
+
       {/* Info Modal / Instructions */}
       {isInfoOpen && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
@@ -218,18 +225,18 @@ export default function ClientBoardsManager({ proId }) {
                     <div className="flex gap-4">
                         <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-black shrink-0">1</div>
                         <div>
-                            <h4 className="font-bold text-gray-900 text-sm">Lock Your Pricing</h4>
+                            <h4 className="font-bold text-gray-900 text-sm">Customize Your Brand</h4>
                             <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                First, adjust your retail margin slider to the desired markup for this specific client. When you click "+ New Board", it permanently takes a snapshot of your slider and locks that price into the board forever.
+                                Upload your company logo and pick your brand colors in the profile section so your presentations look extremely professional.
                             </p>
                         </div>
                     </div>
                     <div className="flex gap-4">
                         <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-black shrink-0">2</div>
                         <div>
-                            <h4 className="font-bold text-gray-900 text-sm">Create the Board</h4>
+                            <h4 className="font-bold text-gray-900 text-sm">Lock Your Pricing</h4>
                             <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                Type a name like &quot;Smith Kitchen Remodel&quot; and create the board. You will see a gold badge confirming the exact Markup and Margin locked to it.
+                                Adjust your retail margin slider to the desired markup for this specific client. When you click "+ New Board", it permanently locks that price and your current branding into the board forever.
                             </p>
                         </div>
                     </div>
@@ -247,7 +254,7 @@ export default function ClientBoardsManager({ proId }) {
                         <div>
                             <h4 className="font-bold text-gray-900 text-sm">Share the Link</h4>
                             <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                Click &quot;Copy Link&quot; and text or email it to your client. When they click it, all Floors 55 branding and wholesale prices disappear, replaced by your business name and retail pricing!
+                                Click &quot;Copy Link&quot; and text or email it to your client. They will see a beautifully branded, private showroom with your retail pricing!
                             </p>
                         </div>
                     </div>

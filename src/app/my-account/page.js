@@ -23,7 +23,8 @@ export default function MyAccountPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
-    const [marginSaveStatus, setMarginSaveStatus] = useState(''); // '', 'saving', 'saved'
+    
+    const [showToast, setShowToast] = useState(false);
 
     useEffect(() => {
         const unsub = onAuthStateChanged(auth, async (currentUser) => {
@@ -62,22 +63,6 @@ export default function MyAccountPage() {
             alert("Failed to save profile.");
         }
         setIsSaving(false);
-    };
-
-    // Auto-save logic specifically for the Slider when released
-    const handleMarginRelease = async () => {
-        if (!db || !user) return;
-        setMarginSaveStatus('saving');
-        try {
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
-                clientMargin: Number(profile.clientMargin)
-            });
-            setMarginSaveStatus('saved');
-            setTimeout(() => setMarginSaveStatus(''), 2000);
-        } catch (error) {
-            console.error("Failed to auto-save margin", error);
-            setMarginSaveStatus('');
-        }
     };
 
     const handleLogoUpload = async (e) => {
@@ -126,11 +111,37 @@ export default function MyAccountPage() {
         window.location.href = '/category';
     };
 
+    const triggerToast = () => {
+        setShowToast(true);
+        setTimeout(() => {
+            setShowToast(false);
+        }, 3000);
+    };
+
     const copyMagicLink = () => {
         const url = `${window.location.origin}/category?pro=${user?.uid}`;
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(url);
-            alert("Portal Link copied to clipboard!");
+        
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(url).then(triggerToast).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        } else {
+            // Fallback
+            const textArea = document.createElement("textarea");
+            textArea.value = url;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                triggerToast();
+            } catch (err) {
+                console.error('Fallback copy failed', err);
+            }
+            document.body.removeChild(textArea);
         }
     };
 
@@ -141,7 +152,7 @@ export default function MyAccountPage() {
     const marginVal = markupVal > 0 ? Math.round((markupVal / (100 + markupVal)) * 100) : 0;
 
     return (
-        <main className="bg-gray-50 min-h-screen py-12">
+        <main className="bg-gray-50 min-h-screen py-12 relative">
             <div className="max-w-4xl mx-auto px-4 space-y-8">
                 
                 <div className="flex justify-between items-end">
@@ -174,7 +185,7 @@ export default function MyAccountPage() {
                     </div>
                 </div>
 
-                {/* Business Profile Settings */}
+                {}
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-black"></div>
                     <h2 className="text-xl font-black mb-6 uppercase tracking-tight">Business Profile</h2>
@@ -207,7 +218,7 @@ export default function MyAccountPage() {
                     </button>
                 </div>
 
-                {/* White-Label Branding */}
+                {}
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-gold"></div>
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
@@ -259,16 +270,14 @@ export default function MyAccountPage() {
                     </button>
                 </div>
 
-                {/* Combined Client Pricing & Portal Link Command Center */}
+                {}
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-100 pb-6 gap-4">
                         <div>
                             <div className="flex items-center gap-3 mb-1">
                                 <h2 className="text-xl font-black uppercase tracking-tight">Client Pricing</h2>
-                                {marginSaveStatus === 'saving' && <span className="text-xs font-bold text-gold animate-pulse">Saving...</span>}
-                                {marginSaveStatus === 'saved' && <span className="text-xs font-bold text-emerald-500">✓ Saved</span>}
                             </div>
-                            <p className="text-sm text-gray-500 max-w-md">Set the markup percentage applied to wholesale prices when presenting catalog items to your clients. Your changes save automatically when you adjust the slider.</p>
+                            <p className="text-sm text-gray-500 max-w-md">Set the markup percentage applied to wholesale prices when presenting catalog items to your clients.</p>
                         </div>
                         <div className="text-left md:text-right shrink-0 bg-gray-50 p-4 rounded-xl border border-gray-200 min-w-[200px]">
                             <div className="text-3xl font-black text-gold leading-none">{markupVal}% <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Markup</span></div>
@@ -281,11 +290,17 @@ export default function MyAccountPage() {
                         min="0" max="100" step="5" 
                         value={profile.clientMargin} 
                         onChange={e => setProfile({...profile, clientMargin: e.target.value})} 
-                        onMouseUp={handleMarginRelease}
-                        onTouchEnd={handleMarginRelease}
-                        onKeyUp={handleMarginRelease}
                         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black mb-8" 
                     />
+                    
+                    <div className="flex gap-4 mb-8">
+                        <button onClick={handleSave} disabled={isSaving} className="flex-1 bg-black text-white px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors">
+                            Save Pricing Model
+                        </button>
+                        <button onClick={enableClientMode} className="flex-1 bg-gray-100 text-black px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors border border-gray-200">
+                            Preview Portal
+                        </button>
+                    </div>
                     
                     {/* The Portal Link Box */}
                     <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
@@ -297,9 +312,6 @@ export default function MyAccountPage() {
                             <button onClick={copyMagicLink} className="bg-gold hover:bg-black text-black hover:text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap">
                                 Copy Link
                             </button>
-                            <button onClick={enableClientMode} className="bg-white text-black px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-colors border border-gray-200 shrink-0 whitespace-nowrap">
-                                Preview Portal
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -307,6 +319,12 @@ export default function MyAccountPage() {
                 {/* Client Boards */}
                 <ClientBoardsManager proId={user.uid} />
 
+            </div>
+
+            {}
+            <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                <span className="font-black text-gold">✓</span>
+                <p className="font-bold text-xs uppercase tracking-widest m-0">Link Copied</p>
             </div>
         </main>
     );
