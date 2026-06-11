@@ -9,6 +9,12 @@ export const metadata = {
 export default function TransitionsPage() {
   const getFbUrl = (path) => `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path)}?alt=media`;
 
+  // Helper for the subtle architectural grid background
+  const blueprintGrid = {
+      backgroundImage: 'linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px)',
+      backgroundSize: '12px 12px'
+  };
+
   return (
     <main className="bg-gray-50 text-gray-900 font-sans flex flex-col flex-1">
       
@@ -42,10 +48,15 @@ export default function TransitionsPage() {
         <div className="space-y-8">
             
             {/* T-Molding */}
-            <div className="bg-white p-8 md:p-10 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-8 items-center">
+            <div className="bg-white p-8 md:p-10 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-8 items-center group hover:shadow-md transition-shadow">
                 <div className="absolute top-0 left-0 w-2 h-full bg-gold"></div>
                 <div className="w-full md:w-1/3 shrink-0 flex justify-center">
-                    <div className="w-32 h-32 bg-gray-50 rounded-full border-4 border-gray-100 flex items-center justify-center font-black text-6xl text-gray-300 select-none pb-4">T</div>
+                    <div className="w-32 h-32 bg-white rounded-full border-4 border-gray-100 flex items-center justify-center relative overflow-hidden shadow-inner group-hover:border-gold transition-colors">
+                        <div className="absolute inset-0 opacity-50" style={blueprintGrid}></div>
+                        <svg viewBox="0 0 100 100" className="w-20 h-20 text-gray-800 relative z-10 drop-shadow-md">
+                            <path d="M5,40 Q50,25 95,40 L95,50 L60,50 L60,95 L40,95 L40,50 L5,50 Z" fill="currentColor"/>
+                        </svg>
+                    </div>
                 </div>
                 <div className="flex-1">
                     <h3 className="text-2xl font-black mb-3">T-Molding</h3>
@@ -59,11 +70,14 @@ export default function TransitionsPage() {
             </div>
 
             {/* Reducer */}
-            <div className="bg-white p-8 md:p-10 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-8 items-center">
+            <div className="bg-white p-8 md:p-10 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-8 items-center group hover:shadow-md transition-shadow">
                 <div className="absolute top-0 left-0 w-2 h-full bg-gold"></div>
                 <div className="w-full md:w-1/3 shrink-0 flex justify-center">
-                    <div className="w-32 h-32 bg-gray-50 rounded-full border-4 border-gray-100 flex items-center justify-center font-black text-6xl text-gray-300 select-none">
-                        <span className="transform block -rotate-12 translate-y-1">╲</span>
+                    <div className="w-32 h-32 bg-white rounded-full border-4 border-gray-100 flex items-center justify-center relative overflow-hidden shadow-inner group-hover:border-gold transition-colors">
+                        <div className="absolute inset-0 opacity-50" style={blueprintGrid}></div>
+                        <svg viewBox="0 0 100 100" className="w-20 h-20 text-gray-800 relative z-10 drop-shadow-md">
+                            <path d="M5,35 L40,35 Q80,40 95,95 L75,95 Q60,65 40,60 L40,95 L20,95 L20,55 L5,55 Z" fill="currentColor"/>
+                        </svg>
                     </div>
                 </div>
                 <div className="flex-1">
@@ -78,11 +92,14 @@ export default function TransitionsPage() {
             </div>
 
             {/* End Cap / Baby Threshold */}
-            <div className="bg-white p-8 md:p-10 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-8 items-center">
+            <div className="bg-white p-8 md:p-10 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-8 items-center group hover:shadow-md transition-shadow">
                 <div className="absolute top-0 left-0 w-2 h-full bg-gold"></div>
                 <div className="w-full md:w-1/3 shrink-0 flex justify-center">
-                    <div className="w-32 h-32 bg-gray-50 rounded-full border-4 border-gray-100 flex items-center justify-center font-black text-5xl text-gray-300 select-none pb-1">
-                        <span className="transform block rotate-90">⎍</span>
+                    <div className="w-32 h-32 bg-white rounded-full border-4 border-gray-100 flex items-center justify-center relative overflow-hidden shadow-inner group-hover:border-gold transition-colors">
+                        <div className="absolute inset-0 opacity-50" style={blueprintGrid}></div>
+                        <svg viewBox="0 0 100 100" className="w-20 h-20 text-gray-800 relative z-10 drop-shadow-md">
+                            <path d="M5,35 L65,35 Q85,35 85,55 L85,95 L65,95 L65,60 L40,60 L40,95 L20,95 L20,55 L5,55 Z" fill="currentColor"/>
+                        </svg>
                     </div>
                 </div>
                 <div className="flex-1">
@@ -98,10 +115,15 @@ export default function TransitionsPage() {
             </div>
 
             {/* Quarter Round */}
-            <div className="bg-white p-8 md:p-10 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-8 items-center">
+            <div className="bg-white p-8 md:p-10 rounded-3xl border border-gray-100 shadow-sm relative overflow-hidden flex flex-col md:flex-row gap-8 items-center group hover:shadow-md transition-shadow">
                 <div className="absolute top-0 left-0 w-2 h-full bg-gold"></div>
                 <div className="w-full md:w-1/3 shrink-0 flex justify-center">
-                    <div className="w-32 h-32 bg-gray-50 rounded-full border-4 border-gray-100 flex items-center justify-center font-black text-6xl text-gray-300 select-none pb-4 ml-4">◿</div>
+                    <div className="w-32 h-32 bg-white rounded-full border-4 border-gray-100 flex items-center justify-center relative overflow-hidden shadow-inner group-hover:border-gold transition-colors">
+                        <div className="absolute inset-0 opacity-50" style={blueprintGrid}></div>
+                        <svg viewBox="0 0 100 100" className="w-20 h-20 text-gray-800 relative z-10 drop-shadow-md">
+                            <path d="M25,25 A 60 60 0 0 1 85 85 L 25 85 Z" fill="currentColor"/>
+                        </svg>
+                    </div>
                 </div>
                 <div className="flex-1">
                     <h3 className="text-2xl font-black mb-1">Quarter Round</h3>
