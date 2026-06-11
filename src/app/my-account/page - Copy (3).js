@@ -4,8 +4,26 @@ import React, { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { auth, db, storage, appId } from "../../lib/firebase";
-import ClientBoardsManager from "../../components/ClientBoardsManager";
+
+// Dynamic fallback for build environments and sandbox previews
+let auth, db, storage, appId;
+try {
+    const fbPath = '../../lib/firebase';
+    const fb = require(fbPath);
+    auth = fb.auth;
+    db = fb.db;
+    storage = fb.storage;
+    appId = fb.appId;
+} catch (e) {
+    console.warn("Firebase lib not found in current environment context.");
+}
+
+let ClientBoardsManager;
+try {
+    ClientBoardsManager = require("../../components/ClientBoardsManager").default;
+} catch (e) {
+    ClientBoardsManager = () => <div>Client Boards Manager (Preview)</div>;
+}
 
 export default function MyAccountPage() {
     const [user, setUser] = useState(null);
@@ -13,6 +31,7 @@ export default function MyAccountPage() {
         business: '',
         name: '',
         phone: '',
+        address: '',
         clientMargin: 20,
         brandBgColor: '#ffffff',
         brandTextColor: '#000000',
@@ -24,19 +43,24 @@ export default function MyAccountPage() {
     const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => {
+        if (!auth) {
+            setIsLoading(false);
+            return;
+        }
         const unsub = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser && !currentUser.isAnonymous) {
                 setUser(currentUser);
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setProfile({ ...profile, ...docSnap.data() });
-                } else {
-                    // Create basic profile if it doesn't exist
-                    await setDoc(docRef, { business: 'Flooring Pro', clientMargin: 20 });
+                if (db) {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        setProfile({ ...profile, ...docSnap.data() });
+                    } else {
+                        await setDoc(docRef, { business: 'Flooring Pro', clientMargin: 20 });
+                    }
                 }
             } else {
-                window.location.href = '/';
+                if (typeof window !== 'undefined') window.location.href = '/';
             }
             setIsLoading(false);
         });
@@ -44,12 +68,14 @@ export default function MyAccountPage() {
     }, []);
 
     const handleSave = async () => {
+        if (!db) return;
         setIsSaving(true);
         try {
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
                 business: profile.business,
                 name: profile.name,
                 phone: profile.phone,
+                address: profile.address || '',
                 clientMargin: Number(profile.clientMargin),
                 brandBgColor: profile.brandBgColor,
                 brandTextColor: profile.brandTextColor
@@ -63,6 +89,7 @@ export default function MyAccountPage() {
     };
 
     const handleLogoUpload = async (e) => {
+        if (!storage || !db) return;
         const file = e.target.files[0];
         if (!file) return;
         setIsUploading(true);
@@ -82,6 +109,7 @@ export default function MyAccountPage() {
     };
 
     const handlePurgeAndReset = async () => {
+        if (!db) return;
         if (!window.confirm("Are you sure you want to remove your custom logo and reset to default colors?")) return;
         try {
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
@@ -105,14 +133,20 @@ export default function MyAccountPage() {
         else sessionStorage.removeItem('client_logo');
         sessionStorage.setItem('client_bg', profile.brandBgColor || '#ffffff');
         sessionStorage.setItem('client_text', profile.brandTextColor || '#000000');
-        window.location.href = '/category';
+        if (typeof window !== 'undefined') window.location.href = '/category';
+    };
+
+    const copyMagicLink = () => {
+        const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/category?pro=${user?.uid}`;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(url);
+            alert("Portal Link copied to clipboard!");
+        }
     };
 
     if (isLoading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold border-t-transparent"></div></div>;
 
     const am = profile.accountManager || { name: "Pending Assignment", phone: "Call Main Office", email: "support@floors55.com" };
-
-    // Calculate real-time margin based on the markup slider value
     const markupVal = Number(profile.clientMargin) || 0;
     const marginVal = markupVal > 0 ? Math.round((markupVal / (100 + markupVal)) * 100) : 0;
 
@@ -125,7 +159,7 @@ export default function MyAccountPage() {
                         <h1 className="text-3xl font-black tracking-tight mb-2">Pro Dashboard</h1>
                         <p className="text-gray-500">Manage your business details, pricing, and client boards.</p>
                     </div>
-                    <button onClick={() => signOut(auth)} className="text-red-500 font-bold uppercase tracking-widest text-xs hover:text-red-700">Sign Out</button>
+                    <button onClick={() => auth && signOut(auth)} className="text-red-500 font-bold uppercase tracking-widest text-xs hover:text-red-700">Sign Out</button>
                 </div>
 
                 {/* Dedicated Account Manager Card */}
@@ -171,6 +205,10 @@ export default function MyAccountPage() {
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Email Address (Login)</label>
                             <input type="email" value={user?.email || ''} disabled className="w-full px-4 py-3 border border-gray-100 rounded-xl bg-gray-50 text-gray-500 outline-none cursor-not-allowed" />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Business Address</label>
+                            <input type="text" value={profile.address || ''} onChange={e => setProfile({...profile, address: e.target.value})} placeholder="e.g. 123 Main St, Portland OR 97204" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
                         </div>
                     </div>
 
@@ -256,8 +294,21 @@ export default function MyAccountPage() {
                     </div>
                 </div>
 
+                {/* Your Custom Portal Link */}
+                <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                    <h2 className="text-xl font-black uppercase tracking-tight mb-2">Your Custom Portal Link</h2>
+                    <p className="text-sm text-gray-500 mb-6">Share this link directly with your clients. It will automatically load the entire catalog securely masked with your logo, colors, and your custom retail pricing margin.</p>
+                    
+                    <div className="flex flex-col md:flex-row gap-3">
+                        <input type="text" readOnly value={user ? `${typeof window !== 'undefined' ? window.location.origin : ''}/category?pro=${user.uid}` : ''} className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono text-gray-600 outline-none" />
+                        <button onClick={copyMagicLink} className="bg-gold hover:bg-black text-black hover:text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap">
+                            Copy Link
+                        </button>
+                    </div>
+                </div>
+
                 {/* Client Boards */}
-                <ClientBoardsManager proId={user.uid} />
+                {user && <ClientBoardsManager proId={user.uid} />}
 
             </div>
         </main>
