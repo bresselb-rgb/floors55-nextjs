@@ -16,7 +16,8 @@ export default function MyAccountPage() {
         clientMargin: 20,
         brandBgColor: '#ffffff',
         brandTextColor: '#000000',
-        logoUrl: ''
+        logoUrl: '',
+        accountManager: null
     });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -80,16 +81,20 @@ export default function MyAccountPage() {
         setIsUploading(false);
     };
 
-    const handlePurgeLogo = async () => {
-        if (!window.confirm("Are you sure you want to remove your custom logo?")) return;
+    const handlePurgeAndReset = async () => {
+        if (!window.confirm("Are you sure you want to remove your custom logo and reset to default colors?")) return;
         try {
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
-                logoUrl: ""
+                logoUrl: "",
+                brandBgColor: "#ffffff",
+                brandTextColor: "#000000"
             });
-            setProfile(prev => ({...prev, logoUrl: ""}));
+            setProfile(prev => ({...prev, logoUrl: "", brandBgColor: "#ffffff", brandTextColor: "#000000"}));
             sessionStorage.removeItem('client_logo');
+            sessionStorage.removeItem('client_bg');
+            sessionStorage.removeItem('client_text');
         } catch(err) {
-            alert("Failed to remove logo");
+            alert("Failed to reset branding");
         }
     };
 
@@ -105,6 +110,12 @@ export default function MyAccountPage() {
 
     if (isLoading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold border-t-transparent"></div></div>;
 
+    const am = profile.accountManager || { name: "Pending Assignment", phone: "Call Main Office", email: "support@floors55.com" };
+
+    // Calculate real-time margin based on the markup slider value
+    const markupVal = Number(profile.clientMargin) || 0;
+    const marginVal = markupVal > 0 ? Math.round((markupVal / (100 + markupVal)) * 100) : 0;
+
     return (
         <main className="bg-gray-50 min-h-screen py-12">
             <div className="max-w-4xl mx-auto px-4 space-y-8">
@@ -117,10 +128,33 @@ export default function MyAccountPage() {
                     <button onClick={() => signOut(auth)} className="text-red-500 font-bold uppercase tracking-widest text-xs hover:text-red-700">Sign Out</button>
                 </div>
 
-                {/* Profile Settings */}
+                {/* Dedicated Account Manager Card */}
+                <div className="bg-gray-900 text-white p-8 rounded-2xl shadow-xl border border-gray-800 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 text-8xl pointer-events-none">🤝</div>
+                    <div className="relative z-10 flex items-center gap-6 w-full md:w-auto">
+                        <div className="w-16 h-16 bg-gold text-black rounded-full flex items-center justify-center font-black text-2xl uppercase shadow-lg shrink-0">
+                            {am.name !== "Pending Assignment" ? am.name.charAt(0) : "F55"}
+                        </div>
+                        <div>
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-gold mb-1">Your Dedicated Account Manager</h3>
+                            <p className="text-2xl font-bold">{am.name}</p>
+                        </div>
+                    </div>
+                    <div className="relative z-10 flex flex-col md:items-end w-full md:w-auto gap-2">
+                        <a href={`tel:${am.phone}`} className="bg-white/10 hover:bg-white/20 border border-white/20 px-5 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-colors flex items-center gap-3 w-full md:w-auto justify-center md:justify-start" style={{ textDecoration: 'none', color: 'white' }}>
+                            <span>📞</span> {am.phone}
+                        </a>
+                        <a href={`mailto:${am.email}`} className="text-gray-400 hover:text-white text-xs font-bold transition-colors text-center md:text-right w-full" style={{ textDecoration: 'none' }}>
+                            {am.email}
+                        </a>
+                    </div>
+                </div>
+
+                {/* Business Profile Settings */}
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-black"></div>
                     <h2 className="text-xl font-black mb-6 uppercase tracking-tight">Business Profile</h2>
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Business Name</label>
@@ -130,7 +164,16 @@ export default function MyAccountPage() {
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Your Name</label>
                             <input type="text" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
                         </div>
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Phone Number</label>
+                            <input type="tel" value={profile.phone} onChange={e => setProfile({...profile, phone: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Email Address (Login)</label>
+                            <input type="email" value={user?.email || ''} disabled className="w-full px-4 py-3 border border-gray-100 rounded-xl bg-gray-50 text-gray-500 outline-none cursor-not-allowed" />
+                        </div>
                     </div>
+
                     <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50">
                         {isSaving ? "Saving..." : "Save Profile"}
                     </button>
@@ -139,22 +182,28 @@ export default function MyAccountPage() {
                 {/* White-Label Branding */}
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-gold"></div>
-                    <h2 className="text-xl font-black mb-1 uppercase tracking-tight">White-Label Branding</h2>
-                    <p className="text-sm text-gray-500 mb-6">Customize the portal to look like your own website when sharing links with clients.</p>
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
+                        <div>
+                            <h2 className="text-xl font-black mb-1 uppercase tracking-tight">White-Label Branding</h2>
+                            <p className="text-sm text-gray-500">Customize the portal to look like your own website when sharing links with clients.</p>
+                        </div>
+                        {(profile.logoUrl || profile.brandBgColor !== '#ffffff' || profile.brandTextColor !== '#000000') && (
+                            <button onClick={handlePurgeAndReset} className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest outline-none transition-colors shrink-0">
+                                ✕ Purge Logo & Reset Colors
+                            </button>
+                        )}
+                    </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Company Logo</label>
                             {profile.logoUrl ? (
-                                <div className="mt-2 bg-gray-50 border border-gray-200 p-4 rounded-xl flex flex-col items-center justify-center">
-                                    <img src={profile.logoUrl} alt="Your Logo" className="h-16 object-contain mb-4" />
-                                    <button onClick={handlePurgeLogo} className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest outline-none transition-colors">
-                                        ✕ Remove Logo
-                                    </button>
+                                <div className="mt-2 bg-gray-50 border border-gray-200 p-4 rounded-xl flex items-center justify-center min-h-[100px]">
+                                    <img src={profile.logoUrl} alt="Your Logo" className="h-16 object-contain" />
                                 </div>
                             ) : (
                                 <div className="mt-2 relative">
-                                    <input type="file" accept="image/png, image/jpeg" onChange={handleLogoUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" disabled={isUploading}/>
+                                    <input type="file" accept="image/png, image/jpeg" onChange={handleLogoUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer" disabled={isUploading}/>
                                     {isUploading && <p className="text-xs text-gold font-bold mt-2 animate-pulse">Uploading...</p>}
                                 </div>
                             )}
@@ -184,19 +233,22 @@ export default function MyAccountPage() {
 
                 {/* Margin Slider */}
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                    <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-100 pb-6 gap-4">
                         <div>
-                            <h2 className="text-xl font-black uppercase tracking-tight">Retail Pricing Margin</h2>
-                            <p className="text-sm text-gray-500">Set the markup percentage applied to wholesale prices when presenting to your clients.</p>
+                            <h2 className="text-xl font-black uppercase tracking-tight">Retail Pricing Model</h2>
+                            <p className="text-sm text-gray-500 mt-1 max-w-md">Set the markup percentage applied to wholesale prices when presenting catalog items to your clients.</p>
                         </div>
-                        <div className="text-4xl font-black text-gold">{profile.clientMargin}%</div>
+                        <div className="text-left md:text-right shrink-0 bg-gray-50 p-4 rounded-xl border border-gray-200 min-w-[200px]">
+                            <div className="text-3xl font-black text-gold leading-none">{markupVal}% <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Markup</span></div>
+                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2 border-t border-gray-200 pt-2">Yields <span className="text-black font-black text-sm">{marginVal}%</span> Gross Margin</div>
+                        </div>
                     </div>
                     
                     <input type="range" min="0" max="100" step="5" value={profile.clientMargin} onChange={e => setProfile({...profile, clientMargin: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black mb-8" />
                     
                     <div className="flex gap-4">
                         <button onClick={handleSave} disabled={isSaving} className="flex-1 bg-black text-white px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors">
-                            Save Margin
+                            Save Pricing Model
                         </button>
                         <button onClick={enableClientMode} className="flex-1 bg-gray-100 text-black px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors border border-gray-200">
                             Preview Portal
