@@ -1,376 +1,211 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, sendPasswordResetEmail } from "firebase/auth";
-import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, db, storage, appId } from "../../lib/firebase";
-
-// Import our new Client Boards Manager component
 import ClientBoardsManager from "../../components/ClientBoardsManager";
 
 export default function MyAccountPage() {
-    const router = useRouter();
     const [user, setUser] = useState(null);
+    const [profile, setProfile] = useState({
+        business: '',
+        name: '',
+        phone: '',
+        clientMargin: 20,
+        brandBgColor: '#ffffff',
+        brandTextColor: '#000000',
+        logoUrl: ''
+    });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const [saveMessage, setSaveMessage] = useState('');
-    const [resetMessage, setResetMessage] = useState('');
-    const [copied, setCopied] = useState(false);
-
-    const [formData, setFormData] = useState({
-        name: '',
-        business: '',
-        phone: '',
-        address: '',
-        clientMargin: 20, // Default 20% markup
-        accountManager: null, // Holds the assigned AM data
-        logoUrl: '',
-        brandBgColor: '#ffffff',
-        brandTextColor: '#000000'
-    });
     const [isUploading, setIsUploading] = useState(false);
 
-    const [activityHistory, setActivityHistory] = useState([]);
-
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (!currentUser || currentUser.isAnonymous) {
-                router.push('/');
-                return;
-            }
-            
-            setUser(currentUser);
-            
-            try {
-                // 1. Fetch Profile Data
-                const userDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid));
-                if (userDoc.exists()) {
-                    const data = userDoc.data();
-                    setFormData({
-                        name: data.name || '',
-                        business: data.business || '',
-                        phone: data.phone || '',
-                        address: data.address || '',
-                        clientMargin: data.clientMargin !== undefined ? data.clientMargin : 20,
-                        accountManager: data.accountManager || null,
-                        logoUrl: data.logoUrl || '',
-                        brandBgColor: data.brandBgColor || '#ffffff',
-                        brandTextColor: data.brandTextColor || '#000000'
-                    });
+        const unsub = onAuthStateChanged(auth, async (currentUser) => {
+            if (currentUser && !currentUser.isAnonymous) {
+                setUser(currentUser);
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    setProfile({ ...profile, ...docSnap.data() });
+                } else {
+                    // Create basic profile if it doesn't exist
+                    await setDoc(docRef, { business: 'Flooring Pro', clientMargin: 20 });
                 }
-
-                // 2. Fetch Recent Activity
-                const quotesQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'quote_requests'), where("email", "==", currentUser.email));
-                const samplesQuery = query(collection(db, 'artifacts', appId, 'public', 'data', 'sample_requests'), where("email", "==", currentUser.email));
-                
-                const [quotesSnap, samplesSnap] = await Promise.all([getDocs(quotesQuery), getDocs(samplesQuery)]);
-                
-                let history = [];
-                quotesSnap.forEach(d => history.push({ type: 'Quote Estimate', id: d.id, ...d.data() }));
-                samplesSnap.forEach(d => history.push({ type: 'Sample Order', id: d.id, ...d.data() }));
-                
-                history.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
-                setActivityHistory(history);
-
-            } catch (err) {
-                console.error("Error fetching profile or activity:", err);
-            } finally {
-                setIsLoading(false);
+            } else {
+                window.location.href = '/';
             }
+            setIsLoading(false);
         });
+        return () => unsub();
+    }, []);
 
-        return () => unsubscribe();
-    }, [router]);
-
-    const handleSaveProfile = async (e) => {
-        e.preventDefault();
+    const handleSave = async () => {
         setIsSaving(true);
-        setSaveMessage('');
-        
         try {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), formData, { merge: true });
-            setSaveMessage('Profile successfully updated.');
-            setTimeout(() => setSaveMessage(''), 3000);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsSaving(false);
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
+                business: profile.business,
+                name: profile.name,
+                phone: profile.phone,
+                clientMargin: Number(profile.clientMargin),
+                brandBgColor: profile.brandBgColor,
+                brandTextColor: profile.brandTextColor
+            });
+            alert("Profile successfully updated!");
+        } catch (error) {
+            console.error(error);
+            alert("Failed to save profile.");
         }
-    };
-
-    const handleSaveMargin = async () => {
-        try {
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { clientMargin: formData.clientMargin }, { merge: true });
-            setSaveMessage('Markup saved successfully.');
-            setTimeout(() => setSaveMessage(''), 3000);
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    const handlePasswordReset = async () => {
-        if (!user || !user.email) return;
-        try {
-            await sendPasswordResetEmail(auth, user.email);
-            setResetMessage('A password reset link has been sent to your email.');
-            setTimeout(() => setResetMessage(''), 5000);
-        } catch (err) {
-            console.error(err);
-        }
+        setIsSaving(false);
     };
 
     const handleLogoUpload = async (e) => {
         const file = e.target.files[0];
-        if (!file || !user) return;
+        if (!file) return;
         setIsUploading(true);
         try {
-            const fileRef = ref(storage, `logos/${user.uid}_${Date.now()}_${file.name}`);
-            await uploadBytes(fileRef, file);
-            const url = await getDownloadURL(fileRef);
-            setFormData(prev => ({ ...prev, logoUrl: url }));
+            const storageRef = ref(storage, `client_logos/${user.uid}_${Date.now()}`);
+            await uploadBytes(storageRef, file);
+            const url = await getDownloadURL(storageRef);
             
-            // Auto-save the logo to the database immediately
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), { logoUrl: url }, { merge: true });
-            setSaveMessage('Logo uploaded successfully!');
-            setTimeout(() => setSaveMessage(''), 3000);
-        } catch (err) {
-            console.error("Error uploading logo:", err);
-            alert("Failed to upload logo. Ensure image is under 5MB.");
-        } finally {
-            setIsUploading(false);
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
+                logoUrl: url
+            });
+            setProfile(prev => ({...prev, logoUrl: url}));
+        } catch(err) {
+            alert("Upload failed. Please try again.");
+        }
+        setIsUploading(false);
+    };
+
+    const handlePurgeLogo = async () => {
+        if (!window.confirm("Are you sure you want to remove your custom logo?")) return;
+        try {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
+                logoUrl: ""
+            });
+            setProfile(prev => ({...prev, logoUrl: ""}));
+            sessionStorage.removeItem('client_logo');
+        } catch(err) {
+            alert("Failed to remove logo");
         }
     };
 
-    const copyClientLink = () => {
-        const encodedMargin = btoa(formData.clientMargin.toString());
-        const encodedBrand = btoa(formData.business || 'Premium Flooring Portal'); // White-label name
-        const link = `${window.location.origin}/category?cm=${encodedMargin}&cb=${encodedBrand}`;
-        navigator.clipboard.writeText(link);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    const activateClientModeLocal = () => {
-        sessionStorage.setItem('client_margin', formData.clientMargin);
-        sessionStorage.setItem('client_brand', formData.business || 'Premium Flooring Portal');
-        if (formData.logoUrl) sessionStorage.setItem('client_logo', formData.logoUrl);
-        sessionStorage.setItem('client_bg_color', formData.brandBgColor);
-        sessionStorage.setItem('client_text_color', formData.brandTextColor);
+    const enableClientMode = () => {
+        sessionStorage.setItem('client_margin', profile.clientMargin);
+        sessionStorage.setItem('client_brand', profile.business);
+        if (profile.logoUrl) sessionStorage.setItem('client_logo', profile.logoUrl);
+        else sessionStorage.removeItem('client_logo');
+        sessionStorage.setItem('client_bg', profile.brandBgColor || '#ffffff');
+        sessionStorage.setItem('client_text', profile.brandTextColor || '#000000');
         window.location.href = '/category';
     };
 
-    const grossMarginPct = ((formData.clientMargin / 100) / (1 + formData.clientMargin / 100) * 100).toFixed(1);
-
-    if (isLoading) {
-        return (
-            <main className="bg-gray-50 flex-1 flex items-center justify-center min-h-[60vh]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold border-t-transparent"></div>
-            </main>
-        );
-    }
+    if (isLoading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold border-t-transparent"></div></div>;
 
     return (
-        <main className="bg-gray-50 text-gray-900 font-sans flex flex-col flex-1">
-            <div className="bg-black text-white py-12 md:py-16 text-center">
-                <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-2">Pro Portal</h1>
-                <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Manage your wholesale account</p>
-            </div>
-
-            <div className="flex-1 max-w-6xl mx-auto px-4 py-12 w-full flex flex-col lg:flex-row gap-8">
+        <main className="bg-gray-50 min-h-screen py-12">
+            <div className="max-w-4xl mx-auto px-4 space-y-8">
                 
-                {/* Left Column: Profile Editor & Activity Feed */}
-                <div className="flex-1 flex flex-col gap-6">
-                    
-                    {/* NEW: Dedicated Account Manager Card */}
-                    {formData.accountManager && (
-                        <div className="bg-gray-900 text-white rounded-2xl shadow-sm p-8 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-6 opacity-5 text-6xl pointer-events-none group-hover:scale-110 transition-transform duration-500">🤝</div>
-                            <div className="absolute top-0 left-0 w-full h-1.5 bg-gold"></div>
-                            
-                            <h3 className="font-bold text-xl mb-1 text-gold">Dedicated Account Manager</h3>
-                            <p className="text-gray-400 text-xs leading-relaxed mb-6">Your direct point of contact for priority quotes, stock checks, and logistics.</p>
-                            
-                            <div className="space-y-3">
-                                <p className="font-black text-2xl">{formData.accountManager.name}</p>
-                                <p className="text-sm text-gray-300 flex items-center gap-2">
-                                    <span className="text-lg">📞</span> <a href={`tel:${formData.accountManager.phone}`} className="hover:text-gold transition-colors">{formData.accountManager.phone}</a>
-                                </p>
-                                <p className="text-sm text-gray-300 flex items-center gap-2">
-                                    <span className="text-lg">✉️</span> <a href={`mailto:${formData.accountManager.email}`} className="hover:text-gold transition-colors">{formData.accountManager.email}</a>
-                                </p>
-                            </div>
+                <div className="flex justify-between items-end">
+                    <div>
+                        <h1 className="text-3xl font-black tracking-tight mb-2">Pro Dashboard</h1>
+                        <p className="text-gray-500">Manage your business details, pricing, and client boards.</p>
+                    </div>
+                    <button onClick={() => signOut(auth)} className="text-red-500 font-bold uppercase tracking-widest text-xs hover:text-red-700">Sign Out</button>
+                </div>
+
+                {/* Profile Settings */}
+                <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-black"></div>
+                    <h2 className="text-xl font-black mb-6 uppercase tracking-tight">Business Profile</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Business Name</label>
+                            <input type="text" value={profile.business} onChange={e => setProfile({...profile, business: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
                         </div>
-                    )}
-
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 md:p-10 relative overflow-hidden h-fit">
-                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gray-200"></div>
-                        <h2 className="text-2xl font-bold mb-6">Business Profile</h2>
-                        
-                        <form onSubmit={handleSaveProfile} className="space-y-5">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Email Address (Login)</label>
-                                <input type="text" disabled value={user?.email || ''} className="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded text-gray-500 cursor-not-allowed" />
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Full Name</label>
-                                    <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Business Name</label>
-                                    <input type="text" value={formData.business} onChange={e => setFormData({...formData, business: e.target.value})} className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Phone Number</label>
-                                <input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors" />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Business Address</label>
-                                <textarea rows="2" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="w-full px-4 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold transition-colors resize-none"></textarea>
-                            </div>
-
-                            <div className="pt-2 flex items-center justify-between">
-                                <button type="submit" disabled={isSaving} className="bg-black hover:bg-gold text-white hover:text-black font-bold uppercase tracking-widest text-xs px-8 py-3.5 rounded transition duration-300 shadow-sm disabled:opacity-50 cursor-pointer">
-                                    {isSaving ? "Saving..." : "Save Changes"}
-                                </button>
-                                {saveMessage && <span className="text-emerald-600 font-bold text-xs">{saveMessage}</span>}
-                            </div>
-                        </form>
-
-                        {/* NEW: White-Label Branding Section */}
-                        <div className="mt-10 pt-6 border-t border-gray-100">
-                            <h3 className="text-xl font-bold mb-4">White-Label Branding</h3>
-                            <p className="text-xs text-gray-500 mb-6">Customize the header and footer of your client presentation boards to match your company's brand identity.</p>
-                            
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Company Logo</label>
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden shrink-0">
-                                            {formData.logoUrl ? (
-                                                <img src={formData.logoUrl} alt="Logo" className="w-full h-full object-contain p-2" />
-                                            ) : (
-                                                <span className="text-2xl opacity-20">📷</span>
-                                            )}
-                                        </div>
-                                        <div className="flex-1">
-                                            <input type="file" accept="image/*" id="logo-upload" onChange={handleLogoUpload} className="hidden" />
-                                            <label htmlFor="logo-upload" className="bg-white border border-gray-200 text-gray-700 hover:border-gold hover:text-gold px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest cursor-pointer transition-colors inline-block mb-2">
-                                                {isUploading ? "Uploading..." : "Upload New Logo"}
-                                            </label>
-                                            <p className="text-[10px] text-gray-400">For best results, use a transparent PNG or high-res JPG.</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Header Background Color</label>
-                                        <div className="flex items-center gap-3">
-                                            <input type="color" value={formData.brandBgColor} onChange={e => setFormData({...formData, brandBgColor: e.target.value})} className="w-12 h-12 p-1 bg-white border border-gray-200 rounded cursor-pointer" />
-                                            <input type="text" value={formData.brandBgColor} onChange={e => setFormData({...formData, brandBgColor: e.target.value})} className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold text-sm font-mono" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Header Text Color</label>
-                                        <div className="flex items-center gap-3">
-                                            <input type="color" value={formData.brandTextColor} onChange={e => setFormData({...formData, brandTextColor: e.target.value})} className="w-12 h-12 p-1 bg-white border border-gray-200 rounded cursor-pointer" />
-                                            <input type="text" value={formData.brandTextColor} onChange={e => setFormData({...formData, brandTextColor: e.target.value})} className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded focus:outline-none focus:border-gold text-sm font-mono" />
-                                        </div>
-                                    </div>
-                                </div>
-                                <button onClick={handleSaveProfile} disabled={isSaving} className="bg-gray-100 hover:bg-gold text-gray-800 hover:text-black font-bold uppercase tracking-widest text-[10px] px-6 py-2.5 rounded transition duration-300 cursor-pointer">
-                                    Save Branding Colors
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="mt-10 pt-6 border-t border-gray-100">
-                            <h3 className="text-sm font-bold mb-2">Security</h3>
-                            <p className="text-xs text-gray-500 mb-3">Need to update your password? We will send a secure reset link to your email address.</p>
-                            <button type="button" onClick={handlePasswordReset} className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold uppercase tracking-widest text-[10px] px-6 py-2.5 rounded transition duration-300 cursor-pointer">
-                                Send Reset Email
-                            </button>
-                            {resetMessage && <p className="text-emerald-600 font-bold text-xs mt-2">{resetMessage}</p>}
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Your Name</label>
+                            <input type="text" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
                         </div>
                     </div>
+                    <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50">
+                        {isSaving ? "Saving..." : "Save Profile"}
+                    </button>
+                </div>
 
-                    {/* Activity Feed moved to bottom left for layout balance */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 h-fit relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gray-200"></div>
-                        <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                            <span className="text-gold">📋</span> Recent Requests
-                        </h3>
-                        
-                        <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
-                            {activityHistory.length > 0 ? (
-                                activityHistory.map((item, idx) => (
-                                    <div key={idx} className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-sm">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{item.type}</span>
-                                            <span className="text-[10px] text-gray-400">
-                                                {item.timestamp ? new Date(item.timestamp.toDate()).toLocaleDateString() : 'Just now'}
-                                            </span>
-                                        </div>
-                                        <div className="font-bold text-gray-900 leading-tight">{item.product || 'General Request'}</div>
-                                        {item.color && <div className="text-xs text-gold font-bold mt-0.5">Color: {item.color}</div>}
-                                    </div>
-                                ))
+                {/* White-Label Branding */}
+                <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gold"></div>
+                    <h2 className="text-xl font-black mb-1 uppercase tracking-tight">White-Label Branding</h2>
+                    <p className="text-sm text-gray-500 mb-6">Customize the portal to look like your own website when sharing links with clients.</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Company Logo</label>
+                            {profile.logoUrl ? (
+                                <div className="mt-2 bg-gray-50 border border-gray-200 p-4 rounded-xl flex flex-col items-center justify-center">
+                                    <img src={profile.logoUrl} alt="Your Logo" className="h-16 object-contain mb-4" />
+                                    <button onClick={handlePurgeLogo} className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest outline-none transition-colors">
+                                        ✕ Remove Logo
+                                    </button>
+                                </div>
                             ) : (
-                                <div className="text-center py-8 text-xs text-gray-400 italic">No recent quotes or sample requests found.</div>
+                                <div className="mt-2 relative">
+                                    <input type="file" accept="image/png, image/jpeg" onChange={handleLogoUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" disabled={isUploading}/>
+                                    {isUploading && <p className="text-xs text-gold font-bold mt-2 animate-pulse">Uploading...</p>}
+                                </div>
                             )}
                         </div>
-                    </div>
-                </div>
-
-                {/* Right Column: Presentation Tools & Client Boards */}
-                <div className="w-full lg:w-[420px] shrink-0 flex flex-col">
-                    
-                    {/* General Client Presentation Mode Tool */}
-                    <div className="bg-gray-900 rounded-2xl shadow-xl p-8 relative overflow-hidden group mb-8">
-                        <div className="absolute top-0 right-0 p-6 opacity-5 text-6xl pointer-events-none group-hover:scale-110 transition-transform duration-500">🤝</div>
-                        <h3 className="text-white font-bold text-xl mb-2">General Client Link</h3>
-                        <p className="text-gray-400 text-xs leading-relaxed mb-6">Set your desired retail markup and share a link to your white-labeled version of the <strong>entire</strong> flooring catalog.</p>
                         
-                        <div className="bg-gray-800 rounded-xl p-5 border border-gray-700 mb-5">
-                            <div className="flex justify-between items-center mb-3">
-                                <span className="text-[10px] uppercase font-black text-gray-400 tracking-wider">Your Retail Markup</span>
-                                <span className="text-lg font-black text-gold">+{formData.clientMargin}%</span>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Header & Footer Background</label>
+                                <div className="flex items-center gap-3">
+                                    <input type="color" value={profile.brandBgColor} onChange={e => setProfile({...profile, brandBgColor: e.target.value})} className="h-10 w-20 cursor-pointer rounded border border-gray-200" />
+                                    <span className="text-sm font-mono text-gray-400">{profile.brandBgColor}</span>
+                                </div>
                             </div>
-                            <input 
-                                type="range" 
-                                min="0" max="100" step="5"
-                                value={formData.clientMargin}
-                                onChange={(e) => setFormData({...formData, clientMargin: parseInt(e.target.value)})}
-                                onMouseUp={handleSaveMargin}
-                                onTouchEnd={handleSaveMargin}
-                                className="w-full accent-gold cursor-pointer"
-                            />
-                            <div className="text-right text-[10px] text-gray-400 font-bold mt-3">
-                                That's a <span className="text-white bg-gray-700 px-1.5 py-0.5 rounded">{grossMarginPct}%</span> Gross Profit Margin
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Header & Footer Text</label>
+                                <div className="flex items-center gap-3">
+                                    <input type="color" value={profile.brandTextColor} onChange={e => setProfile({...profile, brandTextColor: e.target.value})} className="h-10 w-20 cursor-pointer rounded border border-gray-200" />
+                                    <span className="text-sm font-mono text-gray-400">{profile.brandTextColor}</span>
+                                </div>
                             </div>
-                        </div>
-
-                        <div className="flex flex-col gap-3">
-                            <button onClick={copyClientLink} className="w-full bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors border border-gray-700">
-                                {copied ? "✓ Link Copied!" : "🔗 Copy Full Catalog Link"}
-                            </button>
-                            <button onClick={activateClientModeLocal} className="w-full bg-gold hover:bg-white text-black py-3 rounded-lg text-xs font-black uppercase tracking-widest transition-colors">
-                                Activate on this device
-                            </button>
                         </div>
                     </div>
-
-                    {/* Client Boards Component rendered right here */}
-                    {user && <ClientBoardsManager proId={user.uid} currentMargin={formData.clientMargin} businessName={formData.business} />}
-
+                    <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50">
+                        {isSaving ? "Saving..." : "Save Brand Settings"}
+                    </button>
                 </div>
+
+                {/* Margin Slider */}
+                <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+                    <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                        <div>
+                            <h2 className="text-xl font-black uppercase tracking-tight">Retail Pricing Margin</h2>
+                            <p className="text-sm text-gray-500">Set the markup percentage applied to wholesale prices when presenting to your clients.</p>
+                        </div>
+                        <div className="text-4xl font-black text-gold">{profile.clientMargin}%</div>
+                    </div>
+                    
+                    <input type="range" min="0" max="100" step="5" value={profile.clientMargin} onChange={e => setProfile({...profile, clientMargin: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black mb-8" />
+                    
+                    <div className="flex gap-4">
+                        <button onClick={handleSave} disabled={isSaving} className="flex-1 bg-black text-white px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors">
+                            Save Margin
+                        </button>
+                        <button onClick={enableClientMode} className="flex-1 bg-gray-100 text-black px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors border border-gray-200">
+                            Preview Portal
+                        </button>
+                    </div>
+                </div>
+
+                {/* Client Boards */}
+                <ClientBoardsManager proId={user.uid} />
 
             </div>
         </main>

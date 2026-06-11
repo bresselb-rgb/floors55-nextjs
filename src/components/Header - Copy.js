@@ -19,9 +19,6 @@ export default function Header() {
   const [resetMessage, setResetMessage] = useState('');
   
   const [clientBrand, setClientBrand] = useState(null);
-  const [clientLogo, setClientLogo] = useState(null);
-  const [brandBg, setBrandBg] = useState('#ffffff');
-  const [brandText, setBrandText] = useState('#000000');
 
   const pathname = usePathname();
   const router = useRouter();
@@ -29,10 +26,6 @@ export default function Header() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
         setClientBrand(sessionStorage.getItem('client_brand'));
-        const logo = sessionStorage.getItem('client_logo');
-        if (logo && logo !== "undefined" && logo !== "null") setClientLogo(logo);
-        setBrandBg(sessionStorage.getItem('client_bg') || '#ffffff');
-        setBrandText(sessionStorage.getItem('client_text') || '#000000');
     }
   }, []);
 
@@ -133,19 +126,17 @@ export default function Header() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 shadow-sm transition-colors duration-300" style={clientBrand ? { backgroundColor: brandBg, color: brandText, borderBottom: `1px solid ${brandText}20` } : { backgroundColor: '#ffffff', borderBottom: '1px solid #f3f4f6' }}>
+      <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             
             <div className="flex items-center gap-8 h-full">
               <div className="flex items-center">
                 <Link href="/" onClick={closeMenu} className="flex items-center gap-3 group" style={{ textDecoration: 'none' }}>
-                  {clientLogo ? (
-                      <img src={clientLogo} alt={clientBrand} className="h-12 md:h-16 w-auto object-contain py-2" />
-                  ) : clientBrand ? (
+                  {clientBrand ? (
                       <div className="flex flex-col justify-center">
-                          <span className="text-xl md:text-2xl font-black uppercase tracking-tighter leading-none transition-colors" style={{ color: brandText }}>{clientBrand}</span>
-                          <span className="text-[10px] md:text-xs font-black italic tracking-widest uppercase mt-1 opacity-80 transition-colors" style={{ color: brandText }}>Premium Floor Portal</span>
+                          <span className="text-xl md:text-2xl font-black uppercase tracking-tighter text-gray-900 group-hover:text-gold transition-colors leading-none">{clientBrand}</span>
+                          <span className="text-red-600 text-[10px] md:text-xs font-black italic tracking-widest uppercase mt-1">Premium Floor Portal</span>
                       </div>
                   ) : (
                       <img src={getFbUrl('images/f55-pros-logo.jpg')} alt="Floors 55 for Pros" className="h-12 md:h-16 w-auto" />
@@ -157,7 +148,7 @@ export default function Header() {
                 
                 {/* Products Dropdown */}
                 <div className="group relative h-full flex items-center">
-                  <button className="transition flex items-center gap-1 py-8 bg-transparent border-none font-bold uppercase cursor-pointer outline-none hover:opacity-70" style={{ color: clientBrand ? brandText : '#000000' }}>
+                  <button className="hover:text-gold transition flex items-center gap-1 py-8 text-black bg-transparent border-none font-bold uppercase cursor-pointer outline-none">
                     Products ▾
                   </button>
                   <div className="absolute top-full left-0 bg-white shadow-2xl border border-gray-100 min-w-[280px] hidden group-hover:block animate-in fade-in slide-in-from-top-2 duration-200 z-50">
@@ -179,7 +170,7 @@ export default function Header() {
 
                 {/* Resources Dropdown Expanded */}
                 <div className="group relative h-full flex items-center">
-                  <button className="transition flex items-center gap-1 py-8 bg-transparent border-none font-bold uppercase cursor-pointer outline-none hover:opacity-70" style={{ color: clientBrand ? brandText : '#000000' }}>
+                  <button className="hover:text-gold transition flex items-center gap-1 py-8 text-black bg-transparent border-none font-bold uppercase cursor-pointer outline-none">
                     Resources ▾
                   </button>
                   <div className="absolute top-full left-0 bg-white shadow-2xl border border-gray-100 min-w-[240px] hidden group-hover:block animate-in fade-in slide-in-from-top-2 duration-200 z-50">
@@ -229,7 +220,7 @@ export default function Header() {
             </div>
 
             <div className="md:hidden flex items-center">
-              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 focus:outline-none bg-transparent border-none cursor-pointer hover:opacity-70" style={{ color: clientBrand ? brandText : '#111827' }}>
+              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-gray-900 hover:text-gold p-2 focus:outline-none bg-transparent border-none cursor-pointer">
                 <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} /></svg>
               </button>
             </div>

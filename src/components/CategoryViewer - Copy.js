@@ -1,15 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
-import { collection, onSnapshot, doc, getDoc } from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 import { auth, db, appId } from "../lib/firebase";
 
-function CategoryViewerContent({ initialCategory }) {
+export default function CategoryViewer({ initialCategory = 'All Products' }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   
@@ -30,61 +29,38 @@ function CategoryViewerContent({ initialCategory }) {
 
   useEffect(() => {
       if (typeof window !== 'undefined') {
-          const prog = searchParams.get('program');
+          const params = new URLSearchParams(window.location.search);
+          const prog = params.get('program');
           if (prog === 'propmgt' || prog === 'contractor') {
               setSelectedPrograms([prog]);
           }
 
-          const cmParam = searchParams.get('cm');
-          const proParam = searchParams.get('pro');
-          const cbParam = searchParams.get('cb'); // fallback
+          // Decode and activate Client Presentation Mode from URL
+          const cmParam = params.get('cm');
+          const cbParam = params.get('cb');
+          let shouldReplace = false;
 
-          if (proParam) {
-                // Fetch the Pro's live branding directly from the database!
-                const fetchProBranding = async () => {
-                    try {
-                        const proDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', proParam));
-                        if (proDoc.exists()) {
-                            const pData = proDoc.data();
-                            sessionStorage.setItem('client_brand', pData.business || 'Premium Floors');
-                            if (pData.logoUrl) sessionStorage.setItem('client_logo', pData.logoUrl);
-                            else sessionStorage.removeItem('client_logo');
-                            
-                            sessionStorage.setItem('client_bg', pData.brandBgColor || '#ffffff');
-                            sessionStorage.setItem('client_text', pData.brandTextColor || '#000000');
-                            
-                            if (cmParam) {
-                                const decoded = parseInt(atob(cmParam), 10);
-                                if (!isNaN(decoded)) sessionStorage.setItem('client_margin', decoded);
-                            }
-                            sessionStorage.setItem('magic_link_client', 'true');
-                            window.location.replace(window.location.pathname);
-                        }
-                    } catch(err) {
-                        console.error(err);
-                    }
-                };
-                fetchProBranding();
-          } else {
-              let shouldReplace = false;
-              if (cmParam) {
-                  try {
-                      const decoded = parseInt(atob(cmParam), 10);
-                      if (!isNaN(decoded)) {
-                          sessionStorage.setItem('client_margin', decoded);
-                          sessionStorage.setItem('magic_link_client', 'true');
-                          shouldReplace = true;
-                      }
-                  } catch(e) {}
-              }
-              if (cbParam) {
-                  try {
-                      const decodedBrand = atob(cbParam);
-                      sessionStorage.setItem('client_brand', decodedBrand);
+          if (cmParam) {
+              try {
+                  const decoded = parseInt(atob(cmParam), 10);
+                  if (!isNaN(decoded)) {
+                      sessionStorage.setItem('client_margin', decoded);
+                      sessionStorage.setItem('magic_link_client', 'true');
                       shouldReplace = true;
-                  } catch(e) {}
-              }
-              if (shouldReplace) window.location.replace(window.location.pathname);
+                  }
+              } catch(e) {}
+          }
+          
+          if (cbParam) {
+              try {
+                  const decodedBrand = atob(cbParam);
+                  sessionStorage.setItem('client_brand', decodedBrand);
+                  shouldReplace = true;
+              } catch(e) {}
+          }
+
+          if (shouldReplace) {
+              window.location.replace(window.location.pathname);
           }
 
           const storedMargin = sessionStorage.getItem('client_margin');
@@ -92,7 +68,7 @@ function CategoryViewerContent({ initialCategory }) {
 
           if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
       }
-  }, [searchParams]);
+  }, []);
 
   useEffect(() => {
       setActiveCategory(initialCategory);
@@ -293,26 +269,18 @@ function CategoryViewerContent({ initialCategory }) {
   const heroFbUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(heroImage)}?alt=media`;
   const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
-  // Fetch dynamic client button color for the Exit button
-  const exitBtnBg = typeof window !== 'undefined' ? (sessionStorage.getItem('client_bg') || '#ef4444') : '#ef4444';
-  const exitBtnText = typeof window !== 'undefined' ? (sessionStorage.getItem('client_text') || '#ffffff') : '#ffffff';
-
   return (
     <main className="bg-gray-50 text-gray-900 font-sans flex flex-col flex-1">
-      {/* Exit Client Mode Button */}
+      {/* Hide the exit button if they are a homeowner using a Magic Link */}
       {isClientMode && !isMagicLink && (
           <button 
               onClick={() => { 
                   sessionStorage.removeItem('client_margin'); 
                   sessionStorage.removeItem('client_brand'); 
-                  sessionStorage.removeItem('client_logo');
-                  sessionStorage.removeItem('client_bg');
-                  sessionStorage.removeItem('client_text');
                   sessionStorage.removeItem('magic_link_client');
                   window.location.reload(); 
               }} 
-              className="fixed bottom-6 left-6 px-5 py-3 rounded-full font-bold text-xs uppercase tracking-widest shadow-2xl z-[200] transition-opacity hover:opacity-80 flex items-center gap-2 border border-black/10"
-              style={{ backgroundColor: exitBtnBg, color: exitBtnText }}
+              className="fixed bottom-6 left-6 bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-full font-bold text-xs uppercase tracking-widest shadow-2xl z-[200] transition-colors flex items-center gap-2"
           >
               <span>✕</span> Exit Client Mode
           </button>
@@ -635,16 +603,4 @@ function CategoryViewerContent({ initialCategory }) {
       )}
     </main>
   );
-}
-
-export default function CategoryViewer(props) {
-    return (
-        <Suspense fallback={
-            <div className="flex-1 flex items-center justify-center min-h-[50vh]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold border-t-transparent"></div>
-            </div>
-        }>
-            <CategoryViewerContent {...props} />
-        </Suspense>
-    );
 }
