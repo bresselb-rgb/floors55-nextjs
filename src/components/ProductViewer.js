@@ -47,6 +47,7 @@ function ProductViewerContent({ initialProduct }) {
                 // Fetch the Pro's live branding directly from the database!
                 const fetchProBranding = async () => {
                     try {
+                        if (!db) return;
                         const proDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', proParam));
                         if (proDoc.exists()) {
                             const pData = proDoc.data();
@@ -106,6 +107,8 @@ function ProductViewerContent({ initialProduct }) {
 
     useEffect(() => {
         let isMounted = true;
+        if (!auth) return;
+        
         const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
             if (isMounted) setUser(currentUser);
         });
@@ -125,6 +128,7 @@ function ProductViewerContent({ initialProduct }) {
     }, []);
 
     useEffect(() => {
+        if (!db) return;
         const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', initialProduct.id), (docSnap) => {
             if (docSnap.exists()) {
                 const dbData = docSnap.data();
@@ -153,6 +157,7 @@ function ProductViewerContent({ initialProduct }) {
     }, [urlColorSku, productData, activeColor]);
 
     useEffect(() => {
+        if (!db) return;
         if (user && !user.isAnonymous) {
             const fetchBoards = async () => {
                 try {
@@ -234,6 +239,7 @@ function ProductViewerContent({ initialProduct }) {
     };
 
     const handleSaveToBoard = async (boardId, boardName) => {
+        if (!db) return;
         setIsSavingToBoard(true);
         try {
             const productToSave = {
@@ -298,7 +304,7 @@ function ProductViewerContent({ initialProduct }) {
     return (
         <div className="flex-1 max-w-[1400px] mx-auto px-4 py-10 w-full flex flex-col lg:flex-row gap-10 relative">
           
-          {/* Exit Button */}
+          {/* Hide the exit button if they are a homeowner using a Magic Link */}
           {isClientMode && !isMagicLink && (
               <button 
                   onClick={() => { 
@@ -317,7 +323,7 @@ function ProductViewerContent({ initialProduct }) {
               </button>
           )}
 
-          <div className="flex-1 w-full lg:min-w-[450px] lg:sticky lg:top-24 self-start z-10">
+          <div className="flex-1 w-full lg:min-w-[450px] lg:sticky lg:top-24 self-start z-10 order-1 lg:order-1">
             <div
                 className="w-full aspect-[4/3] rounded-lg bg-gray-50 border border-gray-200 overflow-hidden relative cursor-zoom-in group"
                 onClick={() => activeView !== 'VIDEO' && setIsLightboxOpen(true)}
@@ -358,8 +364,10 @@ function ProductViewerContent({ initialProduct }) {
             </div>
           </div>
 
-          <div className="flex-1 w-full lg:min-w-[400px]">
-            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start mb-2 gap-4">
+          <div className="flex-1 w-full lg:min-w-[400px] flex flex-col order-2 lg:order-2">
+            
+            {/* Title Block - Always at top on mobile */}
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start mb-2 gap-4 -order-1 lg:order-none pb-4 lg:pb-0">
                 <div>
                     <h1 className="text-3xl font-bold m-0 leading-tight">{productData.displayTitle}</h1>
                     <div className="flex flex-wrap items-center gap-2 mt-2 mb-4">
@@ -426,10 +434,43 @@ function ProductViewerContent({ initialProduct }) {
                 </div>
             </div>
 
-            <p className="text-[1.05rem] text-gray-500 mb-6 italic">{productData.desc || 'Premium flooring collection.'}</p>
-            <h2 className="text-xl font-bold mb-4">Select a Color: {activeColor?.name}</h2>
+            {/* Colors Section - Jumps up on mobile */}
+            <div className="-order-none lg:order-none">
+                <h2 className="text-xl font-bold mb-4">Select a Color: {activeColor?.name}</h2>
 
-            <div className="my-5 p-4 border-l-4 border-gold bg-[#fdfdfd] relative overflow-hidden">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(85px,1fr))] gap-3 my-6">
+                    {productData.colors?.map(c => {
+                        const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
+                        const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                        const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                        let folderName = 'images';
+                        if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                        else if (safeName) folderName = safeName;
+                        folderName = folderName.replace(/-+$/, '');
+
+                        const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${c.sku}_${swatchType}.jpg`.toLowerCase();
+                        const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+
+                        return (
+                            <div key={c.sku} className="cursor-pointer text-center group" onClick={() => {
+                                router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
+                                setActiveColor(c);
+                            }}>
+                                <img 
+                                    src={fbPath} 
+                                    onError={(e) => e.target.src = TBD_IMG} 
+                                    className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} 
+                                    alt={c.name} 
+                                />
+                                <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Price Block */}
+            <div className="my-5 p-4 border-l-4 border-gold bg-[#fdfdfd] relative overflow-hidden order-last lg:order-none">
                 {isClientMode ? (
                     <>
                         <div className="absolute top-0 right-0 bg-gray-900 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-widest shadow-sm">
@@ -468,48 +509,24 @@ function ProductViewerContent({ initialProduct }) {
                 )}
             </div>
 
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(85px,1fr))] gap-3 my-6">
-                {productData.colors?.map(c => {
-                    const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
-                    const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    let folderName = 'images';
-                    if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-                    else if (safeName) folderName = safeName;
-                    folderName = folderName.replace(/-+$/, '');
-
-                    const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${c.sku}_${swatchType}.jpg`.toLowerCase();
-                    const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
-
-                    return (
-                        <div key={c.sku} className="cursor-pointer text-center group" onClick={() => {
-                            router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
-                            setActiveColor(c);
-                        }}>
-                            <img 
-                                src={fbPath} 
-                                onError={(e) => e.target.src = TBD_IMG} 
-                                className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} 
-                                alt={c.name} 
-                            />
-                            <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
-                        </div>
-                    );
-                })}
+            {/* Description & Specs */}
+            <div className="order-last lg:order-none">
+                <p className="text-[1.05rem] text-gray-500 mb-6 italic">{productData.desc || 'Premium flooring collection.'}</p>
+                
+                {productData.specs && productData.specs.length > 0 && (
+                    <div className="bg-gray-50 p-6 rounded-lg mt-8 border border-gray-200">
+                        <h4 className="mt-0 uppercase tracking-widest text-gold text-sm font-bold mb-4">Technical Specifications</h4>
+                        <ul className="list-disc pl-5 space-y-2 text-gray-600 text-sm">
+                            {productData.specs.map((s, i) => {
+                                const [label, ...rest] = s.split(':');
+                                if (rest.length === 0) return <li key={i}>{s}</li>;
+                                return <li key={i}><strong>{label}:</strong> {rest.join(':')}</li>;
+                            })}
+                        </ul>
+                    </div>
+                )}
             </div>
 
-            {productData.specs && productData.specs.length > 0 && (
-                <div className="bg-gray-50 p-6 rounded-lg mt-8 border border-gray-200">
-                    <h4 className="mt-0 uppercase tracking-widest text-gold text-sm font-bold mb-4">Technical Specifications</h4>
-                    <ul className="list-disc pl-5 space-y-2 text-gray-600 text-sm">
-                        {productData.specs.map((s, i) => {
-                            const [label, ...rest] = s.split(':');
-                            if (rest.length === 0) return <li key={i}>{s}</li>;
-                            return <li key={i}><strong>{label}:</strong> {rest.join(':')}</li>;
-                        })}
-                    </ul>
-                </div>
-            )}
           </div>
 
           {/* Calc and Lightbox Logic */}
