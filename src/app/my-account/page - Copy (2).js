@@ -25,6 +25,7 @@ export default function MyAccountPage() {
     const [isUploading, setIsUploading] = useState(false);
     
     const [showToast, setShowToast] = useState(false);
+    const [isLogoInfoOpen, setIsLogoInfoOpen] = useState(false);
 
     useEffect(() => {
         const unsub = onAuthStateChanged(auth, async (currentUser) => {
@@ -237,7 +238,16 @@ export default function MyAccountPage() {
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
                         <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Company Logo</label>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500">Company Logo</label>
+                                <button 
+                                    type="button"
+                                    onClick={() => setIsLogoInfoOpen(true)}
+                                    className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gold transition-colors flex items-center gap-1 bg-gray-50 hover:bg-gold/10 px-2 py-1 rounded-full border border-gray-200 outline-none cursor-pointer"
+                                >
+                                    <span>❓</span> Tips
+                                </button>
+                            </div>
                             {profile.logoUrl ? (
                                 <div className="mt-2 bg-gray-50 border border-gray-200 p-4 rounded-xl flex items-center justify-center min-h-[100px]">
                                     <img src={profile.logoUrl} alt="Your Logo" className="h-16 object-contain" />
@@ -314,6 +324,49 @@ export default function MyAccountPage() {
                 <ClientBoardsManager proId={user.uid} />
 
             </div>
+
+            {/* Logo Info Modal */}
+            {isLogoInfoOpen && (
+                <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg relative">
+                        <button
+                            onClick={() => setIsLogoInfoOpen(false)}
+                            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black transition-colors font-bold outline-none"
+                        >
+                            ✕
+                        </button>
+                        <h3 className="text-2xl font-black mb-2 text-gray-900">Logo Upload Tips</h3>
+                        <p className="text-gray-500 text-sm mb-6 pb-4 border-b border-gray-100">
+                            Make your portal look flawless with these quick logo guidelines.
+                        </p>
+                        <div className="space-y-4 text-sm text-gray-600">
+                            <div>
+                                <strong className="text-gray-900">Ideal Size & Shape:</strong><br />
+                                A horizontal rectangle works best in headers. We recommend an image around <strong>400px wide by 100px to 150px tall</strong>.
+                            </div>
+                            <div>
+                                <strong className="text-gray-900">Transparent Backgrounds:</strong><br />
+                                For the cleanest look against your brand colors, use a <strong>PNG file with a transparent background</strong> (no white box behind it).
+                            </div>
+                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 mt-4">
+                                <strong className="text-gray-900 text-xs uppercase tracking-widest">Free Design Tools</strong>
+                                <ul className="mt-2 space-y-2 text-xs">
+                                    <li>Need to remove a white background? Try <a href="https://www.erase.bg/" target="_blank" rel="noopener noreferrer" className="text-gold font-bold hover:underline">Erase.bg</a> or <a href="https://www.pixelcut.ai/background-remover" target="_blank" rel="noopener noreferrer" className="text-gold font-bold hover:underline">Pixelcut.ai</a> (Both free, no sign-up).</li>
+                                    <li>Need to create a logo from scratch? Check out <a href="https://www.canva.com/create/logos/" target="_blank" rel="noopener noreferrer" className="text-gold font-bold hover:underline">Canva's Free Logo Maker</a>.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div className="mt-8 pt-4 border-t border-gray-100 flex justify-end">
+                            <button
+                                onClick={() => setIsLogoInfoOpen(false)}
+                                className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors"
+                            >
+                                Got it!
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Toast Notification */}
             <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>

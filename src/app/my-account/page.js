@@ -25,6 +25,7 @@ export default function MyAccountPage() {
     const [isUploading, setIsUploading] = useState(false);
     
     const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
     const [isLogoInfoOpen, setIsLogoInfoOpen] = useState(false);
 
     useEffect(() => {
@@ -46,6 +47,14 @@ export default function MyAccountPage() {
         return () => unsub();
     }, []);
 
+    const triggerToast = (msg = "Link Copied") => {
+        setToastMessage(msg);
+        setShowToast(true);
+        setTimeout(() => {
+            setShowToast(false);
+        }, 3000);
+    };
+
     const handleSave = async () => {
         setIsSaving(true);
         try {
@@ -54,16 +63,29 @@ export default function MyAccountPage() {
                 name: profile.name,
                 phone: profile.phone,
                 address: profile.address || '',
-                clientMargin: Number(profile.clientMargin),
                 brandBgColor: profile.brandBgColor,
                 brandTextColor: profile.brandTextColor
             });
-            alert("Profile successfully updated!");
+            triggerToast("Profile successfully updated!");
         } catch (error) {
             console.error(error);
-            alert("Failed to save profile.");
+            triggerToast("Failed to save profile.");
         }
         setIsSaving(false);
+    };
+
+    // Auto-save just the margin when the slider is released
+    const handleMarginChangeSave = async () => {
+        if (!user) return;
+        try {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
+                clientMargin: Number(profile.clientMargin)
+            });
+            triggerToast("Pricing Margin Auto-Saved!");
+        } catch (error) {
+            console.error("Failed to save margin", error);
+            triggerToast("Failed to sync margin.");
+        }
     };
 
     const handleLogoUpload = async (e) => {
@@ -79,8 +101,9 @@ export default function MyAccountPage() {
                 logoUrl: url
             });
             setProfile(prev => ({...prev, logoUrl: url}));
+            triggerToast("Logo uploaded successfully!");
         } catch(err) {
-            alert("Upload failed. Please try again.");
+            triggerToast("Upload failed. Please try again.");
         }
         setIsUploading(false);
     };
@@ -97,8 +120,9 @@ export default function MyAccountPage() {
             sessionStorage.removeItem('client_logo');
             sessionStorage.removeItem('client_bg');
             sessionStorage.removeItem('client_text');
+            triggerToast("Branding reset to defaults.");
         } catch(err) {
-            alert("Failed to reset branding");
+            triggerToast("Failed to reset branding");
         }
     };
 
@@ -112,20 +136,13 @@ export default function MyAccountPage() {
         window.location.href = '/category';
     };
 
-    const triggerToast = () => {
-        setShowToast(true);
-        setTimeout(() => {
-            setShowToast(false);
-        }, 3000);
-    };
-
     // Dynamically calculate the magic link so it always respects the current slider!
     const encodedMargin = btoa((profile.clientMargin !== undefined ? profile.clientMargin : 20).toString());
     const portalLink = user ? `${typeof window !== 'undefined' ? window.location.origin : ''}/category?pro=${user.uid}&cm=${encodedMargin}` : '';
 
     const copyMagicLink = () => {
         if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(portalLink).then(triggerToast).catch(err => {
+            navigator.clipboard.writeText(portalLink).then(() => triggerToast("Link Copied")).catch(err => {
                 console.error('Failed to copy: ', err);
             });
         } else {
@@ -140,7 +157,7 @@ export default function MyAccountPage() {
             textArea.select();
             try {
                 document.execCommand('copy');
-                triggerToast();
+                triggerToast("Link Copied");
             } catch (err) {
                 console.error('Fallback copy failed', err);
             }
@@ -295,13 +312,19 @@ export default function MyAccountPage() {
                         </div>
                     </div>
                     
-                    <input type="range" min="0" max="100" step="5" value={profile.clientMargin} onChange={e => setProfile({...profile, clientMargin: e.target.value})} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black mb-8" />
+                    <input 
+                        type="range" 
+                        min="0" max="100" step="5" 
+                        value={profile.clientMargin} 
+                        onChange={e => setProfile({...profile, clientMargin: e.target.value})} 
+                        onMouseUp={handleMarginChangeSave}
+                        onTouchEnd={handleMarginChangeSave}
+                        onKeyUp={handleMarginChangeSave}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black mb-8" 
+                    />
                     
                     <div className="flex gap-4 mb-8">
-                        <button onClick={handleSave} disabled={isSaving} className="flex-1 bg-black text-white px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors">
-                            Save Pricing Model
-                        </button>
-                        <button onClick={enableClientMode} className="flex-1 bg-gray-100 text-black px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors border border-gray-200">
+                        <button onClick={enableClientMode} className="w-full bg-gray-100 text-black px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors border border-gray-200">
                             Preview Portal
                         </button>
                     </div>
@@ -371,7 +394,7 @@ export default function MyAccountPage() {
             {/* Toast Notification */}
             <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
                 <span className="font-black text-gold">✓</span>
-                <p className="font-bold text-xs uppercase tracking-widest m-0">Link Copied</p>
+                <p className="font-bold text-xs uppercase tracking-widest m-0">{toastMessage || "Link Copied"}</p>
             </div>
         </main>
     );
