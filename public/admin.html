@@ -506,7 +506,7 @@
     <div id="staff-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-xl p-6 w-full max-w-md">
             <h3 class="text-lg font-bold text-gray-900 mb-1" id="staff-modal-title">Add Staff Member</h3>
-            <p class="text-xs text-gray-500 mb-4">Staff members have full console access and act as Account Managers.</p>
+            <p class="text-xs text-gray-500 mb-4">Staff members act as Account Managers for clients.</p>
             <form onsubmit="window.saveStaff(event)" class="space-y-4">
                 <input type="hidden" id="staff-id">
                 <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg space-y-3">
@@ -525,6 +525,15 @@
                     <div id="staff-password-container">
                         <label class="block text-[10px] font-black uppercase text-gray-400 mb-1">Temporary Password</label>
                         <input type="password" id="staff-password" minlength="6" placeholder="Assign Secure Password (min 6 chars)" class="w-full px-3 py-2 border border-gray-300 rounded focus:border-gold outline-none text-sm bg-white">
+                    </div>
+                    
+                    <!-- NEW: CONSOLE ACCESS SETTING -->
+                    <div class="pt-2 border-t border-gray-100 mt-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="staff-console-access" class="w-4 h-4 accent-gold cursor-pointer">
+                            <span class="text-xs font-bold text-gray-900">Grant Full Admin Console Access</span>
+                        </label>
+                        <p class="text-[9px] text-gray-500 mt-1">If unchecked, they act only as an Account Manager for clients but cannot log into this dashboard.</p>
                     </div>
                 </div>
                 <div class="flex justify-end gap-2 mt-4">
@@ -749,6 +758,7 @@
             }
         };
 
+        // --- NEW: LOGIN SECURITY & CONSOLE ACCESS CHECK ---
         async function initAdmin() {            
             await new Promise(resolve => {
                 const unsub = onAuthStateChanged(auth, (user) => { unsub(); resolve(user); });
@@ -758,12 +768,24 @@
                 if (user && !user.isAnonymous) {
                     const staffDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', user.uid));
                     if (!staffDoc.exists() && (await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'staff'))).empty) {
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', user.uid), { email: user.email, role: 'admin', name: 'Master Admin' });
+                        // Very first user ever created defaults to Master Admin with full access
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', user.uid), { email: user.email, role: 'admin', name: 'Master Admin', hasConsoleAccess: true });
                     } else if (!staffDoc.exists()) { 
                         await signOut(auth); 
                         document.getElementById('login-error').innerText = "Access Denied: Not an authorized system admin.";
                         document.getElementById('login-error').classList.remove('hidden');
                         return; 
+                    } else {
+                        // Check if they are allowed to see the console
+                        const data = staffDoc.data();
+                        const hasAccess = data.hasConsoleAccess === true || (data.hasConsoleAccess === undefined && data.role === 'admin');
+                        
+                        if (!hasAccess) {
+                            await signOut(auth);
+                            document.getElementById('login-error').innerText = "Access Denied: Account Manager credentials do not have console access.";
+                            document.getElementById('login-error').classList.remove('hidden');
+                            return;
+                        }
                     }
                     
                     document.getElementById('auth-screen').classList.add('hidden');
@@ -827,11 +849,15 @@
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-gray-50 border-b border-gray-100 text-xs transition-colors";
                 
+                const accessBadge = (s.hasConsoleAccess === true || (s.hasConsoleAccess === undefined && s.role === 'admin')) 
+                    ? '<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-2">Console Access</span>'
+                    : '<span class="bg-gray-200 text-gray-600 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-2">AM Only</span>';
+
                 tr.innerHTML = `
                     <td class="px-6 py-3 font-bold text-gray-900">${s.name || '--'}</td>
                     <td class="px-6 py-3 text-gray-500">${s.email}</td>
                     <td class="px-6 py-3 text-gray-500">${s.phone || '--'}</td>
-                    <td class="px-6 py-3"><span class="bg-blue-100 text-blue-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">${s.role || 'Staff'}</span></td>
+                    <td class="px-6 py-3"><span class="bg-blue-100 text-blue-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">${s.role || 'Staff'}</span>${accessBadge}</td>
                     <td class="px-6 py-3 text-right">
                         <button onclick="window.openStaffModal('${s.id}')" class="text-gold hover:text-black font-bold uppercase tracking-wider text-[9px] mr-3 outline-none">Edit</button>
                         <button onclick="window.deleteStaff('${s.id}', '${(s.name || s.email).replace(/'/g, "\\'")}')" class="text-gray-400 hover:text-red-500 font-bold uppercase tracking-wider text-[9px] outline-none">Remove</button>
@@ -1586,11 +1612,12 @@
             const name = document.getElementById('staff-name').value;
             const phone = document.getElementById('staff-phone').value;
             const email = document.getElementById('staff-email').value;
+            const hasConsoleAccess = document.getElementById('staff-console-access').checked;
             
             try {
                 if (id) {
                     // Updating an existing staff member (We only update Name and Phone here to be safe with Firebase Auth rules)
-                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', id), { name, phone });
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', id), { name, phone, hasConsoleAccess });
                     showToast("Staff profile updated!");
                 } else {
                     // Creating a brand new staff member
@@ -1600,7 +1627,7 @@
                     const cred = await createUserWithEmailAndPassword(tAuth, email, password);
                     
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', cred.user.uid), { 
-                        name, phone, email, role: 'admin' 
+                        name, phone, email, role: 'admin', hasConsoleAccess
                     });
                     
                     await signOut(tAuth); await deleteApp(tApp);
@@ -1657,6 +1684,7 @@
             const pwdContainer = document.getElementById('staff-password-container');
             const pwdInput = document.getElementById('staff-password');
             const emailInput = document.getElementById('staff-email');
+            const accessInput = document.getElementById('staff-console-access');
             
             if (id) {
                 // Editing existing
@@ -1666,6 +1694,7 @@
                     document.getElementById('staff-id').value = staff.id;
                     document.getElementById('staff-name').value = staff.name || '';
                     document.getElementById('staff-phone').value = staff.phone || '';
+                    accessInput.checked = staff.hasConsoleAccess === true || (staff.hasConsoleAccess === undefined && staff.role === 'admin');
                     emailInput.value = staff.email || '';
                     
                     emailInput.disabled = true;
@@ -1679,6 +1708,7 @@
                 document.getElementById('staff-id').value = '';
                 document.getElementById('staff-name').value = '';
                 document.getElementById('staff-phone').value = '';
+                accessInput.checked = false;
                 emailInput.value = '';
                 
                 emailInput.disabled = false;
