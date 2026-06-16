@@ -36,10 +36,6 @@ function ProductViewerContent({ initialProduct }) {
     const [isBuilderOpen, setIsBuilderOpen] = useState(false);
     const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
 
-    // New: Quote Metadata
-    const [quoteClientName, setQuoteClientName] = useState('');
-    const [quoteProjectName, setQuoteProjectName] = useState('');
-
     // Measurements
     const [calcNetSqft, setCalcNetSqft] = useState('');
     const [calcWaste, setCalcWaste] = useState('1.10');
@@ -356,8 +352,8 @@ function ProductViewerContent({ initialProduct }) {
         }
     };
 
-    const handleSaveStandaloneQuote = async () => {
-        if (!quoteClientName.trim()) return alert("Please enter a Client Name for this proposal.");
+    const handleSaveQuoteToBoard = async () => {
+        if (!selectedBoardId) return alert("Please select a board to save this proposal to.");
         setIsSavingToBoard(true);
 
         try {
@@ -366,16 +362,7 @@ function ProductViewerContent({ initialProduct }) {
             else if (padSelection === '8lb_hope') padName = "Premium 8lb 'Hope' Moisture Barrier Cushion";
             else if (padSelection === '8lb_memory') padName = "Luxury 8lb Memory Foam Cushion";
 
-            const quoteDoc = {
-                proId: user.uid,
-                clientName: quoteClientName,
-                projectName: quoteProjectName || 'Flooring Project',
-                productId: productData.id,
-                productName: productData.displayTitle,
-                colorSku: activeColor?.sku || '',
-                colorName: activeColor?.name || '',
-                imgPrefix: productData.imgPrefix || '',
-                category: productData.category || '',
+            const quoteObj = {
                 measurements: { waste: parseFloat(calcWaste), netSqft: netSqftNum, coverageSqft: finalMaterialCoverageSqft },
                 material: { qty: finalMaterialQty, unit: finalMaterialUnit, wholesaleTotal: totalMaterialCost },
                 addons: {
@@ -392,19 +379,26 @@ function ProductViewerContent({ initialProduct }) {
                     custom1: (customLabor1Name && parseFloat(customLabor1Cost) > 0) ? { name: customLabor1Name, cost: parseFloat(customLabor1Cost) } : null,
                     custom2: (customLabor2Name && parseFloat(customLabor2Cost) > 0) ? { name: customLabor2Name, cost: parseFloat(customLabor2Cost) } : null
                 },
-                totals: { wholesale: totalWholesaleProjectCost, margin: builderMargin, turnkeyRetail: turnkeyRetailPrice },
-                createdAt: new Date().toISOString()
+                totals: { wholesale: totalWholesaleProjectCost, margin: builderMargin, turnkeyRetail: turnkeyRetailPrice }
             };
 
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'pro_quotes'), quoteDoc);
+            const productToSave = {
+                productId: productData.id,
+                name: productData.displayTitle,
+                colorSku: activeColor?.sku || '',
+                colorName: activeColor?.name || '',
+                category: productData.category || '',
+                imgPrefix: productData.imgPrefix || '',
+                quote: quoteObj,
+                addedAt: new Date().toISOString()
+            };
+
+            const boardRef = doc(db, 'artifacts', appId, 'public', 'data', 'client_boards', selectedBoardId);
+            await updateDoc(boardRef, { products: arrayUnion(productToSave) });
             
-            setBoardSaveMessage(`Proposal Saved!`);
-            setTimeout(() => { 
-                setBoardSaveMessage(''); 
-                setIsBuilderOpen(false); 
-                setQuoteClientName('');
-                setQuoteProjectName('');
-            }, 2000);
+            const boardName = proBoards.find(b => b.id === selectedBoardId)?.name || 'Board';
+            setBoardSaveMessage(`Saved Proposal to ${boardName}`);
+            setTimeout(() => { setBoardSaveMessage(''); setIsBuilderOpen(false); }, 2000);
         } catch (err) {
             console.error("Error saving proposal", err);
             alert("Failed to save proposal.");
@@ -621,19 +615,6 @@ function ProductViewerContent({ initialProduct }) {
                       </div>
 
                       <div className="p-6 space-y-8 flex-1">
-
-                          {/* NEW: PROPOSAL DETAILS */}
-                          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                              <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Proposal Details</h4>
-                              <div className="space-y-3">
-                                  <div>
-                                      <input type="text" placeholder="Client Name (e.g. Smith Family) *" value={quoteClientName} onChange={e => setQuoteClientName(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
-                                  </div>
-                                  <div>
-                                      <input type="text" placeholder="Project / Room (e.g. Kitchen Remodel)" value={quoteProjectName} onChange={e => setQuoteProjectName(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
-                                  </div>
-                              </div>
-                          </div>
                           
                           {/* STEP 1: MEASUREMENTS */}
                           <div>
@@ -756,14 +737,20 @@ function ProductViewerContent({ initialProduct }) {
                           
                           <input type="range" min="0" max="100" step="1" value={builderMargin} onChange={e => setBuilderMargin(Number(e.target.value))} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold mb-6" />
 
-                          <div className="space-y-3">
-                              <button onClick={handleSaveStandaloneQuote} disabled={isSavingToBoard || netSqftNum === 0 || !quoteClientName.trim()} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50 cursor-pointer">
-                                  {boardSaveMessage ? `✓ ${boardSaveMessage}` : (isSavingToBoard ? "Saving..." : "Save Turnkey Proposal")}
-                              </button>
-                              {(!quoteClientName.trim() || netSqftNum === 0) && (
-                                  <div className="text-[10px] text-red-400 text-center uppercase tracking-widest font-bold">Client Name & SqFt Required</div>
-                              )}
-                          </div>
+                          {proBoards.length > 0 ? (
+                              <div className="space-y-3">
+                                  <select value={selectedBoardId} onChange={e => setSelectedBoardId(e.target.value)} className="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl text-sm font-bold text-white outline-none focus:border-gold">
+                                      {proBoards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                  </select>
+                                  <button onClick={handleSaveQuoteToBoard} disabled={isSavingToBoard || netSqftNum === 0} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50">
+                                      {boardSaveMessage ? `✓ ${boardSaveMessage}` : (isSavingToBoard ? "Saving..." : "Save Turnkey Proposal")}
+                                  </button>
+                              </div>
+                          ) : (
+                              <div className="text-center text-xs text-gray-400 italic bg-gray-800 p-4 rounded-xl">
+                                  Go to <Link href="/my-account" className="text-gold font-bold not-italic hover:underline">My Account</Link> to create a Client Board first!
+                              </div>
+                          )}
                       </div>
 
                   </div>
