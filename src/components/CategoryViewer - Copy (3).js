@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import Image from 'next/image';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { collection, onSnapshot, doc, getDoc } from "firebase/firestore";
 
@@ -41,8 +42,21 @@ try {
     console.warn("Firebase lib not found in current environment context.");
 }
 
+// Safely handle Next.js Image fallbacks without causing srcset hydration crashes
+const CatalogImage = ({ src, alt, fallbackSrc, ...props }) => {
+    const [error, setError] = useState(false);
+    useEffect(() => { setError(false); }, [src]);
+    return (
+        <Image 
+            src={error ? fallbackSrc : src} 
+            alt={alt} 
+            onError={() => setError(true)} 
+            {...props} 
+        />
+    );
+};
+
 // --- SPEC NORMALIZATION ENGINE ---
-// Standardizes the labels on the left side of the colon
 const normalizeSpecKey = (rawKey) => {
     const k = rawKey.toLowerCase().trim();
     if (k === 'core' || k === 'construction' || k === 'core material' || k === 'core type') return 'Construction / Core';
@@ -56,12 +70,10 @@ const normalizeSpecKey = (rawKey) => {
     return rawKey.trim();
 };
 
-// Standardizes the values on the right side of the colon into specific buckets
 const normalizeSpecValue = (key, rawValue, category = '') => {
     const val = rawValue.trim();
     const lowerVal = val.toLowerCase();
 
-    // 1. Thickness Bucketing
     if (key.toLowerCase() === "thickness") {
         const match = val.match(/[\d.]+/);
         if (match) {
@@ -73,48 +85,37 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
         }
     }
 
-    // 2. Construction / Core Type Extraction
     if (key.toLowerCase() === "construction / core") {
-        // LVP manufacturers often use "Solid Polymer Core" for SPC
         if (category === 'Luxury Vinyl (LVP)' && lowerVal.includes("solid")) return "SPC";
-        
         if (lowerVal.includes("solid")) return "Solid";
         if (lowerVal.includes("wpc")) return "WPC";
         if (lowerVal.includes("spc") || lowerVal.includes("rigid")) return "SPC";
-        
-        // Catch anything that implies engineered hardwood (HDF, Multi-ply, veneer)
         if (lowerVal.includes("engineered") || lowerVal.includes("ply") || lowerVal.includes("hdf") || lowerVal.includes("veneer") || lowerVal.includes("multi")) return "Engineered";
-        
         return val;
     }
 
-    // 3. Attached Pad Extraction
     if (key.toLowerCase() === "attached pad" || key.toLowerCase() === "pad") {
         if (lowerVal.includes("cork")) return "Attached Cork";
         if (lowerVal.includes("no") || lowerVal === "none" || lowerVal === "n/a" || lowerVal === "false") return "None";
         return "Attached Pad"; 
     }
 
-    // 4. Carpet Style Type Bucketing
     if (key.toLowerCase() === "style type") {
         if ((lowerVal.includes("texture") || lowerVal.includes("cut pile")) && !lowerVal.includes("loop")) return "Texture / Cut Pile";
         if (lowerVal.includes("pattern") || (lowerVal.includes("cut") && lowerVal.includes("loop"))) return "Pattern / Cut & Loop";
         if (lowerVal.includes("loop") || lowerVal.includes("berber")) return "Loop";
     }
 
-    // 5. Wear Layer Cleanup
     if (key.toLowerCase() === "wear layer") {
          const match = val.match(/(\d+)/);
          if (match) return `${match[1]} mil`;
     }
     
-    // 6. Waterproof Normalization
     if (key.toLowerCase() === "waterproof") {
         if (lowerVal.includes("no") || lowerVal === "false") return "None";
         return "100% Waterproof";
     }
 
-    // 7. Fiber Type Normalization
     if (key.toLowerCase() === "fiber type") {
         if (lowerVal.includes("nylon")) return "Nylon";
         if (lowerVal.includes("triexta") || lowerVal.includes("smartstrand") || lowerVal.includes("sorona")) return "Triexta";
@@ -123,7 +124,6 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
         return val;
     }
 
-    // 8. Face Weight Bucketing
     if (key.toLowerCase() === "face weight") {
         const match = val.match(/[\d.]+/);
         if (match) {
@@ -139,10 +139,8 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     return val;
 };
 
-// Hardcoded sort order so custom buckets don't sort alphabetically
 const THICKNESS_ORDER = { "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4 };
 const FACE_WEIGHT_ORDER = { "< 30 oz": 1, "30 - 40 oz": 2, "40 - 50 oz": 3, "50 - 60 oz": 4, "60+ oz": 5 };
-// ---------------------------------
 
 function CategoryViewerContent({ initialCategory }) {
   const router = useRouter();
@@ -291,11 +289,9 @@ function CategoryViewerContent({ initialCategory }) {
               data.category = cat || 'Uncategorized';
           }
 
-          // SMART AUTO-TAGGER: Fills in the blanks if manufacturers forgot specs!
           const fullDesc = (data.desc || '').toLowerCase();
           let existingSpecs = data.specs || [];
           
-          // Helper to safely check if a normalized spec exists
           const hasSpec = (targetKey) => {
               return existingSpecs.some(s => {
                   const parts = s.split(':');
@@ -304,33 +300,21 @@ function CategoryViewerContent({ initialCategory }) {
           };
           
           if (data.category === 'Luxury Vinyl (LVP)') {
-              // Ensure Waterproof exists
-              if (!hasSpec('Waterproof')) {
-                  existingSpecs.push('Waterproof: 100% Waterproof');
-              }
-              
-              // Ensure Pad exists
+              if (!hasSpec('Waterproof')) existingSpecs.push('Waterproof: 100% Waterproof');
               if (!hasSpec('Attached Pad')) {
                   if (fullDesc.includes('cork')) existingSpecs.push('Attached Pad: Attached Cork');
                   else existingSpecs.push('Attached Pad: Attached Pad');
               }
-
-              // Ensure Core exists
               if (!hasSpec('Construction / Core')) {
                   if (fullDesc.includes('wpc')) existingSpecs.push('Construction / Core: WPC');
                   else if (fullDesc.includes('spc') || fullDesc.includes('rigid') || fullDesc.includes('solid')) existingSpecs.push('Construction / Core: SPC');
               }
           } else if (data.category === 'Hardwood') {
-              // Ensure Core exists for Hardwood (Engineered vs Solid)
               if (!hasSpec('Construction / Core')) {
-                  if (fullDesc.includes('solid') || data.displayTitle.toLowerCase().includes('solid')) {
-                      existingSpecs.push('Construction / Core: Solid');
-                  } else {
-                      existingSpecs.push('Construction / Core: Engineered');
-                  }
+                  if (fullDesc.includes('solid') || data.displayTitle.toLowerCase().includes('solid')) existingSpecs.push('Construction / Core: Solid');
+                  else existingSpecs.push('Construction / Core: Engineered');
               }
           } else if (data.category === 'Carpet') {
-              // Ensure Fiber Type exists for Carpet
               if (!hasSpec('Fiber Type')) {
                   if (fullDesc.includes('nylon')) existingSpecs.push('Fiber Type: Nylon');
                   else if (fullDesc.includes('triexta') || fullDesc.includes('smartstrand') || fullDesc.includes('sorona')) existingSpecs.push('Fiber Type: Triexta');
@@ -338,11 +322,7 @@ function CategoryViewerContent({ initialCategory }) {
                   else if (fullDesc.includes('polyester') || fullDesc.includes(' pet ')) existingSpecs.push('Fiber Type: Polyester');
               }
           } else {
-              // Non-LVP/Hardwood auto-tags just in case
-              if (fullDesc.includes('cork') && !hasSpec('Attached Pad')) {
-                  existingSpecs.push('Attached Pad: Attached Cork');
-              }
-              
+              if (fullDesc.includes('cork') && !hasSpec('Attached Pad')) existingSpecs.push('Attached Pad: Attached Cork');
               if (!hasSpec('Construction / Core')) {
                   if (fullDesc.includes('wpc')) existingSpecs.push('Construction / Core: WPC');
                   else if (fullDesc.includes('spc') || fullDesc.includes('rigid') || fullDesc.includes('solid')) existingSpecs.push('Construction / Core: SPC');
@@ -432,8 +412,7 @@ function CategoryViewerContent({ initialCategory }) {
           "Face Weight"
       ];
 
-      // Dynamically remove hard surface filters if the user is looking at Carpet
-      if (activeCategory === 'Carpet' || activeCategory === 'Carpet Cushion') {
+      if (activeCategory === 'Carpet') {
           TARGET_SPECS = TARGET_SPECS.filter(s => 
               s !== "Construction / Core" && 
               s !== "Thickness" && 
@@ -461,9 +440,7 @@ function CategoryViewerContent({ initialCategory }) {
                   const matchedSpec = TARGET_SPECS.find(t => t.toLowerCase() === key.toLowerCase());
                   
                   if (matchedSpec && val.length > 0 && val.length < 40) {
-                      // Pass the product category into the normalization engine so it knows context
                       const normalizedVal = normalizeSpecValue(matchedSpec, val, p.category);
-                      
                       if (normalizedVal !== "None") {
                           if (!specMap[matchedSpec]) specMap[matchedSpec] = new Set();
                           specMap[matchedSpec].add(normalizedVal);
@@ -477,12 +454,8 @@ function CategoryViewerContent({ initialCategory }) {
       TARGET_SPECS.forEach(specName => {
           if (specMap[specName] && specMap[specName].size > 0) { 
               result[specName] = [...specMap[specName]].sort((a, b) => {
-                  if (specName === "Thickness") {
-                      return (THICKNESS_ORDER[a] || 99) - (THICKNESS_ORDER[b] || 99);
-                  }
-                  if (specName === "Face Weight") {
-                      return (FACE_WEIGHT_ORDER[a] || 99) - (FACE_WEIGHT_ORDER[b] || 99);
-                  }
+                  if (specName === "Thickness") return (THICKNESS_ORDER[a] || 99) - (THICKNESS_ORDER[b] || 99);
+                  if (specName === "Face Weight") return (FACE_WEIGHT_ORDER[a] || 99) - (FACE_WEIGHT_ORDER[b] || 99);
                   const numA = parseFloat(a);
                   const numB = parseFloat(b);
                   if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
@@ -493,13 +466,8 @@ function CategoryViewerContent({ initialCategory }) {
       return result;
   }, [liveProductsRaw, activeCategory]);
 
-  const handleProgramToggle = (val) => {
-      setSelectedPrograms(prev => prev.includes(val) ? prev.filter(p => p !== val) : [...prev, val]);
-  };
-
-  const handleBrandToggle = (brand) => {
-      setSelectedBrands(prev => prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]);
-  };
+  const handleProgramToggle = (val) => setSelectedPrograms(prev => prev.includes(val) ? prev.filter(p => p !== val) : [...prev, val]);
+  const handleBrandToggle = (brand) => setSelectedBrands(prev => prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]);
 
   const handleSpecToggle = (key, val) => {
       setSelectedSpecs(prev => {
@@ -529,17 +497,8 @@ function CategoryViewerContent({ initialCategory }) {
         const descLower = (p.desc || '').toLowerCase();
         const specTextCombined = (p.specs || []).join(' ').toLowerCase();
 
-        const matchesSearch = !searchVal || 
-                              nameLower.includes(searchVal) || 
-                              skuLower.includes(searchVal) || 
-                              mfgLower.includes(searchVal) || 
-                              descLower.includes(searchVal) || 
-                              specTextCombined.includes(searchVal);
-
-        const matchesCategory = (activeCategory === "All Products") || 
-                                (activeCategory === "Hot Buys" && p.isSale === true) || 
-                                (p.category === activeCategory);
-
+        const matchesSearch = !searchVal || nameLower.includes(searchVal) || skuLower.includes(searchVal) || mfgLower.includes(searchVal) || descLower.includes(searchVal) || specTextCombined.includes(searchVal);
+        const matchesCategory = (activeCategory === "All Products") || (activeCategory === "Hot Buys" && p.isSale === true) || (p.category === activeCategory);
         const matchesPrice = isNaN(maxPrice) || (priceValue <= maxPrice);
 
         let matchesProgs = true;
@@ -552,9 +511,7 @@ function CategoryViewerContent({ initialCategory }) {
         }
 
         let matchesBrands = true;
-        if (selectedBrands.length > 0) {
-            matchesBrands = selectedBrands.includes(p.manufacturer?.trim());
-        }
+        if (selectedBrands.length > 0) matchesBrands = selectedBrands.includes(p.manufacturer?.trim());
 
         let matchesSpecs = true;
         if (Object.keys(selectedSpecs).length > 0) {
@@ -564,11 +521,8 @@ function CategoryViewerContent({ initialCategory }) {
                     if (parts.length >= 2) {
                         const rawKey = parts[0].trim();
                         const pVal = parts.slice(1).join(':').trim();
-                        
                         const pKey = normalizeSpecKey(rawKey);
-                        
                         if (pKey.toLowerCase() === key.toLowerCase()) {
-                            // Pass the category dynamically to correctly map things like Solid hardwood vs SPC LVP
                             const normalizedPVal = normalizeSpecValue(key, pVal, p.category);
                             return vals.includes(normalizedPVal);
                         }
@@ -675,14 +629,15 @@ function CategoryViewerContent({ initialCategory }) {
       );
   };
 
+  const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
+
   let heroImage = 'images/heros/main-hero.jpg';
   if (activeCategory === 'Luxury Vinyl (LVP)') heroImage = 'images/heros/lvp.jpg';
-  else if (activeCategory === 'Carpet' || activeCategory === 'Carpet Cushion') heroImage = 'images/heros/carpet.jpg';
+  else if (activeCategory === 'Carpet') heroImage = 'images/heros/carpet.jpg';
   else if (activeCategory === 'Laminate') heroImage = 'images/heros/laminate.jpg';
   else if (activeCategory === 'Hardwood') heroImage = 'images/heros/hardwood.jpg';
 
   const heroFbUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(heroImage)}?alt=media`;
-  const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
   const exitBtnBg = typeof window !== 'undefined' ? (sessionStorage.getItem('client_bg') || '#ef4444') : '#ef4444';
   const exitBtnText = typeof window !== 'undefined' ? (sessionStorage.getItem('client_text') || '#ffffff') : '#ffffff';
@@ -736,14 +691,15 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
-                        {['All Products', 'Hot Buys', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Carpet Cushion'].map(cat => {
-                            if (cat === 'Hot Buys' && (!isWholesale || isClientMode)) return null;
-                            return (
-                                <button key={cat} onClick={() => handleCategorySwitch(cat)} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === cat ? 'bg-gold text-black font-black' : (cat === 'Hot Buys' ? 'text-red-600 hover:bg-red-50' : 'text-gray-500 hover:bg-gray-100')}`}>
-                                    {cat === 'All Products' ? '🌐 All Collections' : cat === 'Hot Buys' ? '🔥 Hot Buys (On Sale)' : cat}
-                                </button>
-                            );
-                        })}
+                        <button onClick={() => handleCategorySwitch('All Products')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === 'All Products' ? 'bg-gold text-black font-black' : 'text-gray-500 hover:bg-gray-100'}`}>🌐 All Collections</button>
+                        
+                        {!isClientMode && isWholesale && (
+                            <button onClick={() => handleCategorySwitch('Hot Buys')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === 'Hot Buys' ? 'bg-red-50 text-red-700 font-black' : 'text-gray-500 hover:bg-gray-100'}`}>🔥 Hot Buys (On Sale)</button>
+                        )}
+                        
+                        {uniqueCategoriesList.map(cat => (
+                            <button key={cat} onClick={() => handleCategorySwitch(cat)} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === cat ? 'bg-gold text-black font-black' : 'text-gray-500 hover:bg-gray-100'}`}>{cat}</button>
+                        ))}
                     </div>
                 </div>
 
@@ -852,8 +808,8 @@ function CategoryViewerContent({ initialCategory }) {
                                         </div>
                                     )}
 
-                                    <Link href={`/product/${p.id}`} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
-                                        <img src={fbPath} className="w-full h-full object-cover transition duration-300 hover:scale-105" onError={e => e.target.src=TBD_IMG} />
+                                    <Link href={`/product/${p.id}`} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block relative" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
+                                        <CatalogImage src={fbPath} fallbackSrc={TBD_IMG} alt={p.displayTitle || 'Product'} fill sizes={isListView ? "(max-width: 640px) 100vw, 160px" : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"} className="object-cover transition duration-300 hover:scale-105" />
                                     </Link>
 
                                     {!isListView && (
@@ -863,8 +819,8 @@ function CategoryViewerContent({ initialCategory }) {
                                                 const swatchRawPath = `images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
                                                 const swatchFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(swatchRawPath)}?alt=media`;
                                                 return (
-                                                    <button key={c.sku} onMouseEnter={() => setActivePreviews(prev => ({...prev, [p.id]: c.sku}))} onClick={(e) => { e.preventDefault(); setActivePreviews(prev => ({...prev, [p.id]: c.sku})); }} className="w-6 h-6 rounded-full border border-gray-200 overflow-hidden shrink-0 transition-transform hover:scale-125 focus:scale-125 focus:outline-none bg-gray-100 cursor-pointer" title={c.name}>
-                                                        <img src={swatchFbPath} className="w-full h-full object-cover pointer-events-none" onError={e => e.target.src=TBD_IMG} />
+                                                    <button key={c.sku} onMouseEnter={() => setActivePreviews(prev => ({...prev, [p.id]: c.sku}))} onClick={(e) => { e.preventDefault(); setActivePreviews(prev => ({...prev, [p.id]: c.sku})); }} className="relative w-6 h-6 rounded-full border border-gray-200 overflow-hidden shrink-0 transition-transform hover:scale-125 focus:scale-125 focus:outline-none bg-gray-100 cursor-pointer" title={c.name}>
+                                                        <CatalogImage src={swatchFbPath} fallbackSrc={TBD_IMG} fill sizes="24px" className="object-cover pointer-events-none" alt={c.name} />
                                                     </button>
                                                 )
                                             })}
@@ -896,8 +852,8 @@ function CategoryViewerContent({ initialCategory }) {
                                                         const swatchRawPath = `images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
                                                         const swatchFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(swatchRawPath)}?alt=media`;
                                                         return (
-                                                            <button key={c.sku} onMouseEnter={() => setActivePreviews(prev => ({...prev, [p.id]: c.sku}))} onClick={(e) => { e.preventDefault(); setActivePreviews(prev => ({...prev, [p.id]: c.sku})); }} className="w-6 h-6 rounded-full border border-gray-200 overflow-hidden shrink-0 transition-transform hover:scale-125 focus:scale-125 focus:outline-none bg-gray-100 cursor-pointer" title={c.name}>
-                                                                <img src={swatchFbPath} className="w-full h-full object-cover pointer-events-none" onError={e => e.target.src=TBD_IMG} />
+                                                            <button key={c.sku} onMouseEnter={() => setActivePreviews(prev => ({...prev, [p.id]: c.sku}))} onClick={(e) => { e.preventDefault(); setActivePreviews(prev => ({...prev, [p.id]: c.sku})); }} className="relative w-6 h-6 rounded-full border border-gray-200 overflow-hidden shrink-0 transition-transform hover:scale-125 focus:scale-125 focus:outline-none bg-gray-100 cursor-pointer" title={c.name}>
+                                                                <CatalogImage src={swatchFbPath} fallbackSrc={TBD_IMG} fill sizes="24px" className="object-cover pointer-events-none" alt={c.name} />
                                                             </button>
                                                         )
                                                     })}
@@ -981,14 +937,13 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
-                        {['All Products', 'Hot Buys', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Carpet Cushion'].map(cat => {
-                            if (cat === 'Hot Buys' && (!isWholesale || isClientMode)) return null;
-                            return (
-                                <button key={cat} onClick={() => handleCategorySwitch(cat)} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === cat ? 'bg-gold text-black font-black' : (cat === 'Hot Buys' ? 'text-red-600 hover:bg-red-50' : 'text-gray-500 hover:bg-gray-100')}`}>
-                                    {cat === 'All Products' ? '🌐 All Collections' : cat === 'Hot Buys' ? '🔥 Hot Buys (On Sale)' : cat}
-                                </button>
-                            );
-                        })}
+                        <button onClick={() => handleCategorySwitch('All Products')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === 'All Products' ? 'bg-gold text-black font-black' : 'text-gray-500 hover:bg-gray-100'}`}>🌐 All Collections</button>
+                        {!isClientMode && isWholesale && (
+                            <button onClick={() => handleCategorySwitch('Hot Buys')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === 'Hot Buys' ? 'bg-red-50 text-red-700 font-black' : 'text-gray-500 hover:bg-gray-100'}`}>🔥 Hot Buys (On Sale)</button>
+                        )}
+                        {uniqueCategoriesList.map(cat => (
+                            <button key={cat} onClick={() => handleCategorySwitch(cat)} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === cat ? 'bg-gold text-black font-black' : 'text-gray-500 hover:bg-gray-100'}`}>{cat}</button>
+                        ))}
                     </div>
                 </div>
 

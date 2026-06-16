@@ -2,10 +2,26 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc } from "firebase/firestore";
 import { auth, db, appId } from "../lib/firebase";
+
+// Safely handle Next.js Image fallbacks without causing srcset hydration crashes
+const CatalogImage = ({ src, alt, fallbackSrc, priority, ...props }) => {
+    const [error, setError] = useState(false);
+    useEffect(() => { setError(false); }, [src]);
+    return (
+        <Image 
+            src={error ? fallbackSrc : src} 
+            alt={alt} 
+            onError={() => setError(true)} 
+            priority={priority}
+            {...props} 
+        />
+    );
+};
 
 function ProductViewerContent({ initialProduct }) {
     const router = useRouter();
@@ -64,9 +80,6 @@ function ProductViewerContent({ initialProduct }) {
     const [selectedBoardId, setSelectedBoardId] = useState('');
     const [isSavingToBoard, setIsSavingToBoard] = useState(false);
     const [boardSaveMessage, setBoardSaveMessage] = useState('');
-    
-    // NEW: Dynamic Pads State
-    const [availablePads, setAvailablePads] = useState([]);
 
     const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
@@ -202,40 +215,12 @@ function ProductViewerContent({ initialProduct }) {
         }
     }, [user]);
 
-    // NEW: Fetch dynamic pads from database
     useEffect(() => {
-        const isCarpetProd = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
-        const isClientModeActual = clientMargin !== null;
-        
-        if (isCarpetProd && !isClientModeActual) {
-            const fetchPads = async () => {
-                try {
-                    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'), where("category", "==", "Carpet Cushion"), where("isVisible", "==", true));
-                    const snap = await getDocs(q);
-                    const pads = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    setAvailablePads(pads);
-                } catch(e) { console.error("Error fetching pads", e); }
-            };
-            fetchPads();
-        }
-    }, [productData, clientMargin]);
-
-    // NEW: Dynamic Pad Pricing Effect
-    useEffect(() => {
-        if (padSelection === 'none') {
-            setPadCost('0.00');
-        } else if (padSelection !== 'custom_legacy') {
-            const pad = availablePads.find(p => p.id === padSelection);
-            if (pad) {
-                setPadCost(pad.price ? pad.price.toFixed(2) : '0.00');
-            } else {
-                // Fallback for hardcoded legacy UI until replaced
-                if (padSelection === '6lb') setPadCost('2.50');
-                else if (padSelection === '8lb_hope') setPadCost('3.75');
-                else if (padSelection === '8lb_memory') setPadCost('4.50');
-            }
-        }
-    }, [padSelection, availablePads]);
+        if (padSelection === '6lb') setPadCost('2.50');
+        else if (padSelection === '8lb_hope') setPadCost('3.75');
+        else if (padSelection === '8lb_memory') setPadCost('4.50');
+        else setPadCost('0.00');
+    }, [padSelection]);
 
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
@@ -326,7 +311,6 @@ function ProductViewerContent({ initialProduct }) {
         ? (requiredSqYd * (basePrice * 9)) 
         : (requiredCartons * cartonSqft * basePrice);
 
-    // Dynamic padding calculation
     const totalPadCost = isCarpet && padSelection !== 'none' 
         ? (requiredSqYd * (parseFloat(padCost) || 0)) 
         : 0;
@@ -381,16 +365,10 @@ function ProductViewerContent({ initialProduct }) {
         setIsSavingToBoard(true);
 
         try {
-            // Save dynamic pad name to database for quote retrieval
-            let padNameToSave = '';
-            if (padSelection === '6lb') padNameToSave = "6lb Standard Cushion";
-            else if (padSelection === '8lb_hope') padNameToSave = "Premium 8lb 'Hope' Moisture Barrier Cushion";
-            else if (padSelection === '8lb_memory') padNameToSave = "Luxury 8lb Memory Foam Cushion";
-            else if (padSelection === 'custom_legacy') padNameToSave = "Legacy Pad / Custom";
-            else if (padSelection !== 'none') {
-                const found = availablePads.find(p => p.id === padSelection);
-                if (found) padNameToSave = found.name;
-            }
+            let padName = '';
+            if (padSelection === '6lb') padName = "6lb Standard Cushion";
+            else if (padSelection === '8lb_hope') padName = "Premium 8lb 'Hope' Moisture Barrier Cushion";
+            else if (padSelection === '8lb_memory') padName = "Luxury 8lb Memory Foam Cushion";
 
             const quoteDoc = {
                 proId: user.uid,
@@ -405,7 +383,7 @@ function ProductViewerContent({ initialProduct }) {
                 measurements: { waste: parseFloat(calcWaste), netSqft: netSqftNum, coverageSqft: finalMaterialCoverageSqft },
                 material: { qty: finalMaterialQty, unit: finalMaterialUnit, wholesaleTotal: totalMaterialCost },
                 addons: {
-                    pad: padNameToSave ? { name: padNameToSave, cost: totalPadCost } : null,
+                    pad: padName ? { name: padName, cost: totalPadCost } : null,
                     trims: !isCarpet && (trimQty.standard > 0 || trimQty.stairnose > 0 || trimQty.quarterRound > 0) ? { 
                         cost: totalTrimCost, 
                         details: { standard: trimQty.standard, stairnose: trimQty.stairnose, quarterRound: trimQty.quarterRound } 
@@ -502,7 +480,9 @@ function ProductViewerContent({ initialProduct }) {
                             router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
                             setActiveColor(c);
                         }}>
-                            <img src={fbPath} onError={(e) => e.target.src = TBD_IMG} className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} alt={c.name} />
+                            <div className={`relative w-full aspect-square border-2 rounded-md transition duration-200 bg-gray-100 overflow-hidden ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`}>
+                                <CatalogImage src={fbPath} fallbackSrc={TBD_IMG} alt={c.name} fill sizes="85px" className="object-cover" />
+                            </div>
                             <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
                         </div>
                     );
@@ -523,14 +503,29 @@ function ProductViewerContent({ initialProduct }) {
                 {activeView === 'VIDEO' ? (
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
-                    <img src={getMediaPath(activeView) || TBD_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => e.target.src = TBD_IMG} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
+                    <CatalogImage 
+                        src={getMediaPath(activeView) || TBD_IMG} 
+                        fallbackSrc={TBD_IMG}
+                        alt="Product" 
+                        fill 
+                        priority={true}
+                        sizes="(max-width: 1024px) 100vw, 50vw" 
+                        className="object-cover transition-opacity duration-200 group-hover:opacity-85" 
+                        style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} 
+                    />
                 )}
             </div>
 
             {productData.views && (
                 <div className="mt-4 flex gap-3">
                     {productData.views.map(v => (
-                         <img key={v} src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)} className={`w-[75px] h-[75px] object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} onClick={() => setActiveView(v)} onError={(e) => e.target.src = TBD_IMG} alt={`View ${v}`} />
+                         <div key={v} className={`relative w-[75px] h-[75px] border-2 rounded cursor-pointer transition overflow-hidden bg-gray-100 ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200'}`} onClick={() => setActiveView(v)}>
+                             {v === 'VIDEO' ? (
+                                 <img src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' className="w-full h-full object-cover" alt="Video View" />
+                             ) : (
+                                 <CatalogImage src={getMediaPath(v) || TBD_IMG} fallbackSrc={TBD_IMG} fill sizes="75px" className="object-cover" alt={`View ${v}`} />
+                             )}
+                         </div>
                     ))}
                 </div>
             )}
@@ -609,9 +604,15 @@ function ProductViewerContent({ initialProduct }) {
                     <h4 className="mt-0 uppercase tracking-widest text-gold text-sm font-bold mb-4">Technical Specifications</h4>
                     <ul className="list-disc pl-5 space-y-2 text-gray-600 text-sm">
                         {productData.specs.map((s, i) => {
-                            const [label, ...rest] = s.split(':');
-                            if (rest.length === 0) return <li key={i}>{s}</li>;
-                            return <li key={i}><strong>{label}:</strong> {rest.join(':')}</li>;
+                            if (!s.includes(':')) return <li key={i} className="text-sm text-gray-600 font-medium pb-2 border-b border-gray-100">{s}</li>;
+                            const [key, ...rest] = s.split(':');
+                            const val = rest.join(':');
+                            return (
+                                <li key={i} className="flex flex-col pb-2 border-b border-gray-100">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">{key.trim()}</span>
+                                    <span className="text-sm font-bold text-gray-900">{val.trim()}</span>
+                                </li>
+                            );
                         })}
                     </ul>
                 </div>
@@ -692,23 +693,16 @@ function ProductViewerContent({ initialProduct }) {
                                   <div className="space-y-3">
                                       <div>
                                           <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Select Carpet Cushion</label>
-                                          <select value={padSelection} onChange={e => setPadSelection(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white cursor-pointer">
+                                          <select value={padSelection} onChange={e => setPadSelection(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white">
                                               <option value="none">No Pad Included</option>
-                                              {availablePads.length > 0 ? availablePads.map(pad => (
-                                                  <option key={pad.id} value={pad.id}>{pad.name} (${parseFloat(pad.price || 0).toFixed(2)}/sqyd)</option>
-                                              )) : (
-                                                  <>
-                                                      <option value="6lb">6lb Standard Cushion</option>
-                                                      <option value="8lb_hope">Premium 8lb "Hope" Moisture Barrier</option>
-                                                      <option value="8lb_memory">Luxury 8lb Memory Foam</option>
-                                                  </>
-                                              )}
-                                              {padSelection === 'custom_legacy' && <option value="custom_legacy">Legacy Pad / Custom</option>}
+                                              <option value="6lb">6lb Standard Cushion</option>
+                                              <option value="8lb_hope">Premium 8lb "Hope" Moisture Barrier</option>
+                                              <option value="8lb_memory">Luxury 8lb Memory Foam</option>
                                           </select>
                                       </div>
                                       {padSelection !== 'none' && (
-                                          <div className="flex items-center gap-2 mt-2">
-                                              <label className="block text-[10px] font-bold uppercase text-gray-500 flex-1">Your Cost per sqyd ($)</label>
+                                          <div className="flex items-center gap-2">
+                                              <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 flex-1">Your Cost per sqyd ($)</label>
                                               <input type="number" step="0.01" value={padCost} onChange={e => setPadCost(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm text-right bg-white" />
                                           </div>
                                       )}
@@ -789,7 +783,7 @@ function ProductViewerContent({ initialProduct }) {
                           <input type="range" min="0" max="100" step="1" value={builderMargin} onChange={e => setBuilderMargin(Number(e.target.value))} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold mb-6" />
 
                           <div className="space-y-3">
-                              <button onClick={handleSaveStandaloneQuote} disabled={isSavingToBoard || netSqftNum === 0 || !quoteClientName.trim()} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50 cursor-pointer outline-none">
+                              <button onClick={handleSaveStandaloneQuote} disabled={isSavingToBoard || netSqftNum === 0 || !quoteClientName.trim()} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50 cursor-pointer">
                                   {boardSaveMessage ? `✓ ${boardSaveMessage}` : (isSavingToBoard ? "Saving..." : "Save Turnkey Proposal")}
                               </button>
                               {(!quoteClientName.trim() || netSqftNum === 0) && (
@@ -807,7 +801,14 @@ function ProductViewerContent({ initialProduct }) {
               <div className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center backdrop-blur-sm transition-opacity" onClick={(e) => { if (e.target === e.currentTarget) setIsLightboxOpen(false); }}>
                   <button className="absolute top-5 right-5 bg-black/60 text-white border-2 border-white rounded-full w-11 h-11 text-2xl flex items-center justify-center cursor-pointer hover:bg-gold hover:border-gold hover:text-black transition-colors z-[10000] outline-none" onClick={() => setIsLightboxOpen(false)}>✕</button>
                   <div className="w-[90vw] max-w-[1200px] h-[85vh] relative rounded-lg overflow-hidden cursor-crosshair touch-none" onMouseMove={handleZoomPan} onTouchMove={handleZoomPan} onMouseLeave={() => setZoomPos({x:50, y:50})} onTouchEnd={() => setZoomPos({x:50, y:50})}>
-                      <img src={getMediaPath(activeView) || TBD_IMG} alt="Zoomed Product" className="w-full h-full object-contain transition-transform duration-150 ease-out hover:scale-[2.2]" style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }} onError={(e) => e.target.src = TBD_IMG} />
+                      <CatalogImage 
+                          src={getMediaPath(activeView) || TBD_IMG} 
+                          fallbackSrc={TBD_IMG}
+                          alt="Zoomed Product" 
+                          fill
+                          className="object-contain transition-transform duration-150 ease-out hover:scale-[2.2]" 
+                          style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }} 
+                      />
                   </div>
               </div>
           )}
