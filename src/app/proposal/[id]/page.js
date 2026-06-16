@@ -4,7 +4,8 @@ import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
-import { auth, db, appId } from "../../../../lib/firebase";
+// FIX: Corrected relative path to go up 3 folders to src/lib/firebase
+import { auth, db, appId } from "../../../lib/firebase";
 
 export default function ProposalPage({ params }) {
     const unwrappedParams = use(params);
@@ -301,3 +302,6 @@ export default function ProposalPage({ params }) {
         </div>
     );
 }
+```
+
+Push that fix up to Vercel and your build will complete successfully. Next up, we will build out the Pro's "My Proposals" dashboard inside their My Account page so they can start managing these quotes!
