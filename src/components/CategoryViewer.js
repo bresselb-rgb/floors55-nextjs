@@ -646,7 +646,7 @@ function CategoryViewerContent({ initialCategory }) {
                 </div>
             )}
 
-            {Object.keys(dynamicSpecs).length > 0 && (
+            {Object.keys(dynamicSpecs).length > 0 && activeCategory !== 'All Products' && activeCategory !== 'Hot Buys' && (
                 <div className="pt-4 mt-4 border-t border-gray-100">
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-3">Specifications</label>
                     <div className="space-y-4">
@@ -760,7 +760,7 @@ function CategoryViewerContent({ initialCategory }) {
                     </div>
                 </div>
 
-                {!isClientMode && (
+                {!isClientMode && activeCategory !== 'All Products' && activeCategory !== 'Hot Buys' && (
                     <div>
                         <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2.5">Exclusive Programs</label>
                         <div className="space-y-2 text-xs font-bold text-gray-600">
@@ -1004,7 +1004,7 @@ function CategoryViewerContent({ initialCategory }) {
                     </div>
                 </div>
 
-                {!isClientMode && (
+                {!isClientMode && activeCategory !== 'All Products' && activeCategory !== 'Hot Buys' && (
                     <div>
                         <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2.5">Exclusive Programs</label>
                         <div className="space-y-2 text-xs font-bold text-gray-600">
