@@ -4,7 +4,6 @@ import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
-// FIX: Corrected relative path to go up 3 folders to src/lib/firebase
 import { auth, db, appId } from "../../../lib/firebase";
 
 export default function ProposalPage({ params }) {
@@ -103,7 +102,7 @@ export default function ProposalPage({ params }) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 text-center">
                 <h1 className="text-3xl font-black mb-2">Proposal Not Found</h1>
-                <p className="text-gray-500 max-w-md">We couldn't locate this proposal. The link may be invalid or the project was removed by the contractor.</p>
+                <p className="text-gray-500 max-w-md">We couldn't locate this proposal. The link may be invalid or the project was removed by your contractor.</p>
             </div>
         );
     }
@@ -302,6 +301,3 @@ export default function ProposalPage({ params }) {
         </div>
     );
 }
-```
-
-Push that fix up to Vercel and your build will complete successfully. Next up, we will build out the Pro's "My Proposals" dashboard inside their My Account page so they can start managing these quotes!
