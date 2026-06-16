@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc } from "firebase/firestore";
@@ -65,7 +66,6 @@ function ProductViewerContent({ initialProduct }) {
     const [isSavingToBoard, setIsSavingToBoard] = useState(false);
     const [boardSaveMessage, setBoardSaveMessage] = useState('');
     
-    // NEW: Dynamic Pads State
     const [availablePads, setAvailablePads] = useState([]);
 
     const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
@@ -202,7 +202,6 @@ function ProductViewerContent({ initialProduct }) {
         }
     }, [user]);
 
-    // NEW: Fetch dynamic pads from database
     useEffect(() => {
         const isCarpetProd = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
         const isClientModeActual = clientMargin !== null;
@@ -210,9 +209,14 @@ function ProductViewerContent({ initialProduct }) {
         if (isCarpetProd && !isClientModeActual) {
             const fetchPads = async () => {
                 try {
-                    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'), where("category", "==", "Carpet Cushion"), where("isVisible", "==", true));
+                    // Fetch all Carpet Cushions and filter visibility locally to avoid index errors
+                    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'), where("category", "==", "Carpet Cushion"));
                     const snap = await getDocs(q);
-                    const pads = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    const pads = [];
+                    snap.docs.forEach(d => {
+                        const data = d.data();
+                        if (data.isVisible !== false) pads.push({ id: d.id, ...data });
+                    });
                     setAvailablePads(pads);
                 } catch(e) { console.error("Error fetching pads", e); }
             };
@@ -220,7 +224,6 @@ function ProductViewerContent({ initialProduct }) {
         }
     }, [productData, clientMargin]);
 
-    // NEW: Dynamic Pad Pricing Effect
     useEffect(() => {
         if (padSelection === 'none') {
             setPadCost('0.00');
@@ -229,10 +232,7 @@ function ProductViewerContent({ initialProduct }) {
             if (pad) {
                 setPadCost(pad.price ? pad.price.toFixed(2) : '0.00');
             } else {
-                // Fallback for hardcoded legacy UI until replaced
-                if (padSelection === '6lb') setPadCost('2.50');
-                else if (padSelection === '8lb_hope') setPadCost('3.75');
-                else if (padSelection === '8lb_memory') setPadCost('4.50');
+                setPadCost('0.00');
             }
         }
     }, [padSelection, availablePads]);
@@ -326,7 +326,6 @@ function ProductViewerContent({ initialProduct }) {
         ? (requiredSqYd * (basePrice * 9)) 
         : (requiredCartons * cartonSqft * basePrice);
 
-    // Dynamic padding calculation
     const totalPadCost = isCarpet && padSelection !== 'none' 
         ? (requiredSqYd * (parseFloat(padCost) || 0)) 
         : 0;
@@ -381,12 +380,8 @@ function ProductViewerContent({ initialProduct }) {
         setIsSavingToBoard(true);
 
         try {
-            // Save dynamic pad name to database for quote retrieval
             let padNameToSave = '';
-            if (padSelection === '6lb') padNameToSave = "6lb Standard Cushion";
-            else if (padSelection === '8lb_hope') padNameToSave = "Premium 8lb 'Hope' Moisture Barrier Cushion";
-            else if (padSelection === '8lb_memory') padNameToSave = "Luxury 8lb Memory Foam Cushion";
-            else if (padSelection === 'custom_legacy') padNameToSave = "Legacy Pad / Custom";
+            if (padSelection === 'custom_legacy') padNameToSave = "Legacy Pad / Custom";
             else if (padSelection !== 'none') {
                 const found = availablePads.find(p => p.id === padSelection);
                 if (found) padNameToSave = found.name;
@@ -502,7 +497,12 @@ function ProductViewerContent({ initialProduct }) {
                             router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
                             setActiveColor(c);
                         }}>
-                            <img src={fbPath} onError={(e) => e.target.src = TBD_IMG} className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} alt={c.name} />
+                            <Image 
+                                src={fbPath} 
+                                alt={c.name} 
+                                width={85} height={85}
+                                className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} 
+                            />
                             <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
                         </div>
                     );
@@ -523,14 +523,22 @@ function ProductViewerContent({ initialProduct }) {
                 {activeView === 'VIDEO' ? (
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
-                    <img src={getMediaPath(activeView) || TBD_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => e.target.src = TBD_IMG} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
+                    <Image src={getMediaPath(activeView) || TBD_IMG} alt="Product View" priority={true} fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover transition-opacity duration-200 group-hover:opacity-85" style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
                 )}
             </div>
 
             {productData.views && (
                 <div className="mt-4 flex gap-3">
                     {productData.views.map(v => (
-                         <img key={v} src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)} className={`w-[75px] h-[75px] object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} onClick={() => setActiveView(v)} onError={(e) => e.target.src = TBD_IMG} alt={`View ${v}`} />
+                        <div key={v} className={`relative w-[75px] h-[75px] border-2 rounded cursor-pointer transition overflow-hidden ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} onClick={() => setActiveView(v)}>
+                            {v === 'VIDEO' ? (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#c5a059" width="36px" height="36px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+                                </div>
+                            ) : (
+                                <Image src={getMediaPath(v) || TBD_IMG} alt={`View ${v}`} fill sizes="75px" className="object-cover" />
+                            )}
+                        </div>
                     ))}
                 </div>
             )}
@@ -618,8 +626,8 @@ function ProductViewerContent({ initialProduct }) {
             )}
           </div>
 
-          {/* THE NEW PROPOSAL BUILDER TRIGGER BUTTON */}
-          {!isClientMode && user && !user.isAnonymous && (
+          {}
+          {!isClientMode && user && !user.isAnonymous && productData?.category !== 'Carpet Cushion' && (
               <button 
                   className="fixed bottom-5 right-5 md:bottom-8 md:right-8 bg-black text-white px-6 py-4 rounded-full cursor-pointer font-bold shadow-2xl z-40 transition-all border-2 border-black hover:bg-gold hover:text-black hover:border-gold flex items-center gap-2 text-sm md:text-base hover:scale-105" 
                   onClick={() => setIsBuilderOpen(true)}
@@ -628,7 +636,6 @@ function ProductViewerContent({ initialProduct }) {
               </button>
           )}
 
-          {/* SLIDE OUT PROPOSAL BUILDER DRAWER */}
           {isBuilderOpen && (
               <div className="fixed inset-0 z-50 flex justify-end">
                   {/* Dark Backdrop */}
@@ -694,15 +701,9 @@ function ProductViewerContent({ initialProduct }) {
                                           <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Select Carpet Cushion</label>
                                           <select value={padSelection} onChange={e => setPadSelection(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white cursor-pointer">
                                               <option value="none">No Pad Included</option>
-                                              {availablePads.length > 0 ? availablePads.map(pad => (
+                                              {availablePads.map(pad => (
                                                   <option key={pad.id} value={pad.id}>{pad.name} (${parseFloat(pad.price || 0).toFixed(2)}/sqyd)</option>
-                                              )) : (
-                                                  <>
-                                                      <option value="6lb">6lb Standard Cushion</option>
-                                                      <option value="8lb_hope">Premium 8lb "Hope" Moisture Barrier</option>
-                                                      <option value="8lb_memory">Luxury 8lb Memory Foam</option>
-                                                  </>
-                                              )}
+                                              ))}
                                               {padSelection === 'custom_legacy' && <option value="custom_legacy">Legacy Pad / Custom</option>}
                                           </select>
                                       </div>

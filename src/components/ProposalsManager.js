@@ -52,10 +52,15 @@ export default function ProposalsManager({ proId }) {
           quotesData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           setQuotes(quotesData);
           
-          // Also fetch pads for edit mode dynamically
-          const padQ = query(collection(db, "artifacts", appId, "public", "data", "pricing"), where("category", "==", "Carpet Cushion"), where("isVisible", "==", true));
+          // Also fetch pads for edit mode dynamically (bypassing composite index error)
+          const padQ = query(collection(db, "artifacts", appId, "public", "data", "pricing"), where("category", "==", "Carpet Cushion"));
           const padSnap = await getDocs(padQ);
-          setAvailablePads(padSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+          const pads = [];
+          padSnap.forEach(d => {
+               const data = d.data();
+               if (data.isVisible !== false) pads.push({ id: d.id, ...data });
+          });
+          setAvailablePads(pads);
       } catch (e) {
           console.error("Error fetching quotes:", e);
       } finally {
@@ -152,10 +157,9 @@ Thank you!`;
           const matchingPad = availablePads.find(p => p.name === quote.addons.pad.name);
           if (matchingPad) {
               setPadSelection(matchingPad.id);
-          } else if (quote.addons.pad.name.includes("6lb")) setPadSelection('6lb');
-          else if (quote.addons.pad.name.includes("Hope")) setPadSelection('8lb_hope');
-          else if (quote.addons.pad.name.includes("Memory")) setPadSelection('8lb_memory');
-          else setPadSelection('custom_legacy');
+          } else {
+              setPadSelection('custom_legacy');
+          }
           
           if(quote.material?.qty > 0) {
               const perYdCost = quote.addons.pad.cost / quote.material.qty;
@@ -209,7 +213,6 @@ Thank you!`;
   
   const currentMarginVal = builderMargin > 0 ? ((builderMargin / (100 + builderMargin)) * 100).toFixed(1) : 0;
 
-  // Dynamic Pad Pricing Effect for Edit Mode
   useEffect(() => {
       if (padSelection === 'none') {
           setPadCost('0.00');
@@ -217,10 +220,6 @@ Thank you!`;
           const pad = availablePads.find(p => p.id === padSelection);
           if (pad) {
               setPadCost(pad.price ? pad.price.toFixed(2) : '0.00');
-          } else {
-              if (padSelection === '6lb') setPadCost('2.50');
-              else if (padSelection === '8lb_hope') setPadCost('3.75');
-              else if (padSelection === '8lb_memory') setPadCost('4.50');
           }
       }
   }, [padSelection, availablePads]);
@@ -230,10 +229,7 @@ Thank you!`;
       setIsSaving(true);
       
       let padName = '';
-      if (padSelection === '6lb') padName = "6lb Standard Cushion";
-      else if (padSelection === '8lb_hope') padName = "Premium 8lb 'Hope' Moisture Barrier Cushion";
-      else if (padSelection === '8lb_memory') padName = "Luxury 8lb Memory Foam Cushion";
-      else if (padSelection === 'custom_legacy') padName = editingQuote.addons?.pad?.name || "Carpet Cushion";
+      if (padSelection === 'custom_legacy') padName = editingQuote.addons?.pad?.name || "Carpet Cushion";
       else if (padSelection !== 'none') {
           const found = availablePads.find(p => p.id === padSelection);
           if (found) padName = found.name;
@@ -464,7 +460,6 @@ Thank you!`;
           </div>
       )}
 
-      {}
       {editingQuote && editingProduct && (
           <div className="fixed inset-0 z-50 flex justify-end">
               <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={() => { setEditingQuote(null); setEditingProduct(null); }}></div>
@@ -525,16 +520,10 @@ Thank you!`;
                                       <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Select Carpet Cushion</label>
                                       <select value={padSelection} onChange={e => setPadSelection(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white cursor-pointer">
                                           <option value="none">No Pad Included</option>
-                                          {availablePads.length > 0 ? availablePads.map(pad => (
+                                          {availablePads.map(pad => (
                                               <option key={pad.id} value={pad.id}>{pad.name} (${parseFloat(pad.price || 0).toFixed(2)}/sqyd)</option>
-                                          )) : (
-                                              <>
-                                                  <option value="6lb">6lb Standard Cushion</option>
-                                                  <option value="8lb_hope">Premium 8lb "Hope" Moisture Barrier</option>
-                                                  <option value="8lb_memory">Luxury 8lb Memory Foam</option>
-                                              </>
-                                          )}
-                                          {padSelection === 'custom_legacy' && <option value="custom_legacy">Legacy Pad / Custom</option>}
+                                          ))}
+                                          {padSelection === 'custom_legacy' && <option value="custom_legacy">{editingQuote?.addons?.pad?.name || 'Legacy Pad'}</option>}
                                       </select>
                                   </div>
                                   {padSelection !== 'none' && (
@@ -629,7 +618,7 @@ Thank you!`;
           </div>
       )}
 
-      {}
+      {/* Toast Notifier */}
       <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
           <span className="font-black text-gold">✓</span>
           <p className="font-bold text-xs uppercase tracking-widest m-0">{toastMsg}</p>

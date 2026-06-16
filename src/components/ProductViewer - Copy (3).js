@@ -64,6 +64,9 @@ function ProductViewerContent({ initialProduct }) {
     const [selectedBoardId, setSelectedBoardId] = useState('');
     const [isSavingToBoard, setIsSavingToBoard] = useState(false);
     const [boardSaveMessage, setBoardSaveMessage] = useState('');
+    
+    // NEW: Dynamic Pads State
+    const [availablePads, setAvailablePads] = useState([]);
 
     const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
@@ -199,12 +202,40 @@ function ProductViewerContent({ initialProduct }) {
         }
     }, [user]);
 
+    // NEW: Fetch dynamic pads from database
     useEffect(() => {
-        if (padSelection === '6lb') setPadCost('2.50');
-        else if (padSelection === '8lb_hope') setPadCost('3.75');
-        else if (padSelection === '8lb_memory') setPadCost('4.50');
-        else setPadCost('0.00');
-    }, [padSelection]);
+        const isCarpetProd = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
+        const isClientModeActual = clientMargin !== null;
+        
+        if (isCarpetProd && !isClientModeActual) {
+            const fetchPads = async () => {
+                try {
+                    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'), where("category", "==", "Carpet Cushion"), where("isVisible", "==", true));
+                    const snap = await getDocs(q);
+                    const pads = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    setAvailablePads(pads);
+                } catch(e) { console.error("Error fetching pads", e); }
+            };
+            fetchPads();
+        }
+    }, [productData, clientMargin]);
+
+    // NEW: Dynamic Pad Pricing Effect
+    useEffect(() => {
+        if (padSelection === 'none') {
+            setPadCost('0.00');
+        } else if (padSelection !== 'custom_legacy') {
+            const pad = availablePads.find(p => p.id === padSelection);
+            if (pad) {
+                setPadCost(pad.price ? pad.price.toFixed(2) : '0.00');
+            } else {
+                // Fallback for hardcoded legacy UI until replaced
+                if (padSelection === '6lb') setPadCost('2.50');
+                else if (padSelection === '8lb_hope') setPadCost('3.75');
+                else if (padSelection === '8lb_memory') setPadCost('4.50');
+            }
+        }
+    }, [padSelection, availablePads]);
 
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
@@ -295,6 +326,7 @@ function ProductViewerContent({ initialProduct }) {
         ? (requiredSqYd * (basePrice * 9)) 
         : (requiredCartons * cartonSqft * basePrice);
 
+    // Dynamic padding calculation
     const totalPadCost = isCarpet && padSelection !== 'none' 
         ? (requiredSqYd * (parseFloat(padCost) || 0)) 
         : 0;
@@ -349,10 +381,16 @@ function ProductViewerContent({ initialProduct }) {
         setIsSavingToBoard(true);
 
         try {
-            let padName = '';
-            if (padSelection === '6lb') padName = "6lb Standard Cushion";
-            else if (padSelection === '8lb_hope') padName = "Premium 8lb 'Hope' Moisture Barrier Cushion";
-            else if (padSelection === '8lb_memory') padName = "Luxury 8lb Memory Foam Cushion";
+            // Save dynamic pad name to database for quote retrieval
+            let padNameToSave = '';
+            if (padSelection === '6lb') padNameToSave = "6lb Standard Cushion";
+            else if (padSelection === '8lb_hope') padNameToSave = "Premium 8lb 'Hope' Moisture Barrier Cushion";
+            else if (padSelection === '8lb_memory') padNameToSave = "Luxury 8lb Memory Foam Cushion";
+            else if (padSelection === 'custom_legacy') padNameToSave = "Legacy Pad / Custom";
+            else if (padSelection !== 'none') {
+                const found = availablePads.find(p => p.id === padSelection);
+                if (found) padNameToSave = found.name;
+            }
 
             const quoteDoc = {
                 proId: user.uid,
@@ -367,7 +405,7 @@ function ProductViewerContent({ initialProduct }) {
                 measurements: { waste: parseFloat(calcWaste), netSqft: netSqftNum, coverageSqft: finalMaterialCoverageSqft },
                 material: { qty: finalMaterialQty, unit: finalMaterialUnit, wholesaleTotal: totalMaterialCost },
                 addons: {
-                    pad: padName ? { name: padName, cost: totalPadCost } : null,
+                    pad: padNameToSave ? { name: padNameToSave, cost: totalPadCost } : null,
                     trims: !isCarpet && (trimQty.standard > 0 || trimQty.stairnose > 0 || trimQty.quarterRound > 0) ? { 
                         cost: totalTrimCost, 
                         details: { standard: trimQty.standard, stairnose: trimQty.stairnose, quarterRound: trimQty.quarterRound } 
@@ -654,16 +692,23 @@ function ProductViewerContent({ initialProduct }) {
                                   <div className="space-y-3">
                                       <div>
                                           <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Select Carpet Cushion</label>
-                                          <select value={padSelection} onChange={e => setPadSelection(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white">
+                                          <select value={padSelection} onChange={e => setPadSelection(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white cursor-pointer">
                                               <option value="none">No Pad Included</option>
-                                              <option value="6lb">6lb Standard Cushion</option>
-                                              <option value="8lb_hope">Premium 8lb "Hope" Moisture Barrier</option>
-                                              <option value="8lb_memory">Luxury 8lb Memory Foam</option>
+                                              {availablePads.length > 0 ? availablePads.map(pad => (
+                                                  <option key={pad.id} value={pad.id}>{pad.name} (${parseFloat(pad.price || 0).toFixed(2)}/sqyd)</option>
+                                              )) : (
+                                                  <>
+                                                      <option value="6lb">6lb Standard Cushion</option>
+                                                      <option value="8lb_hope">Premium 8lb "Hope" Moisture Barrier</option>
+                                                      <option value="8lb_memory">Luxury 8lb Memory Foam</option>
+                                                  </>
+                                              )}
+                                              {padSelection === 'custom_legacy' && <option value="custom_legacy">Legacy Pad / Custom</option>}
                                           </select>
                                       </div>
                                       {padSelection !== 'none' && (
-                                          <div className="flex items-center gap-2">
-                                              <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 flex-1">Your Cost per sqyd ($)</label>
+                                          <div className="flex items-center gap-2 mt-2">
+                                              <label className="block text-[10px] font-bold uppercase text-gray-500 flex-1">Your Cost per sqyd ($)</label>
                                               <input type="number" step="0.01" value={padCost} onChange={e => setPadCost(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm text-right bg-white" />
                                           </div>
                                       )}
@@ -744,7 +789,7 @@ function ProductViewerContent({ initialProduct }) {
                           <input type="range" min="0" max="100" step="1" value={builderMargin} onChange={e => setBuilderMargin(Number(e.target.value))} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold mb-6" />
 
                           <div className="space-y-3">
-                              <button onClick={handleSaveStandaloneQuote} disabled={isSavingToBoard || netSqftNum === 0 || !quoteClientName.trim()} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50 cursor-pointer">
+                              <button onClick={handleSaveStandaloneQuote} disabled={isSavingToBoard || netSqftNum === 0 || !quoteClientName.trim()} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50 cursor-pointer outline-none">
                                   {boardSaveMessage ? `✓ ${boardSaveMessage}` : (isSavingToBoard ? "Saving..." : "Save Turnkey Proposal")}
                               </button>
                               {(!quoteClientName.trim() || netSqftNum === 0) && (
