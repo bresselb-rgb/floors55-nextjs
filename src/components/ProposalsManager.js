@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { collection, query, where, getDocs, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, getDoc } from "firebase/firestore";
 import { db, appId } from "../lib/firebase";
 
 export default function ProposalsManager({ proId }) {
@@ -13,6 +13,25 @@ export default function ProposalsManager({ proId }) {
   
   const [editingQuote, setEditingQuote] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // New simplified editor state variables
+  const [editClientName, setEditClientName] = useState('');
+  const [editProjectName, setEditProjectName] = useState('');
+  const [editNetSqft, setEditNetSqft] = useState('');
+  const [editWaste, setEditWaste] = useState('1.10');
+  const [editPadSelection, setEditPadSelection] = useState('none');
+  const [editPadCost, setEditPadCost] = useState('0.00');
+  const [editTrimQty, setEditTrimQty] = useState({ standard: 0, stairnose: 0, quarterRound: 0 });
+  const [editTrimCost, setEditTrimCost] = useState({ standard: 25, stairnose: 45, quarterRound: 10 });
+  const [editLaborInstall, setEditLaborInstall] = useState('');
+  const [editLaborPrep, setEditLaborPrep] = useState('');
+  const [editLaborDelivery, setEditLaborDelivery] = useState('');
+  const [editCustomLabor1Name, setEditCustomLabor1Name] = useState('');
+  const [editCustomLabor1Cost, setEditCustomLabor1Cost] = useState('');
+  const [editCustomLabor2Name, setEditCustomLabor2Name] = useState('');
+  const [editCustomLabor2Cost, setEditCustomLabor2Cost] = useState('');
+  const [editMargin, setEditMargin] = useState(20);
+  const [productDetailsCache, setProductDetailsCache] = useState(null);
 
   useEffect(() => {
     if (!proId || !db) return;
@@ -65,90 +84,155 @@ export default function ProposalsManager({ proId }) {
       }
   };
 
-  const handleEditClick = (quote) => {
-      // Deep clone to safely initialize all nested objects if they were left blank originally
-      const q = JSON.parse(JSON.stringify(quote));
-      if (!q.measurements) q.measurements = { netSqft: 0, waste: 1.1 };
-      if (!q.material) q.material = { wholesaleTotal: 0 };
-      if (!q.addons) q.addons = {};
-      if (!q.addons.pad) q.addons.pad = { name: '', cost: 0 };
-      if (!q.addons.trims) q.addons.trims = { cost: 0, details: { standard: 0, stairnose: 0, quarterRound: 0 } };
-      if (!q.services) q.services = {};
-      if (!q.services.custom1) q.services.custom1 = { name: '', cost: 0 };
-      if (!q.services.custom2) q.services.custom2 = { name: '', cost: 0 };
-      setEditingQuote(q);
+  const handleEditClick = async (quote) => {
+      setIsLoading(true);
+      try {
+          // We need to fetch the live product to calculate math accurately!
+          const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'pricing', quote.productId);
+          const prodSnap = await getDoc(prodRef);
+          if (prodSnap.exists()) {
+              setProductDetailsCache(prodSnap.data());
+          } else {
+              alert("Original product data could not be loaded for math recalculations.");
+              setIsLoading(false);
+              return;
+          }
+
+          // Populate the builder states!
+          setEditClientName(quote.clientName || '');
+          setEditProjectName(quote.projectName || '');
+          setEditNetSqft(quote.measurements?.netSqft || '');
+          setEditWaste(quote.measurements?.waste?.toFixed(2) || '1.10');
+          
+          if (quote.addons?.pad) {
+              if (quote.addons.pad.name.includes("6lb")) setEditPadSelection('6lb');
+              else if (quote.addons.pad.name.includes("Hope")) setEditPadSelection('8lb_hope');
+              else if (quote.addons.pad.name.includes("Memory")) setEditPadSelection('8lb_memory');
+              else setEditPadSelection('none');
+              
+              // Reverse engineer per-sqyd pad cost
+              const requiredSqYd = Math.ceil(((quote.measurements?.netSqft || 0) * (quote.measurements?.waste || 1.1)) / 9);
+              if (requiredSqYd > 0) setEditPadCost((quote.addons.pad.cost / requiredSqYd).toFixed(2));
+          } else {
+              setEditPadSelection('none');
+              setEditPadCost('0.00');
+          }
+
+          setEditTrimQty({
+              standard: quote.addons?.trims?.details?.standard || 0,
+              stairnose: quote.addons?.trims?.details?.stairnose || 0,
+              quarterRound: quote.addons?.trims?.details?.quarterRound || 0
+          });
+
+          // Reverse engineer labor per sqft
+          const installCost = quote.services?.installTotal || 0;
+          const net = quote.measurements?.netSqft || 0;
+          setEditLaborInstall(net > 0 ? (installCost / net).toFixed(2) : '');
+
+          setEditLaborPrep(quote.services?.prep || '');
+          setEditLaborDelivery(quote.services?.delivery || '');
+          
+          setEditCustomLabor1Name(quote.services?.custom1?.name || '');
+          setEditCustomLabor1Cost(quote.services?.custom1?.cost || '');
+          setEditCustomLabor2Name(quote.services?.custom2?.name || '');
+          setEditCustomLabor2Cost(quote.services?.custom2?.cost || '');
+
+          setEditMargin(quote.totals?.margin || 0);
+
+          setEditingQuote(quote);
+      } catch (err) {
+          console.error(err);
+          alert("Error loading quote editor.");
+      }
+      setIsLoading(false);
   };
 
-  const handleEditChange = (field, value, category = null, subfield = null) => {
-      let updated = { ...editingQuote };
-      
-      if (category === 'services') {
-          if (subfield) {
-              if (!updated.services[field]) updated.services[field] = { name: '', cost: 0 };
-              if (subfield === 'cost') updated.services[field].cost = value === '' ? 0 : parseFloat(value);
-              else updated.services[field].name = value;
-          } else {
-              updated.services[field] = value === '' ? 0 : parseFloat(value);
-          }
-      } else if (category === 'measurements') {
-          updated.measurements[field] = value === '' ? 0 : parseFloat(value);
-      } else if (category === 'material') {
-          updated.material[field] = value === '' ? 0 : parseFloat(value);
-      } else if (category === 'addons') {
-          if (field === 'pad') {
-               if (!updated.addons.pad) updated.addons.pad = { name: '', cost: 0 };
-               if (subfield === 'cost') updated.addons.pad.cost = value === '' ? 0 : parseFloat(value);
-               else updated.addons.pad.name = value;
-          }
-          if (field === 'trims') {
-               if (!updated.addons.trims) updated.addons.trims = { cost: 0, details: { standard: 0, stairnose: 0, quarterRound: 0 } };
-               if (subfield === 'cost') {
-                   updated.addons.trims.cost = value === '' ? 0 : parseFloat(value);
-               } else {
-                   updated.addons.trims.details[subfield] = value === '' ? 0 : parseInt(value);
-               }
-          }
-      } else if (field === 'margin') {
-          updated.totals.margin = value === '' ? 0 : parseFloat(value);
-      } else {
-          updated[field] = value;
-      }
-      
-      // Recalculate Totals Instantly
-      const matTotal = parseFloat(updated.material?.wholesaleTotal) || 0;
-      const padTotal = parseFloat(updated.addons?.pad?.cost) || 0;
-      const trimTotal = parseFloat(updated.addons?.trims?.cost) || 0;
-      
-      const srv = updated.services || {};
-      const laborTotal = (parseFloat(srv.prep) || 0) + 
-                         (parseFloat(srv.installTotal) || 0) + 
-                         (parseFloat(srv.delivery) || 0) + 
-                         (srv.custom1 ? (parseFloat(srv.custom1.cost) || 0) : 0) + 
-                         (srv.custom2 ? (parseFloat(srv.custom2.cost) || 0) : 0);
-                         
-      const newWholesale = matTotal + padTotal + trimTotal + laborTotal;
-      const newRetail = newWholesale * (1 + ((updated.totals?.margin || 0) / 100));
-      
-      updated.totals.wholesale = newWholesale;
-      updated.totals.turnkeyRetail = newRetail;
-      
-      setEditingQuote(updated);
-  };
+  useEffect(() => {
+        if (editPadSelection === '6lb') setEditPadCost('2.50');
+        else if (editPadSelection === '8lb_hope') setEditPadCost('3.75');
+        else if (editPadSelection === '8lb_memory') setEditPadCost('4.50');
+        else if (editPadSelection === 'none') setEditPadCost('0.00');
+  }, [editPadSelection]);
+
+  // Recalculate Totals
+  const isCarpet = editingQuote?.category === 'Carpet' || (editingQuote?.category || '').toLowerCase().includes('carpet');
+  const basePrice = productDetailsCache?.price || 0;
+  
+  let cartonSqft = parseFloat(productDetailsCache?.cartonSize);
+  if (isNaN(cartonSqft) || cartonSqft <= 0) cartonSqft = parseFloat(productDetailsCache?.boxSqft);
+  if (!cartonSqft && productDetailsCache?.specs && Array.isArray(productDetailsCache.specs)) {
+      const specText = productDetailsCache.specs.join(' ').toLowerCase();
+      const sqftMatch = specText.match(/([\d.]+)\s*(sq\.?ft\.?|sq\s*ft|sf)/);
+      if (sqftMatch && parseFloat(sqftMatch[1]) > 0) cartonSqft = parseFloat(sqftMatch[1]);
+  }
+  cartonSqft = cartonSqft || 20;
+
+  const netSqftNum = parseFloat(editNetSqft) || 0;
+  const totalSqftWithWaste = netSqftNum * parseFloat(editWaste);
+  
+  const requiredSqYd = Math.ceil(totalSqftWithWaste / 9);
+  const requiredCartons = Math.ceil(totalSqftWithWaste / cartonSqft);
+  const finalMaterialQty = isCarpet ? requiredSqYd : requiredCartons;
+  const finalMaterialUnit = isCarpet ? 'sqyd' : 'cartons';
+  const finalMaterialCoverageSqft = isCarpet ? (requiredSqYd * 9) : (requiredCartons * cartonSqft);
+  
+  const totalMaterialCost = isCarpet 
+      ? (requiredSqYd * (basePrice * 9)) 
+      : (requiredCartons * cartonSqft * basePrice);
+
+  const totalPadCost = isCarpet && editPadSelection !== 'none' 
+      ? (requiredSqYd * (parseFloat(editPadCost) || 0)) 
+      : 0;
+
+  const totalTrimCost = isCarpet ? 0 : 
+      (editTrimQty.standard * editTrimCost.standard) + 
+      (editTrimQty.stairnose * editTrimCost.stairnose) + 
+      (editTrimQty.quarterRound * editTrimCost.quarterRound);
+
+  const totalLaborCost = 
+      (parseFloat(editLaborPrep) || 0) + 
+      (netSqftNum * (parseFloat(editLaborInstall) || 0)) + 
+      (parseFloat(editLaborDelivery) || 0) + 
+      (parseFloat(editCustomLabor1Cost) || 0) + 
+      (parseFloat(editCustomLabor2Cost) || 0);
+
+  const currentWholesale = totalMaterialCost + totalPadCost + totalTrimCost + totalLaborCost;
+  const currentTurnkeyRetail = currentWholesale * (1 + (editMargin / 100));
+
 
   const saveEdit = async () => {
       setIsSaving(true);
       try {
-          await updateDoc(doc(db, "artifacts", appId, "public", "data", "pro_quotes", editingQuote.id), {
-              clientName: editingQuote.clientName,
-              projectName: editingQuote.projectName,
-              measurements: editingQuote.measurements,
-              material: editingQuote.material,
-              addons: editingQuote.addons,
-              services: editingQuote.services,
-              totals: editingQuote.totals
-          });
+          let padName = '';
+          if (editPadSelection === '6lb') padName = "6lb Standard Cushion";
+          else if (editPadSelection === '8lb_hope') padName = "Premium 8lb 'Hope' Moisture Barrier Cushion";
+          else if (editPadSelection === '8lb_memory') padName = "Luxury 8lb Memory Foam Cushion";
+
+          const updatedQuote = {
+              clientName: editClientName,
+              projectName: editProjectName || 'Flooring Project',
+              measurements: { waste: parseFloat(editWaste), netSqft: netSqftNum, coverageSqft: finalMaterialCoverageSqft },
+              material: { qty: finalMaterialQty, unit: finalMaterialUnit, wholesaleTotal: totalMaterialCost },
+              addons: {
+                  pad: padName ? { name: padName, cost: totalPadCost } : null,
+                  trims: !isCarpet && (editTrimQty.standard > 0 || editTrimQty.stairnose > 0 || editTrimQty.quarterRound > 0) ? { 
+                      cost: totalTrimCost, 
+                      details: { standard: editTrimQty.standard, stairnose: editTrimQty.stairnose, quarterRound: editTrimQty.quarterRound } 
+                  } : null
+              },
+              services: {
+                  prep: parseFloat(editLaborPrep) || 0,
+                  installTotal: netSqftNum * (parseFloat(editLaborInstall) || 0),
+                  delivery: parseFloat(editLaborDelivery) || 0,
+                  custom1: (editCustomLabor1Name && parseFloat(editCustomLabor1Cost) > 0) ? { name: editCustomLabor1Name, cost: parseFloat(editCustomLabor1Cost) } : null,
+                  custom2: (editCustomLabor2Name && parseFloat(editCustomLabor2Cost) > 0) ? { name: editCustomLabor2Name, cost: parseFloat(editCustomLabor2Cost) } : null
+              },
+              totals: { wholesale: currentWholesale, margin: editMargin, turnkeyRetail: currentTurnkeyRetail }
+          };
+
+          await updateDoc(doc(db, "artifacts", appId, "public", "data", "pro_quotes", editingQuote.id), updatedQuote);
           
-          setQuotes(quotes.map(q => q.id === editingQuote.id ? editingQuote : q));
+          setQuotes(quotes.map(q => q.id === editingQuote.id ? { ...q, ...updatedQuote } : q));
           setEditingQuote(null);
           triggerToast("Proposal updated!");
       } catch (err) {
@@ -210,7 +294,7 @@ export default function ProposalsManager({ proId }) {
 
       {/* THE SLIDE-OUT EDIT DRAWER */}
       {editingQuote && (
-          <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="fixed inset-0 z-50 flex justify-end text-left">
               <div className="absolute inset-0 bg-black/60 transition-opacity backdrop-blur-sm" onClick={() => setEditingQuote(null)}></div>
               
               <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl relative z-10 animate-in slide-in-from-right flex flex-col">
@@ -223,98 +307,117 @@ export default function ProposalsManager({ proId }) {
                       <button onClick={() => setEditingQuote(null)} className="text-gray-400 hover:text-black text-2xl font-bold bg-transparent border-none cursor-pointer outline-none p-2">✕</button>
                   </div>
 
-                  <div className="p-6 space-y-6 flex-1">
+                  <div className="p-6 space-y-8 flex-1">
                       
-                      {/* Project Info */}
+                      {/* PROPOSAL DETAILS */}
                       <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Project Info</h4>
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Proposal Details</h4>
                           <div className="space-y-3">
                               <div>
-                                  <label className="block text-xs font-bold text-gray-700 mb-1">Client Name</label>
-                                  <input type="text" value={editingQuote.clientName} onChange={e => handleEditChange('clientName', e.target.value)} className="w-full p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
+                                  <input type="text" placeholder="Client Name (e.g. Smith Family) *" value={editClientName} onChange={e => setEditClientName(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
                               </div>
                               <div>
-                                  <label className="block text-xs font-bold text-gray-700 mb-1">Project Name</label>
-                                  <input type="text" value={editingQuote.projectName} onChange={e => handleEditChange('projectName', e.target.value)} className="w-full p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
+                                  <input type="text" placeholder="Project / Room (e.g. Kitchen Remodel)" value={editProjectName} onChange={e => setEditProjectName(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
                               </div>
                           </div>
                       </div>
 
-                      {/* Measurements & Materials */}
-                      <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Measurements & Material</h4>
+                      {/* STEP 1: MEASUREMENTS */}
+                      <div>
+                          <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>1</span> Measurements</h4>
                           <div className="grid grid-cols-2 gap-3 mb-3">
                               <div>
-                                  <label className="block text-xs font-bold text-gray-700 mb-1">Net SqFt</label>
-                                  <input type="number" value={editingQuote.measurements?.netSqft || ''} onChange={e => handleEditChange('netSqft', e.target.value, 'measurements')} className="w-full p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
+                                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Net Square Footage</label>
+                                  <input type="number" value={editNetSqft} onChange={e => setEditNetSqft(e.target.value)} placeholder="e.g. 500" className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-gray-50" />
                               </div>
                               <div>
-                                  <label className="block text-xs font-bold text-gray-700 mb-1">Waste Factor</label>
-                                  <input type="number" step="0.01" value={editingQuote.measurements?.waste || ''} onChange={e => handleEditChange('waste', e.target.value, 'measurements')} className="w-full p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
+                                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Waste Factor</label>
+                                  <select value={editWaste} onChange={e => setEditWaste(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-gray-50">
+                                      <option value="1.00">Exact Net (0%)</option>
+                                      <option value="1.05">Standard (5%)</option>
+                                      <option value="1.10">Safe (10%)</option>
+                                      <option value="1.15">Complex / Diagonal (15%)</option>
+                                  </select>
                               </div>
                           </div>
-                          <div>
-                              <label className="block text-xs font-bold text-gray-700 mb-1">Material Base Cost ($)</label>
-                              <input type="number" value={editingQuote.material?.wholesaleTotal || ''} onChange={e => handleEditChange('wholesaleTotal', e.target.value, 'material')} className="w-full p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
-                          </div>
-                      </div>
-
-                      {/* Accessories */}
-                      <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Accessories</h4>
-                          <div className="space-y-3">
-                              <div className="flex gap-2">
-                                  <div className="flex-1">
-                                      <label className="text-xs font-bold text-gray-700 mb-1 block">Pad / Cushion Name</label>
-                                      <input type="text" placeholder="N/A" value={editingQuote.addons?.pad?.name || ''} onChange={e => handleEditChange('pad', e.target.value, 'addons', 'name')} className="w-full p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
-                                  </div>
-                                  <div className="w-24">
-                                      <label className="text-xs font-bold text-gray-700 mb-1 block">Cost ($)</label>
-                                      <input type="number" placeholder="0.00" value={editingQuote.addons?.pad?.cost || ''} onChange={e => handleEditChange('pad', e.target.value, 'addons', 'cost')} className="w-full p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-white" />
-                                  </div>
-                              </div>
-
-                              <div className="pt-3 mt-2 border-t border-gray-200">
-                                  <label className="text-xs font-bold text-gray-700 block mb-2">Trim Quantities</label>
-                                  <div className="flex gap-2 mb-3">
-                                      <input type="number" placeholder="Standard" title="Standard Transitions" value={editingQuote.addons?.trims?.details?.standard || ''} onChange={e => handleEditChange('trims', e.target.value, 'addons', 'standard')} className="w-1/3 p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-xs bg-white text-center" />
-                                      <input type="number" placeholder="Stairnose" title="Stair Noses" value={editingQuote.addons?.trims?.details?.stairnose || ''} onChange={e => handleEditChange('trims', e.target.value, 'addons', 'stairnose')} className="w-1/3 p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-xs bg-white text-center" />
-                                      <input type="number" placeholder="1/4 Round" title="Quarter Round" value={editingQuote.addons?.trims?.details?.quarterRound || ''} onChange={e => handleEditChange('trims', e.target.value, 'addons', 'quarterRound')} className="w-1/3 p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-xs bg-white text-center" />
-                                  </div>
-                                  <div className="flex items-center justify-between">
-                                      <label className="text-xs font-bold text-gray-700">Total Trims Cost ($)</label>
-                                      <input type="number" placeholder="0.00" value={editingQuote.addons?.trims?.cost || ''} onChange={e => handleEditChange('trims', e.target.value, 'addons', 'cost')} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-white" />
-                                  </div>
-                              </div>
+                          <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg flex justify-between items-center text-xs font-bold text-blue-900">
+                              <span>Coverage Required:</span>
+                              <span>{finalMaterialCoverageSqft.toFixed(1)} sqft ({finalMaterialQty} {finalMaterialUnit})</span>
                           </div>
                       </div>
 
-                      {/* Labor & Logistics */}
-                      <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-gold flex justify-between items-end mb-3">Labor & Logistics (Base Cost)</h4>
+                      {/* STEP 2: ACCESSORIES */}
+                      <div>
+                          <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>2</span> Add-Ons & Accessories</h4>
+                          
+                          {isCarpet ? (
+                              <div className="space-y-3">
+                                  <div>
+                                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Select Carpet Cushion</label>
+                                      <select value={editPadSelection} onChange={e => setEditPadSelection(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white">
+                                          <option value="none">No Pad Included</option>
+                                          <option value="6lb">6lb Standard Cushion</option>
+                                          <option value="8lb_hope">Premium 8lb "Hope" Moisture Barrier</option>
+                                          <option value="8lb_memory">Luxury 8lb Memory Foam</option>
+                                      </select>
+                                  </div>
+                                  {editPadSelection !== 'none' && (
+                                      <div className="flex items-center gap-2">
+                                          <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 flex-1">Your Cost per sqyd ($)</label>
+                                          <input type="number" step="0.01" value={editPadCost} onChange={e => setEditPadCost(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm text-right bg-white" />
+                                      </div>
+                                  )}
+                              </div>
+                          ) : (
+                              <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                  <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
+                                      <div className="flex flex-col">
+                                        <span className="text-xs font-bold text-gray-700">Standard Transitions</span>
+                                        <span className="text-[9px] text-gray-400">T-Mold, Reducer, End Cap</span>
+                                      </div>
+                                      <input type="number" min="0" placeholder="Qty" value={editTrimQty.standard || ''} onChange={e => setEditTrimQty({...editTrimQty, standard: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold bg-white" />
+                                      <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={editTrimCost.standard} onChange={e=>setEditTrimCost({...editTrimCost, standard: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
+                                  </div>
+                                  <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
+                                      <span className="text-xs font-bold text-gray-700">Stair Nose</span>
+                                      <input type="number" min="0" placeholder="Qty" value={editTrimQty.stairnose || ''} onChange={e => setEditTrimQty({...editTrimQty, stairnose: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold bg-white" />
+                                      <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={editTrimCost.stairnose} onChange={e=>setEditTrimCost({...editTrimCost, stairnose: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
+                                  </div>
+                                  <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
+                                      <span className="text-xs font-bold text-gray-700">Quarter Round</span>
+                                      <input type="number" min="0" placeholder="Qty" value={editTrimQty.quarterRound || ''} onChange={e => setEditTrimQty({...editTrimQty, quarterRound: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold bg-white" />
+                                      <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={editTrimCost.quarterRound} onChange={e=>setEditTrimCost({...editTrimCost, quarterRound: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
+                                  </div>
+                              </div>
+                          )}
+                      </div>
+
+                      {/* STEP 3: LABOR */}
+                      <div>
+                          <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>3</span> Labor & Logistics (Your Cost)</h4>
                           <div className="space-y-3">
                               <div className="flex items-center justify-between">
-                                  <label className="text-xs font-bold text-gray-700">Total Installation Labor</label>
-                                  <input type="number" value={editingQuote.services?.installTotal || ''} onChange={e => handleEditChange('installTotal', e.target.value, 'services')} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-white" />
+                                  <label className="text-xs font-bold text-gray-700">Basic Install <span className="text-[10px] text-gray-400 font-normal ml-1">/ sqft</span></label>
+                                  <input type="number" placeholder="0.00" value={editLaborInstall} onChange={e => setEditLaborInstall(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
                               </div>
                               <div className="flex items-center justify-between">
-                                  <label className="text-xs font-bold text-gray-700">Tear Out & Prep</label>
-                                  <input type="number" value={editingQuote.services?.prep || ''} onChange={e => handleEditChange('prep', e.target.value, 'services')} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-white" />
+                                  <label className="text-xs font-bold text-gray-700">Tear Out & Prep <span className="text-[10px] text-gray-400 font-normal ml-1">Lump Sum</span></label>
+                                  <input type="number" placeholder="0.00" value={editLaborPrep} onChange={e => setEditLaborPrep(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
                               </div>
                               <div className="flex items-center justify-between">
-                                  <label className="text-xs font-bold text-gray-700">Delivery</label>
-                                  <input type="number" value={editingQuote.services?.delivery || ''} onChange={e => handleEditChange('delivery', e.target.value, 'services')} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-white" />
+                                  <label className="text-xs font-bold text-gray-700">Fuel & Delivery <span className="text-[10px] text-gray-400 font-normal ml-1">Lump Sum</span></label>
+                                  <input type="number" placeholder="0.00" value={editLaborDelivery} onChange={e => setEditLaborDelivery(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
                               </div>
 
-                              {/* Custom Labor Lines */}
-                              <div className="pt-3 mt-2 border-t border-gray-200 space-y-2">
+                              <div className="pt-2 mt-2 border-t border-gray-100 space-y-2">
+                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Additional Custom Labor</p>
                                   <div className="flex gap-2">
-                                      <input type="text" placeholder="Custom Labor 1 (e.g. Stairs)" value={editingQuote.services?.custom1?.name || ''} onChange={e => handleEditChange('custom1', e.target.value, 'services', 'name')} className="flex-1 p-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-gold bg-white" />
-                                      <input type="number" placeholder="$ 0.00" value={editingQuote.services?.custom1?.cost || ''} onChange={e => handleEditChange('custom1', e.target.value, 'services', 'cost')} className="w-20 p-2 border border-gray-200 rounded-lg text-xs text-right outline-none focus:border-gold bg-white" />
+                                      <input type="text" placeholder="e.g. Stair Labor" value={editCustomLabor1Name} onChange={e => setEditCustomLabor1Name(e.target.value)} className="flex-1 p-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-gold bg-white" />
+                                      <input type="number" placeholder="$ 0.00" value={editCustomLabor1Cost} onChange={e => setEditCustomLabor1Cost(e.target.value)} className="w-20 p-2 border border-gray-200 rounded-lg text-xs text-right outline-none focus:border-gold bg-gray-50" />
                                   </div>
                                   <div className="flex gap-2">
-                                      <input type="text" placeholder="Custom Labor 2 (e.g. Appliances)" value={editingQuote.services?.custom2?.name || ''} onChange={e => handleEditChange('custom2', e.target.value, 'services', 'name')} className="flex-1 p-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-gold bg-white" />
-                                      <input type="number" placeholder="$ 0.00" value={editingQuote.services?.custom2?.cost || ''} onChange={e => handleEditChange('custom2', e.target.value, 'services', 'cost')} className="w-20 p-2 border border-gray-200 rounded-lg text-xs text-right outline-none focus:border-gold bg-white" />
+                                      <input type="text" placeholder="e.g. Moving Appliances" value={editCustomLabor2Name} onChange={e => setEditCustomLabor2Name(e.target.value)} className="flex-1 p-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-gold bg-white" />
+                                      <input type="number" placeholder="$ 0.00" value={editCustomLabor2Cost} onChange={e => setEditCustomLabor2Cost(e.target.value)} className="w-20 p-2 border border-gray-200 rounded-lg text-xs text-right outline-none focus:border-gold bg-gray-50" />
                                   </div>
                               </div>
                           </div>
@@ -327,21 +430,27 @@ export default function ProposalsManager({ proId }) {
                       <div className="flex justify-between items-end mb-4">
                           <div>
                               <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Your Base Cost</div>
-                              <div className="text-lg font-mono text-gray-200">${editingQuote.totals?.wholesale?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                              <div className="text-lg font-mono text-gray-200">${currentWholesale.toFixed(2)}</div>
                           </div>
                           <div className="text-right">
                               <div className="text-[10px] text-gold font-bold uppercase tracking-widest flex items-center gap-2 justify-end">
-                                  Margin: {editingQuote.totals?.margin}%
+                                  Margin: {editMargin}%
                               </div>
-                              <div className="text-2xl font-black text-white font-mono">${editingQuote.totals?.turnkeyRetail?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                              <div className="text-2xl font-black text-white font-mono">${currentTurnkeyRetail.toFixed(2)}</div>
+                              <div className="text-[9px] text-emerald-400 font-bold uppercase tracking-widest mt-1">Gross Profit: ${(currentTurnkeyRetail - currentWholesale).toFixed(2)}</div>
                           </div>
                       </div>
                       
-                      <input type="range" min="0" max="100" step="1" value={editingQuote.totals?.margin || 0} onChange={e => handleEditChange('margin', e.target.value)} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold mb-6" />
+                      <input type="range" min="0" max="100" step="1" value={editMargin} onChange={e => setEditMargin(Number(e.target.value))} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold mb-6" />
 
-                      <button onClick={saveEdit} disabled={isSaving} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50 cursor-pointer outline-none">
-                          {isSaving ? 'Saving...' : 'Save Changes'}
-                      </button>
+                      <div className="space-y-3">
+                          <button onClick={saveEdit} disabled={isSaving || netSqftNum === 0 || !editClientName.trim()} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50 cursor-pointer outline-none">
+                              {isSaving ? 'Saving...' : 'Update Proposal'}
+                          </button>
+                          {(!editClientName.trim() || netSqftNum === 0) && (
+                              <div className="text-[10px] text-red-400 text-center uppercase tracking-widest font-bold">Client Name & SqFt Required</div>
+                          )}
+                      </div>
                   </div>
               </div>
           </div>
