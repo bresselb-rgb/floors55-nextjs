@@ -167,7 +167,8 @@ export default function ClientBoardPage({ params }) {
                             const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
                             const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
-                            const productLink = `/product/${p.id}?pro=${board.proId || ''}&cm=${cmToken}#${p.id}?color=${displaySku}`;
+                            // UPDATED: Use proper query parameters instead of hash
+                            const productLink = `/product/${p.id}?color=${displaySku}&pro=${board.proId || ''}&cm=${cmToken}`;
 
                             const hasQuote = p.quote && p.quote.totals;
 
