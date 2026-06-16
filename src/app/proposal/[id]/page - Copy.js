@@ -69,6 +69,7 @@ export default function ProposalPage({ params }) {
         };
     }, [proposalId]);
 
+    // Apply Magic Link styling so if they click the product, it keeps the branding
     useEffect(() => {
         if (proProfile) {
             const bName = proProfile.business || "Your Flooring Professional";
@@ -90,7 +91,7 @@ export default function ProposalPage({ params }) {
 
     if (isLoading) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50 print:hidden">
+            <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black border-t-transparent mb-4"></div>
                 <p className="text-sm font-bold uppercase tracking-widest text-gray-400">Loading Proposal...</p>
             </div>
@@ -99,7 +100,7 @@ export default function ProposalPage({ params }) {
 
     if (error || !quote) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 text-center print:hidden">
+            <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 text-center">
                 <h1 className="text-3xl font-black mb-2">Proposal Not Found</h1>
                 <p className="text-gray-500 max-w-md">We couldn't locate this proposal. The link may be invalid or the project was removed by your contractor.</p>
             </div>
@@ -141,30 +142,22 @@ export default function ProposalPage({ params }) {
     const productLink = `/product/${quote.productId}?pro=${quote.proId}&cm=${cmToken}#${quote.productId}?color=${displaySku}`;
 
     return (
-        <div className="min-h-screen bg-gray-50 font-sans flex flex-col print:bg-white">
-            
-            {/* BRANDED HEADER - Force background colors to print */}
-            <header className="border-b border-gray-200 py-6 px-6 text-center shadow-sm print:shadow-none" style={{ backgroundColor: brandBgColor, color: brandTextColor, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+        <div className="min-h-screen bg-gray-50 font-sans flex flex-col">
+            {/* BRANDED HEADER */}
+            <header className="border-b border-gray-200 py-6 px-6 text-center shadow-sm" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
                 {logoUrl ? (
                     <img src={logoUrl} alt={businessName} className="h-16 md:h-20 w-auto mx-auto object-contain" />
                 ) : (
-                    <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none m-0">{businessName}</h1>
+                    <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none">{businessName}</h1>
                 )}
-                <p className="text-[10px] md:text-xs font-black italic tracking-widest uppercase mt-2 opacity-80 m-0">Official Turnkey Proposal</p>
+                <p className="text-[10px] md:text-xs font-black italic tracking-widest uppercase mt-2 opacity-80">Official Turnkey Proposal</p>
             </header>
 
-            <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-12 print:py-8">
+            <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-12">
                 
-                {/* ACTION BAR (Hidden on PDF) */}
-                <div className="flex justify-end mb-6 print:hidden">
-                    <button onClick={() => window.print()} className="bg-gray-900 text-white px-6 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors flex items-center gap-2 outline-none cursor-pointer shadow-md">
-                        <span>📄</span> Download PDF / Print
-                    </button>
-                </div>
-
                 {/* PROPOSAL TITLE BLOCK */}
-                <div className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100 mb-8 relative overflow-hidden print:border-gray-300 print:shadow-none">
-                    <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: brandBgColor, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}></div>
+                <div className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100 mb-8 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: brandBgColor }}></div>
                     <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6">
                         <div>
                             <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Prepared For:</h2>
@@ -179,41 +172,41 @@ export default function ProposalPage({ params }) {
                 </div>
 
                 {/* THE SELECTED PRODUCT */}
-                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-8 flex flex-col md:flex-row group print:border-gray-300 print:shadow-none print:break-inside-avoid">
-                    <Link href={productLink} className="md:w-2/5 h-64 md:h-auto relative overflow-hidden bg-gray-100 block print:pointer-events-none" style={{ textDecoration: 'none' }}>
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-8 flex flex-col md:flex-row group">
+                    <Link href={productLink} className="md:w-2/5 h-64 md:h-auto relative overflow-hidden bg-gray-100 block" style={{ textDecoration: 'none' }}>
                         <img src={fbPath} className="w-full h-full object-cover transition duration-500 group-hover:scale-105" onError={e => e.target.src=TBD_IMG} alt={quote.productName} />
-                        <div className="absolute bottom-4 left-4 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-sm print:bg-black/70">
+                        <div className="absolute bottom-4 left-4 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-sm">
                             <span className="text-white font-bold text-xs">Color: {quote.colorName}</span>
                         </div>
                     </Link>
                     <div className="p-8 flex-1 flex flex-col justify-center">
                         <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{quote.category}</div>
                         <h3 className="text-2xl font-black text-gray-900 mb-4">{quote.productName}</h3>
-                        <p className="text-gray-500 text-sm mb-6 line-clamp-3 print:line-clamp-none">{productDetails?.desc || 'Premium flooring collection.'}</p>
-                        <Link href={productLink} className="inline-block text-center font-black uppercase py-3 px-6 rounded-xl transition text-xs tracking-widest w-full md:w-auto print:hidden" style={{ textDecoration: 'none', backgroundColor: brandBgColor, color: brandTextColor, border: `1px solid ${brandTextColor}` }}>
+                        <p className="text-gray-500 text-sm mb-6 line-clamp-3">{productDetails?.desc || 'Premium flooring collection.'}</p>
+                        <Link href={productLink} className="inline-block text-center font-black uppercase py-3 px-6 rounded-xl transition text-xs tracking-widest w-full md:w-auto" style={{ textDecoration: 'none', backgroundColor: brandBgColor, color: brandTextColor, border: `1px solid ${brandTextColor}` }}>
                             View Photos & Specs
                         </Link>
                     </div>
                 </div>
 
                 {/* THE INCLUSIONS CHECKLIST */}
-                <div className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100 mb-8 print:border-gray-300 print:shadow-none print:break-inside-avoid">
+                <div className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100 mb-8">
                     <h3 className="text-xl font-black text-gray-900 mb-6 border-b border-gray-100 pb-4">Project Inclusions</h3>
                     
                     <ul className="space-y-4 text-base text-gray-700">
                         {/* Material */}
                         <li className="flex gap-4 items-start">
-                            <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
+                            <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5">✓</span> 
                             <div>
                                 <span className="font-bold text-gray-900 block">Premium Flooring Material</span>
-                                <span className="text-sm text-gray-500">{Math.ceil(quote.measurements.netSqft)} net sqft of {quote.productName} in {quote.colorName}.</span>
+                                <span className="text-sm text-gray-500">{Math.ceil(quote.measurements.coverageSqft)} sqft of {quote.productName} in {quote.colorName}.</span>
                             </div>
                         </li>
                         
                         {/* Pad */}
                         {quote.addons?.pad && (
                             <li className="flex gap-4 items-start">
-                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
+                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block">Carpet Cushion</span>
                                     <span className="text-sm text-gray-500">{quote.addons.pad.name}.</span>
@@ -224,7 +217,7 @@ export default function ProposalPage({ params }) {
                         {/* Trims */}
                         {quote.addons?.trims && (
                             <li className="flex gap-4 items-start">
-                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
+                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block">Transitions & Moldings</span>
                                     <span className="text-sm text-gray-500">{trimText} included.</span>
@@ -235,7 +228,7 @@ export default function ProposalPage({ params }) {
                         {/* Prep */}
                         {quote.services?.prep > 0 && (
                             <li className="flex gap-4 items-start">
-                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
+                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block">Tear Out & Prep</span>
                                     <span className="text-sm text-gray-500">Removal of old flooring and subfloor preparation.</span>
@@ -246,7 +239,7 @@ export default function ProposalPage({ params }) {
                         {/* Install */}
                         {quote.services?.installTotal > 0 && (
                             <li className="flex gap-4 items-start">
-                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
+                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block">Professional Installation</span>
                                     <span className="text-sm text-gray-500">Expert installation of {quote.measurements.netSqft} net sqft.</span>
@@ -257,7 +250,7 @@ export default function ProposalPage({ params }) {
                         {/* Delivery */}
                         {quote.services?.delivery > 0 && (
                             <li className="flex gap-4 items-start">
-                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
+                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block">Materials Delivery</span>
                                     <span className="text-sm text-gray-500">Logistics and handling to job site.</span>
@@ -268,7 +261,7 @@ export default function ProposalPage({ params }) {
                         {/* Custom Lines */}
                         {quote.services?.custom1 && (
                             <li className="flex gap-4 items-start">
-                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
+                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block">{quote.services.custom1.name}</span>
                                 </div>
@@ -276,7 +269,7 @@ export default function ProposalPage({ params }) {
                         )}
                         {quote.services?.custom2 && (
                             <li className="flex gap-4 items-start">
-                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
+                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block">{quote.services.custom2.name}</span>
                                 </div>
@@ -286,7 +279,7 @@ export default function ProposalPage({ params }) {
                 </div>
 
                 {/* THE GRAND TOTAL */}
-                <div className="bg-gray-900 p-8 md:p-12 rounded-3xl shadow-2xl text-center md:text-right text-white mb-12 print:shadow-none print:border print:border-gray-800 print:break-inside-avoid" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                <div className="bg-gray-900 p-8 md:p-12 rounded-3xl shadow-2xl text-center md:text-right text-white">
                     <p className="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Turnkey Project Total</p>
                     <p className="text-4xl md:text-6xl font-black font-mono text-white tracking-tight mb-2">
                         ${quote.totals.turnkeyRetail.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -294,22 +287,10 @@ export default function ProposalPage({ params }) {
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Includes materials, accessories, and labor as detailed above.</p>
                 </div>
 
-                {/* TERMS AND CONDITIONS */}
-                <div className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100 print:border-gray-300 print:shadow-none print:break-inside-avoid">
-                    <h3 className="text-lg font-black text-gray-900 mb-4 border-b border-gray-100 pb-2">Terms & Conditions</h3>
-                    <ul className="text-xs text-gray-600 space-y-3 list-disc pl-4 leading-relaxed">
-                        <li><strong>Proposal Validity:</strong> This proposal and its pricing are valid for 30 days from the date issued. Following this period, material costs are subject to manufacturer price increases.</li>
-                        <li><strong>Site Conditions & Acclimation:</strong> The job site must be climate-controlled (65-75°F with 35-55% humidity) with an operational HVAC system before, during, and after installation to ensure material integrity and maintain manufacturer warranties.</li>
-                        <li><strong>Unforeseen Subfloor Issues:</strong> This proposal assumes a standard, structurally sound subfloor. Any hidden damage, dry rot, severe leveling requirements, or moisture issues discovered after the removal of existing flooring will require a separate change order and additional costs.</li>
-                        <li><strong>Material Waste & Excess:</strong> Measurements include a standard industry waste factor. It is customary and recommended to keep 1-2 unopened boxes of leftover material stored in a climate-controlled area for future repairs (dye lots will vary over time).</li>
-                        <li><strong>Payment Terms:</strong> A standard 50% deposit is required to order materials and reserve your installation date. The remaining balance is due upon project completion.</li>
-                    </ul>
-                </div>
-
             </main>
 
             {/* BRANDED FOOTER */}
-            <footer className="py-12 text-center mt-auto border-t border-gray-200 print:hidden" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
+            <footer className="py-12 text-center mt-auto border-t border-gray-200" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
                 {logoUrl && (
                     <img src={logoUrl} alt={businessName} className="h-12 w-auto mx-auto object-contain mb-4 opacity-80" style={{ filter: brandBgColor.toLowerCase() === '#ffffff' ? 'none' : 'brightness(0) invert(1) opacity(0.8)' }} />
                 )}

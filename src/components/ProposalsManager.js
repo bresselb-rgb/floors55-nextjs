@@ -76,7 +76,6 @@ export default function ProposalsManager({ proId }) {
           updated[field] = value;
       }
       
-      // Recalculate totals dynamically
       const matTotal = updated.material?.wholesaleTotal || 0;
       const padTotal = updated.addons?.pad?.cost || 0;
       const trimTotal = updated.addons?.trims?.cost || 0;
@@ -128,6 +127,7 @@ export default function ProposalsManager({ proId }) {
       </div>
       <p className="text-sm text-gray-500 mb-6">Manage, edit, and share your generated turnkey quotes.</p>
 
+      {}
       <div className="space-y-4">
         {quotes.length === 0 ? (
           <p className="text-gray-400 text-sm italic text-center py-6 bg-gray-50 rounded-xl border border-gray-100">No proposals created yet. Go to a product page to build one.</p>
@@ -166,68 +166,80 @@ export default function ProposalsManager({ proId }) {
         )}
       </div>
 
-      {/* THE EDIT MODAL */}
+      {}
       {editingQuote && (
-          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="fixed inset-0 z-50 flex justify-end">
+              {/* Dark Backdrop */}
+              <div className="absolute inset-0 bg-black/60 transition-opacity backdrop-blur-sm" onClick={() => setEditingQuote(null)}></div>
+              
+              {/* The Drawer */}
+              <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl relative z-10 animate-in slide-in-from-right flex flex-col">
                   
-                  <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                  <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center sticky top-0 z-20">
                       <div>
                           <h3 className="text-lg font-black uppercase tracking-tight text-gray-900">Edit Proposal</h3>
                           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{editingQuote.productName}</p>
                       </div>
-                      <button onClick={() => setEditingQuote(null)} className="text-gray-400 hover:text-black font-bold text-xl outline-none bg-transparent border-none cursor-pointer">✕</button>
+                      <button onClick={() => setEditingQuote(null)} className="text-gray-400 hover:text-black text-2xl font-bold bg-transparent border-none cursor-pointer outline-none p-2">✕</button>
                   </div>
 
-                  <div className="p-6 overflow-y-auto space-y-6">
+                  <div className="p-6 space-y-8 flex-1">
                       
-                      <div className="space-y-3">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-gold">Project Info</h4>
-                          <div>
-                              <label className="block text-xs font-bold text-gray-700 mb-1">Client Name</label>
-                              <input type="text" value={editingQuote.clientName} onChange={e => handleEditChange('clientName', e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
-                          </div>
-                          <div>
-                              <label className="block text-xs font-bold text-gray-700 mb-1">Project Name</label>
-                              <input type="text" value={editingQuote.projectName} onChange={e => handleEditChange('projectName', e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
+                      <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Project Info</h4>
+                          <div className="space-y-3">
+                              <div>
+                                  <label className="block text-xs font-bold text-gray-700 mb-1">Client Name</label>
+                                  <input type="text" value={editingQuote.clientName} onChange={e => handleEditChange('clientName', e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
+                              </div>
+                              <div>
+                                  <label className="block text-xs font-bold text-gray-700 mb-1">Project Name</label>
+                                  <input type="text" value={editingQuote.projectName} onChange={e => handleEditChange('projectName', e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
+                              </div>
                           </div>
                       </div>
 
-                      <div className="space-y-3 pt-4 border-t border-gray-100">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-gold flex justify-between items-end">
+                      <div>
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-gold flex justify-between items-end mb-3">
                               <span>Labor & Delivery</span>
                               <span className="text-[9px] text-gray-400 normal-case">(Base Cost)</span>
                           </h4>
-                          <div className="flex items-center justify-between">
-                              <label className="text-xs font-bold text-gray-700">Tear Out & Prep</label>
-                              <input type="number" value={editingQuote.services?.prep || ''} onChange={e => handleEditChange('prep', e.target.value, true)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
+                          <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                  <label className="text-xs font-bold text-gray-700">Tear Out & Prep</label>
+                                  <input type="number" value={editingQuote.services?.prep || ''} onChange={e => handleEditChange('prep', e.target.value, true)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                  <label className="text-xs font-bold text-gray-700">Total Installation Labor</label>
+                                  <input type="number" value={editingQuote.services?.installTotal || ''} onChange={e => handleEditChange('installTotal', e.target.value, true)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                  <label className="text-xs font-bold text-gray-700">Delivery</label>
+                                  <input type="number" value={editingQuote.services?.delivery || ''} onChange={e => handleEditChange('delivery', e.target.value, true)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
+                              </div>
                           </div>
-                          <div className="flex items-center justify-between">
-                              <label className="text-xs font-bold text-gray-700">Total Installation Labor</label>
-                              <input type="number" value={editingQuote.services?.installTotal || ''} onChange={e => handleEditChange('installTotal', e.target.value, true)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
-                          </div>
-                          <div className="flex items-center justify-between">
-                              <label className="text-xs font-bold text-gray-700">Delivery</label>
-                              <input type="number" value={editingQuote.services?.delivery || ''} onChange={e => handleEditChange('delivery', e.target.value, true)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
-                          </div>
-                      </div>
-
-                      <div className="space-y-4 pt-4 border-t border-gray-100">
-                          <div className="flex justify-between items-end">
-                              <h4 className="text-[10px] font-black uppercase tracking-widest text-gold">Retail Margin</h4>
-                              <span className="text-lg font-black text-gray-900">{editingQuote.totals?.margin}%</span>
-                          </div>
-                          <input type="range" min="0" max="100" step="1" value={editingQuote.totals?.margin || 0} onChange={e => handleEditChange('margin', e.target.value)} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black" />
                       </div>
 
                   </div>
 
-                  <div className="bg-gray-900 p-6 flex justify-between items-center mt-auto">
-                      <div>
-                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">New Turnkey Total</div>
-                          <div className="text-2xl font-black text-white font-mono">${editingQuote.totals?.turnkeyRetail?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                  {}
+                  <div className="bg-gray-900 text-white p-6 sticky bottom-0 z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.1)]">
+                      <div className="flex justify-between items-end mb-4">
+                          <div>
+                              <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Your Base Cost</div>
+                              <div className="text-lg font-mono text-gray-200">${editingQuote.totals?.wholesale?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                          </div>
+                          <div className="text-right">
+                              <div className="text-[10px] text-gold font-bold uppercase tracking-widest flex items-center gap-2 justify-end">
+                                  Margin: {editingQuote.totals?.margin}%
+                              </div>
+                              <div className="text-2xl font-black text-white font-mono">${editingQuote.totals?.turnkeyRetail?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                          </div>
                       </div>
-                      <button onClick={saveEdit} disabled={isSaving} className="bg-gold hover:bg-white text-black px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-xs transition-colors cursor-pointer outline-none">
+                      
+                      <input type="range" min="0" max="100" step="1" value={editingQuote.totals?.margin || 0} onChange={e => handleEditChange('margin', e.target.value)} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold mb-6" />
+
+                      <button onClick={saveEdit} disabled={isSaving} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50 cursor-pointer outline-none">
                           {isSaving ? 'Saving...' : 'Save Changes'}
                       </button>
                   </div>
