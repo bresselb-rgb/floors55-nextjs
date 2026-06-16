@@ -4,7 +4,7 @@ import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
-import { auth, db, appId } from "../../../../lib/firebase";
+import { auth, db, appId } from "../../../lib/firebase";
 
 export default function ProposalPage({ params }) {
     const unwrappedParams = use(params);

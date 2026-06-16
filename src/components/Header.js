@@ -1,4 +1,59 @@
-// ... existing code ...
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth } from "../lib/firebase";
+
+// Safe wrapper for Next.js 15 routing during static builds
+let usePathname = () => '';
+try {
+    const nextNav = 'next/navigation';
+    const nav = require(nextNav);
+    usePathname = nav.usePathname;
+} catch (e) {
+    usePathname = () => typeof window !== 'undefined' ? window.location.pathname : '';
+}
+
+export default function Header() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const pathname = usePathname();
+
+  const [clientBrand, setClientBrand] = useState(null);
+  const [clientLogo, setClientLogo] = useState(null);
+  const [brandBg, setBrandBg] = useState('#ffffff');
+  const [brandText, setBrandText] = useState('#000000');
+  
+  // Intercept rendering instantly if URL has magic link params
+  const [isProcessingMagicLink, setIsProcessingMagicLink] = useState(true);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+      if (typeof window !== 'undefined') {
+          const search = window.location.search;
+          
+          if (search.includes('pro=') || search.includes('cb=')) {
+              setIsProcessingMagicLink(true);
+              return;
+          }
+
+          setIsProcessingMagicLink(false);
+          setClientBrand(sessionStorage.getItem('client_brand'));
+          const logo = sessionStorage.getItem('client_logo');
+          if (logo && logo !== "undefined" && logo !== "null") setClientLogo(logo);
+          else setClientLogo(null);
+          setBrandBg(sessionStorage.getItem('client_bg') || '#ffffff');
+          setBrandText(sessionStorage.getItem('client_text') || '#000000');
+      }
+  }, [pathname]);
+
   const handleLogout = async () => {
     if (!auth) return;
     try { await signOut(auth); window.location.href = '/'; } catch (err) {}
@@ -6,368 +61,135 @@
 
   const closeMenu = () => setIsMobileMenuOpen(false);
 
+  // COMPLETELY HIDE THIS HEADER ON CLIENT PRESENTATION PAGES AND PROPOSAL PAGES
   if (pathname && (pathname.startsWith('/client/') || pathname.startsWith('/proposal/'))) return null;
   
-  // FIX: Intercept rendering entirely to prevent the brief branding flash
+  // PREVENT FLASH OF WRONG BRANDING WHILE MAGIC LINK LOADS
   if (isProcessingMagicLink) return null; 
 
-  return (
-// ... existing code ...
-```
-
-### 2. Hide the Main Website Footer
-We apply the exact same fix to the `Footer.js` component.
-
-```javascript:Footer Component:src/components/Footer.js
-// ... existing code ...
-          setBrandBg(sessionStorage.getItem('client_bg') || '#ffffff');
-          setBrandText(sessionStorage.getItem('client_text') || '#000000');
-      }
-  }, [pathname]);
-
-  if (pathname && (pathname.startsWith('/client/') || pathname.startsWith('/proposal/'))) return null;
-  
-  // FIX: Intercept rendering entirely to prevent the brief branding flash
-  if (isProcessingMagicLink) return null;
+  const isProLoggedIn = user && !user.isAnonymous;
 
   return (
-// ... existing code ...
-```
-
-### 3. Condense the Proposal PDF to 1 Page
-Here is the fully updated Proposal Presentation page. I have added a special CSS print rule to minimize the page margins, and aggressively added `print:p-3`, `print:mb-3`, and `print:text-[10px]` classes throughout the document. 
-
-This ensures that the web version still looks large, spacious, and premium on a monitor, but when they hit "Download PDF", it instantly squashes the images and padding down to snap perfectly onto a single sheet of paper!
-
-You can completely replace the contents of **`src/app/proposal/[id]/page.js`** with this code:
-
-```javascript:Proposal Viewer Page:src/app/proposal/[id]/page.js
-"use client";
-
-import React, { useState, useEffect, use } from 'react';
-import Link from 'next/link';
-import { doc, getDoc } from 'firebase/firestore';
-import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
-import { auth, db, appId } from "../../../lib/firebase";
-
-export default function ProposalPage({ params }) {
-    const unwrappedParams = use(params);
-    const proposalId = unwrappedParams.id;
-
-    const [quote, setQuote] = useState(null);
-    const [proProfile, setProProfile] = useState(null);
-    const [productDetails, setProductDetails] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(false);
-
-    useEffect(() => {
-        let isMounted = true;
-
-        const fetchProposal = async () => {
-            try {
-                // 1. Fetch the specific quote
-                const quoteRef = doc(db, 'artifacts', appId, 'public', 'data', 'pro_quotes', proposalId);
-                const quoteSnap = await getDoc(quoteRef);
-
-                if (!quoteSnap.exists()) {
-                    if (isMounted) { setError(true); setIsLoading(false); }
-                    return;
-                }
-
-                const quoteData = quoteSnap.data();
-                if (isMounted) setQuote(quoteData);
-
-                // 2. Fetch the Pro's branding profile
-                if (quoteData.proId) {
-                    const proRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', quoteData.proId);
-                    const proSnap = await getDoc(proRef);
-                    if (proSnap.exists() && isMounted) setProProfile(proSnap.data());
-                }
-
-                // 3. Fetch the latest product image/details just in case
-                if (quoteData.productId) {
-                    const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'pricing', quoteData.productId);
-                    const prodSnap = await getDoc(prodRef);
-                    if (prodSnap.exists() && isMounted) setProductDetails(prodSnap.data());
-                }
-
-            } catch (err) {
-                console.error("Error loading proposal:", err);
-                if (isMounted) setError(true);
-            } finally {
-                if (isMounted) setIsLoading(false);
-            }
-        };
-
-        const unsub = onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                signInAnonymously(auth).catch(() => {});
-            } else if (isMounted && proposalId) {
-                fetchProposal();
-            }
-        });
-
-        return () => {
-            isMounted = false;
-            unsub();
-        };
-    }, [proposalId]);
-
-    useEffect(() => {
-        if (proProfile) {
-            const bName = proProfile.business || "Your Flooring Professional";
-            const mgn = quote?.totals?.margin || proProfile.clientMargin || 20;
-            const lUrl = proProfile.logoUrl || "";
-            const bBg = proProfile.brandBgColor || "#ffffff";
-            const bText = proProfile.brandTextColor || "#000000";
-
-            sessionStorage.setItem('client_brand', bName);
-            if (lUrl) sessionStorage.setItem('client_logo', lUrl);
-            else sessionStorage.removeItem('client_logo');
-            
-            sessionStorage.setItem('client_bg', bBg);
-            sessionStorage.setItem('client_text', bText);
-            sessionStorage.setItem('client_margin', mgn);
-            sessionStorage.setItem('magic_link_client', 'true');
-        }
-    }, [proProfile, quote]);
-
-    if (isLoading) {
-        return (
-            <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50 print:hidden">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black border-t-transparent mb-4"></div>
-                <p className="text-sm font-bold uppercase tracking-widest text-gray-400">Loading Proposal...</p>
-            </div>
-        );
-    }
-
-    if (error || !quote) {
-        return (
-            <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 text-center print:hidden">
-                <h1 className="text-3xl font-black mb-2">Proposal Not Found</h1>
-                <p className="text-gray-500 max-w-md">We couldn't locate this proposal. The link may be invalid or the project was removed by your contractor.</p>
-            </div>
-        );
-    }
-
-    const businessName = proProfile?.business || "Your Flooring Professional";
-    const logoUrl = proProfile?.logoUrl || "";
-    const brandBgColor = proProfile?.brandBgColor || "#ffffff";
-    const brandTextColor = proProfile?.brandTextColor || "#000000";
-    
-    // Product Image Logic
-    const safePrefix = quote.imgPrefix || productDetails?.imgPrefix || '';
-    const displaySku = quote.colorSku || '01';
-    const safeName = (quote.productName || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const safeSku = (productDetails?.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    let folderName = 'images'; 
-    if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-    else if (safeName) folderName = safeName;
-    folderName = folderName.replace(/-+$/, '');
-
-    const mainType = quote.category === 'Carpet' ? 'main' : 'main';
-    const rawPath = `images/${folderName}/${safePrefix}${displaySku}_${mainType}.jpg`.toLowerCase();
-    const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
-    const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
-
-    // Dynamic Trim Text
-    let trimParts = [];
-    if (quote.addons?.trims?.details) {
-        if (quote.addons.trims.details.standard > 0) trimParts.push('Transitions');
-        if (quote.addons.trims.details.stairnose > 0) trimParts.push('Stair Noses');
-        if (quote.addons.trims.details.quarterRound > 0) trimParts.push('Quarter Round');
-    }
-    const trimText = trimParts.length > 0 ? `Matching ${trimParts.join(', ').replace(/, ([^,]*)$/, ' and $1')}` : 'Matching transition moldings';
-
-    // Magic Link Generation for Product Image
-    let cmToken = '';
-    try { cmToken = btoa((quote.totals.margin).toString()); } catch(e) {}
-    const productLink = `/product/${quote.productId}?pro=${quote.proId}&cm=${cmToken}#${quote.productId}?color=${displaySku}`;
-
-    return (
-        <div className="min-h-screen bg-gray-50 font-sans flex flex-col print:bg-white">
-            {/* Force tight page margins for printing so everything fits on one page */}
-            <style dangerouslySetInnerHTML={{__html: `
-                @media print {
-                    @page { margin: 0.4in; }
-                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                }
-            `}} />
-
-            {/* BRANDED HEADER - Squashed for print */}
-            <header className="border-b border-gray-200 py-6 px-6 print:py-3 print:px-2 text-center shadow-sm print:shadow-none" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
-                {logoUrl ? (
-                    <img src={logoUrl} alt={businessName} className="h-16 md:h-20 print:h-10 w-auto mx-auto object-contain" />
-                ) : (
-                    <h1 className="text-2xl md:text-3xl print:text-xl font-black uppercase tracking-tighter leading-none m-0">{businessName}</h1>
-                )}
-                <p className="text-[10px] md:text-xs print:text-[8px] font-black italic tracking-widest uppercase mt-2 print:mt-1 opacity-80 m-0">Official Turnkey Proposal</p>
-            </header>
-
-            <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-12 print:py-4 print:px-0">
+    <header className="sticky top-0 z-50 transition-colors duration-300 shadow-sm border-b" style={clientBrand ? { backgroundColor: brandBg, borderColor: `${brandText}20` } : { backgroundColor: '#ffffff', borderColor: '#e5e7eb' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-24">
                 
-                {/* ACTION BAR (Hidden on PDF) */}
-                <div className="flex justify-end mb-6 print:hidden">
-                    <button onClick={() => window.print()} className="bg-gray-900 text-white px-6 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors flex items-center gap-2 outline-none cursor-pointer shadow-md">
-                        <span>📄</span> Download PDF / Print
+                {/* LOGO AREA */}
+                <div className="flex-shrink-0 flex items-center">
+                    <Link href="/" onClick={closeMenu} className="flex flex-col justify-center items-start" style={{ textDecoration: 'none' }}>
+                        {clientLogo ? (
+                            <img src={clientLogo} alt={clientBrand} className="h-12 w-auto object-contain" />
+                        ) : clientBrand ? (
+                            <div className="flex flex-col items-start">
+                                <span className="text-2xl font-black uppercase tracking-tighter leading-none" style={{ color: brandText }}>{clientBrand}</span>
+                                <span className="text-sm font-black italic tracking-tight opacity-80" style={{ color: brandText }}>Premium Floors</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-3xl font-black tracking-tighter text-gray-900">FLOORS <span className="text-gold">55</span></span>
+                                <span className="text-red-600 text-lg font-black italic tracking-tight">for Pros</span>
+                            </div>
+                        )}
+                    </Link>
+                </div>
+
+                {/* DESKTOP NAV */}
+                <nav className="hidden md:flex space-x-8 items-center">
+                    {clientBrand ? (
+                        <>
+                            <Link href="/category" className="font-bold text-sm uppercase tracking-widest hover:opacity-70 transition-opacity" style={{ color: brandText, textDecoration: 'none' }}>Catalog</Link>
+                            <Link href="/choosing-your-floor" className="font-bold text-sm uppercase tracking-widest hover:opacity-70 transition-opacity" style={{ color: brandText, textDecoration: 'none' }}>Design Guide</Link>
+                            <Link href="/order-sample" className="font-bold text-sm uppercase tracking-widest hover:opacity-70 transition-opacity" style={{ color: brandText, textDecoration: 'none' }}>Order Sample</Link>
+                        </>
+                    ) : (
+                        <>
+                            <Link href="/category" className="text-gray-600 hover:text-gold font-bold text-xs uppercase tracking-widest transition-colors" style={{ textDecoration: 'none' }}>Collections</Link>
+                            
+                            {/* Resources Dropdown */}
+                            <div className="relative group">
+                                <button className="text-gray-600 group-hover:text-gold font-bold text-xs uppercase tracking-widest transition-colors flex items-center gap-1 bg-transparent border-none cursor-pointer outline-none pb-8 mb:-mb-8">
+                                    Resources <span className="text-[10px]">▼</span>
+                                </button>
+                                <div className="absolute top-full left-0 w-56 bg-white border border-gray-100 shadow-xl rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0 pt-2 pb-2">
+                                    <Link href="/choosing-your-floor" className="block px-5 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gold transition-colors" style={{ textDecoration: 'none' }}>Design Guide</Link>
+                                    <Link href="/hard-surface-transitions" className="block px-5 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gold transition-colors" style={{ textDecoration: 'none' }}>Transition Moldings Guide</Link>
+                                    <Link href="/floor-care" className="block px-5 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gold transition-colors" style={{ textDecoration: 'none' }}>Care & Maintenance</Link>
+                                    <Link href="/installation-prep" className="block px-5 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gold transition-colors" style={{ textDecoration: 'none' }}>Installation Prep</Link>
+                                    <Link href="/faq" className="block px-5 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gold transition-colors" style={{ textDecoration: 'none' }}>FAQ</Link>
+                                    <Link href="/flooring-glossary" className="block px-5 py-3 text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gold transition-colors" style={{ textDecoration: 'none' }}>Glossary of Terms</Link>
+                                </div>
+                            </div>
+                            
+                            <Link href="/become-a-pro" className="text-gray-600 hover:text-gold font-bold text-xs uppercase tracking-widest transition-colors" style={{ textDecoration: 'none' }}>Pro Program</Link>
+                            
+                            {isProLoggedIn ? (
+                                <div className="flex items-center gap-4 ml-4 pl-4 border-l border-gray-200">
+                                    <Link href="/my-account" className="bg-black text-white px-5 py-2.5 rounded-full font-bold text-[10px] uppercase tracking-widest hover:bg-gold hover:text-black transition-colors" style={{ textDecoration: 'none' }}>My Account</Link>
+                                    <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 font-bold text-[10px] uppercase tracking-widest transition-colors bg-transparent border-none cursor-pointer outline-none">Log Out</button>
+                                </div>
+                            ) : (
+                                <button onClick={() => window.dispatchEvent(new Event('open-login-modal'))} className="ml-4 bg-black text-white px-5 py-2.5 rounded-full font-bold text-[10px] uppercase tracking-widest hover:bg-gold hover:text-black transition-colors bg-transparent border-none cursor-pointer outline-none">Pro Login</button>
+                            )}
+                        </>
+                    )}
+                </nav>
+
+                {/* MOBILE MENU BUTTON */}
+                <div className="md:hidden flex items-center">
+                    <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 focus:outline-none bg-transparent border-none cursor-pointer" style={{ color: clientBrand ? brandText : '#111827' }}>
+                        <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            {isMobileMenuOpen ? (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            ) : (
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                            )}
+                        </svg>
                     </button>
                 </div>
-
-                {/* PROPOSAL TITLE BLOCK - Squashed for print */}
-                <div className="bg-white p-8 md:p-10 print:p-4 rounded-3xl print:rounded-xl shadow-sm border border-gray-100 mb-8 print:mb-3 relative overflow-hidden print:border-gray-300 print:shadow-none">
-                    <div className="absolute top-0 left-0 w-2 h-full print:w-1" style={{ backgroundColor: brandBgColor }}></div>
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6 print:gap-2">
-                        <div>
-                            <h2 className="text-[10px] print:text-[8px] font-black uppercase tracking-widest text-gray-400 mb-2 print:mb-0.5">Prepared For:</h2>
-                            <h1 className="text-3xl md:text-4xl print:text-xl font-black text-gray-900 leading-none">{quote.clientName}</h1>
-                            <p className="text-lg print:text-xs text-gray-500 mt-2 print:mt-0.5 font-medium">{quote.projectName}</p>
-                        </div>
-                        <div className="text-left md:text-right">
-                            <p className="text-xs print:text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1 print:mb-0">Date Issued</p>
-                            <p className="text-sm print:text-[10px] font-bold text-gray-900">{new Date(quote.createdAt).toLocaleDateString()}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* THE SELECTED PRODUCT - Squashed for print */}
-                <div className="bg-white rounded-3xl print:rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8 print:mb-3 flex flex-col md:flex-row group print:border-gray-300 print:shadow-none print:break-inside-avoid">
-                    <Link href={productLink} className="md:w-2/5 print:w-1/4 h-64 md:h-auto print:h-24 relative overflow-hidden bg-gray-100 block print:pointer-events-none" style={{ textDecoration: 'none' }}>
-                        <img src={fbPath} className="w-full h-full object-cover transition duration-500 group-hover:scale-105" onError={e => e.target.src=TBD_IMG} alt={quote.productName} />
-                        <div className="absolute bottom-4 left-4 print:bottom-1 print:left-1 bg-black/50 backdrop-blur-md px-3 py-1 print:px-1.5 print:py-0.5 rounded-full border border-white/20 shadow-sm print:bg-black/70">
-                            <span className="text-white font-bold text-xs print:text-[7px]">Color: {quote.colorName}</span>
-                        </div>
-                    </Link>
-                    <div className="p-8 print:p-4 flex-1 flex flex-col justify-center">
-                        <div className="text-[10px] print:text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-2 print:mb-0.5">{quote.category}</div>
-                        <h3 className="text-2xl print:text-sm font-black text-gray-900 mb-4 print:mb-1">{quote.productName}</h3>
-                        <p className="text-gray-500 text-sm print:text-[9px] print:leading-tight mb-6 print:mb-0 line-clamp-3 print:line-clamp-2">{productDetails?.desc || 'Premium flooring collection.'}</p>
-                        <Link href={productLink} className="inline-block text-center font-black uppercase py-3 px-6 rounded-xl transition text-xs tracking-widest w-full md:w-auto print:hidden" style={{ textDecoration: 'none', backgroundColor: brandBgColor, color: brandTextColor, border: `1px solid ${brandTextColor}` }}>
-                            View Photos & Specs
-                        </Link>
-                    </div>
-                </div>
-
-                {/* THE INCLUSIONS CHECKLIST - Squashed for print */}
-                <div className="bg-white p-8 md:p-10 print:p-4 rounded-3xl print:rounded-xl shadow-sm border border-gray-100 mb-8 print:mb-3 print:border-gray-300 print:shadow-none print:break-inside-avoid">
-                    <h3 className="text-xl print:text-sm font-black text-gray-900 mb-6 print:mb-2 border-b border-gray-100 pb-4 print:pb-1">Project Inclusions</h3>
-                    
-                    <ul className="space-y-4 print:space-y-1.5 text-base print:text-[10px] text-gray-700">
-                        {/* Material */}
-                        <li className="flex gap-4 print:gap-2 items-start">
-                            <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
-                            <div>
-                                <span className="font-bold text-gray-900 block print:leading-tight">Premium Flooring Material</span>
-                                <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">{Math.ceil(quote.measurements.netSqft)} net sqft of {quote.productName} in {quote.colorName}.</span>
-                            </div>
-                        </li>
-                        
-                        {/* Pad */}
-                        {quote.addons?.pad && (
-                            <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
-                                <div>
-                                    <span className="font-bold text-gray-900 block print:leading-tight">Carpet Cushion</span>
-                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">{quote.addons.pad.name}.</span>
-                                </div>
-                            </li>
-                        )}
-
-                        {/* Trims */}
-                        {quote.addons?.trims && (
-                            <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
-                                <div>
-                                    <span className="font-bold text-gray-900 block print:leading-tight">Transitions & Moldings</span>
-                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">{trimText} included.</span>
-                                </div>
-                            </li>
-                        )}
-
-                        {/* Prep */}
-                        {quote.services?.prep > 0 && (
-                            <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
-                                <div>
-                                    <span className="font-bold text-gray-900 block print:leading-tight">Tear Out & Prep</span>
-                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">Removal of old flooring and subfloor preparation.</span>
-                                </div>
-                            </li>
-                        )}
-
-                        {/* Install */}
-                        {quote.services?.installTotal > 0 && (
-                            <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
-                                <div>
-                                    <span className="font-bold text-gray-900 block print:leading-tight">Professional Installation</span>
-                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">Expert installation of {quote.measurements.netSqft} net sqft.</span>
-                                </div>
-                            </li>
-                        )}
-
-                        {/* Delivery */}
-                        {quote.services?.delivery > 0 && (
-                            <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
-                                <div>
-                                    <span className="font-bold text-gray-900 block print:leading-tight">Materials Delivery</span>
-                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">Logistics and handling to job site.</span>
-                                </div>
-                            </li>
-                        )}
-
-                        {/* Custom Lines */}
-                        {quote.services?.custom1 && (
-                            <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
-                                <div>
-                                    <span className="font-bold text-gray-900 block print:leading-tight">{quote.services.custom1.name}</span>
-                                </div>
-                            </li>
-                        )}
-                        {quote.services?.custom2 && (
-                            <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
-                                <div>
-                                    <span className="font-bold text-gray-900 block print:leading-tight">{quote.services.custom2.name}</span>
-                                </div>
-                            </li>
-                        )}
-                    </ul>
-                </div>
-
-                {/* THE GRAND TOTAL - Squashed for print */}
-                <div className="bg-gray-900 p-8 md:p-12 print:p-4 rounded-3xl print:rounded-xl shadow-2xl text-center md:text-right text-white mb-12 print:mb-3 print:shadow-none print:bg-gray-100 print:text-black print:border print:border-gray-300 print:break-inside-avoid">
-                    <p className="text-xs md:text-sm print:text-[9px] font-bold text-gray-400 print:text-gray-500 uppercase tracking-widest mb-2 print:mb-0.5">Turnkey Project Total</p>
-                    <p className="text-4xl md:text-6xl print:text-2xl font-black font-mono text-white print:text-black tracking-tight mb-2 print:mb-0.5">
-                        ${quote.totals.turnkeyRetail.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-[10px] print:text-[7px] text-gray-500 uppercase tracking-widest font-bold m-0">Includes materials, accessories, and labor as detailed above.</p>
-                </div>
-
-                {/* TERMS AND CONDITIONS - Squashed for print */}
-                <div className="bg-white p-8 md:p-10 print:p-4 rounded-3xl print:rounded-xl shadow-sm border border-gray-100 print:border-gray-300 print:shadow-none print:break-inside-avoid">
-                    <h3 className="text-lg print:text-xs font-black text-gray-900 mb-4 print:mb-1.5 border-b border-gray-100 print:border-gray-200 pb-2 print:pb-1">Terms & Conditions</h3>
-                    <ul className="text-xs print:text-[8px] text-gray-600 space-y-3 print:space-y-1 list-disc pl-4 leading-relaxed print:leading-tight m-0">
-                        <li><strong>Proposal Validity:</strong> This proposal and its pricing are valid for 30 days from the date issued. Following this period, material costs are subject to manufacturer price increases.</li>
-                        <li><strong>Site Conditions & Acclimation:</strong> The job site must be climate-controlled (65-75°F with 35-55% humidity) with an operational HVAC system before, during, and after installation to ensure material integrity and maintain manufacturer warranties.</li>
-                        <li><strong>Unforeseen Subfloor Issues:</strong> This proposal assumes a standard, structurally sound subfloor. Any hidden damage, dry rot, severe leveling requirements, or moisture issues discovered after the removal of existing flooring will require a separate change order and additional costs.</li>
-                        <li><strong>Material Waste & Excess:</strong> Measurements include a standard industry waste factor. It is customary and recommended to keep 1-2 unopened boxes of leftover material stored in a climate-controlled area for future repairs (dye lots will vary over time).</li>
-                        <li><strong>Payment Terms:</strong> A standard project deposit is required to order materials and reserve your installation date. The remaining balance is due upon project completion.</li>
-                    </ul>
-                </div>
-
-            </main>
-
-            {/* BRANDED FOOTER */}
-            <footer className="py-12 print:py-2 text-center mt-auto border-t border-gray-200 print:hidden" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
-                {logoUrl && (
-                    <img src={logoUrl} alt={businessName} className="h-12 w-auto mx-auto object-contain mb-4 opacity-80" style={{ filter: brandBgColor.toLowerCase() === '#ffffff' ? 'none' : 'brightness(0) invert(1) opacity(0.8)' }} />
-                )}
-                <p className="text-xs uppercase tracking-widest font-bold opacity-80 m-0">
-                    © {new Date().getFullYear()} {businessName}. All Rights Reserved.
-                </p>
-            </footer>
+            </div>
         </div>
-    );
+
+        {/* MOBILE DROPDOWN MENU */}
+        {isMobileMenuOpen && (
+            <div className="md:hidden border-t shadow-2xl absolute w-full left-0" style={{ backgroundColor: clientBrand ? brandBg : '#ffffff', borderColor: clientBrand ? `${brandText}20` : '#e5e7eb' }}>
+                <div className="px-4 pt-4 pb-6 space-y-2">
+                    {clientBrand ? (
+                        <>
+                            <Link href="/category" onClick={closeMenu} className="block px-4 py-3 rounded-xl font-bold text-base uppercase tracking-widest hover:bg-black/5" style={{ color: brandText, textDecoration: 'none' }}>Catalog</Link>
+                            <Link href="/choosing-your-floor" onClick={closeMenu} className="block px-4 py-3 rounded-xl font-bold text-base uppercase tracking-widest hover:bg-black/5" style={{ color: brandText, textDecoration: 'none' }}>Design Guide</Link>
+                            <Link href="/order-sample" onClick={closeMenu} className="block px-4 py-3 rounded-xl font-bold text-base uppercase tracking-widest hover:bg-black/5" style={{ color: brandText, textDecoration: 'none' }}>Order Sample</Link>
+                        </>
+                    ) : (
+                        <>
+                            <Link href="/category" onClick={closeMenu} className="block px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-widest text-gray-900 hover:bg-gray-50 hover:text-gold" style={{ textDecoration: 'none' }}>Collections</Link>
+                            
+                            <div className="px-4 py-2">
+                                <div className="font-bold text-[10px] text-gray-400 uppercase tracking-widest mb-2">Resources</div>
+                                <div className="space-y-1 pl-2 border-l-2 border-gray-100">
+                                    <Link href="/choosing-your-floor" onClick={closeMenu} className="block py-2 text-sm font-bold text-gray-600 hover:text-gold" style={{ textDecoration: 'none' }}>Design Guide</Link>
+                                    <Link href="/hard-surface-transitions" onClick={closeMenu} className="block py-2 text-sm font-bold text-gray-600 hover:text-gold" style={{ textDecoration: 'none' }}>Transition Moldings</Link>
+                                    <Link href="/floor-care" onClick={closeMenu} className="block py-2 text-sm font-bold text-gray-600 hover:text-gold" style={{ textDecoration: 'none' }}>Care & Maintenance</Link>
+                                    <Link href="/installation-prep" onClick={closeMenu} className="block py-2 text-sm font-bold text-gray-600 hover:text-gold" style={{ textDecoration: 'none' }}>Installation Prep</Link>
+                                </div>
+                            </div>
+                            
+                            <Link href="/become-a-pro" onClick={closeMenu} className="block px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-widest text-gray-900 hover:bg-gray-50 hover:text-gold" style={{ textDecoration: 'none' }}>Pro Program</Link>
+                            
+                            <div className="border-t border-gray-100 mt-4 pt-4 px-4">
+                                {isProLoggedIn ? (
+                                    <div className="flex flex-col gap-3">
+                                        <Link href="/my-account" onClick={closeMenu} className="w-full text-center bg-black text-white px-5 py-4 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-gold hover:text-black transition-colors" style={{ textDecoration: 'none' }}>My Account</Link>
+                                        <button onClick={() => { handleLogout(); closeMenu(); }} className="w-full text-center border border-gray-200 text-gray-600 px-5 py-3 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors outline-none cursor-pointer">Log Out</button>
+                                    </div>
+                                ) : (
+                                    <button onClick={() => { window.dispatchEvent(new Event('open-login-modal')); closeMenu(); }} className="w-full bg-black text-white px-5 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors outline-none cursor-pointer">Pro Login</button>
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        )}
+    </header>
+  );
 }
