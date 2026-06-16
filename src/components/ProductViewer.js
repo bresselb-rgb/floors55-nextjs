@@ -15,7 +15,6 @@ function ProductViewerContent({ initialProduct }) {
     const [user, setUser] = useState(null);
     const [productData, setProductData] = useState(initialProduct);
 
-    // FIX: Evaluate active color instantly on first render to prevent TBD flashing
     const [activeColor, setActiveColor] = useState(() => {
         if (initialProduct?.colors && initialProduct.colors.length > 0) {
             if (urlColorSku) {
@@ -27,25 +26,40 @@ function ProductViewerContent({ initialProduct }) {
         return null;
     });
     
-    // FIX: Evaluate active view instantly as well
     const [activeView, setActiveView] = useState(() => {
         return (initialProduct?.views && initialProduct.views[0]) || 'MAIN';
     });
 
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-    const [isCalcOpen, setIsCalcOpen] = useState(false);
+    
+    // Proposal Builder States
+    const [isBuilderOpen, setIsBuilderOpen] = useState(false);
     const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
 
+    // Measurements
     const [calcLength, setCalcLength] = useState('');
     const [calcWidth, setCalcWidth] = useState('');
     const [calcWaste, setCalcWaste] = useState('1.10');
     
+    // Add-ons
+    const [padSelection, setPadSelection] = useState('none');
+    const [padCost, setPadCost] = useState('0.00');
+    
+    const [trimQty, setTrimQty] = useState({ tmold: 0, reducer: 0, stairnose: 0, quarterRound: 0 });
+    const [trimCost, setTrimCost] = useState({ tmold: 25, reducer: 25, stairnose: 45, quarterRound: 10 });
+
+    // Services
+    const [laborPrep, setLaborPrep] = useState('');
+    const [laborInstall, setLaborInstall] = useState('');
+    const [laborDelivery, setLaborDelivery] = useState('');
+    
     const [clientMargin, setClientMargin] = useState(null);
+    const [builderMargin, setBuilderMargin] = useState(20);
     const [copied, setCopied] = useState(false);
     const [isMagicLink, setIsMagicLink] = useState(false);
 
     const [proBoards, setProBoards] = useState([]);
-    const [isBoardsMenuOpen, setIsBoardsMenuOpen] = useState(false);
+    const [selectedBoardId, setSelectedBoardId] = useState('');
     const [isSavingToBoard, setIsSavingToBoard] = useState(false);
     const [boardSaveMessage, setBoardSaveMessage] = useState('');
 
@@ -70,11 +84,13 @@ function ProductViewerContent({ initialProduct }) {
                             sessionStorage.setItem('client_bg', pData.brandBgColor || '#ffffff');
                             sessionStorage.setItem('client_text', pData.brandTextColor || '#000000');
                             
+                            let decodedMargin = 20;
                             if (cmParam) {
-                                const decoded = parseInt(atob(cmParam), 10);
-                                if (!isNaN(decoded)) sessionStorage.setItem('client_margin', decoded);
+                                decodedMargin = parseInt(atob(cmParam), 10);
+                                if (!isNaN(decodedMargin)) sessionStorage.setItem('client_margin', decodedMargin);
                             } else if (pData.clientMargin !== undefined) {
                                 sessionStorage.setItem('client_margin', pData.clientMargin);
+                                decodedMargin = pData.clientMargin;
                             }
                             
                             sessionStorage.setItem('magic_link_client', 'true');
@@ -114,8 +130,10 @@ function ProductViewerContent({ initialProduct }) {
             }
 
             const storedMargin = sessionStorage.getItem('client_margin');
-            if (storedMargin !== null) setClientMargin(parseInt(storedMargin, 10));
-            
+            if (storedMargin !== null) {
+                setClientMargin(parseInt(storedMargin, 10));
+                setBuilderMargin(parseInt(storedMargin, 10));
+            }
             if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
         }
     }, [searchParams, urlColorSku]);
@@ -133,11 +151,7 @@ function ProductViewerContent({ initialProduct }) {
                 signInAnonymously(auth).catch(() => {});
             }
         }
-
-        return () => {
-            isMounted = false;
-            unsubscribe();
-        };
+        return () => { isMounted = false; unsubscribe(); };
     }, []);
 
     useEffect(() => {
@@ -147,8 +161,6 @@ function ProductViewerContent({ initialProduct }) {
                 dbData.displayTitle = (dbData.usePrivateName && dbData.privateName) ? dbData.privateName : (dbData.name || 'Unnamed Product');
                 setProductData({ id: docSnap.id, ...dbData });
             }
-        }, (error) => {
-            if (error.code !== 'permission-denied') console.error("Firestore Error:", error);
         });
         return () => unsub();
     }, [initialProduct.id]);
@@ -176,6 +188,7 @@ function ProductViewerContent({ initialProduct }) {
                     const snapshot = await getDocs(q);
                     const boardsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                     setProBoards(boardsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0)));
+                    if (boardsData.length > 0) setSelectedBoardId(boardsData[0].id);
                 } catch (e) {
                     console.error("Error fetching boards", e);
                 }
@@ -183,6 +196,14 @@ function ProductViewerContent({ initialProduct }) {
             fetchBoards();
         }
     }, [user]);
+
+    // Handle Pad Selection Updates
+    useEffect(() => {
+        if (padSelection === '6lb') setPadCost('2.50');
+        else if (padSelection === '8lb_hope') setPadCost('3.75');
+        else if (padSelection === '8lb_memory') setPadCost('4.50');
+        else setPadCost('0.00');
+    }, [padSelection]);
 
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
@@ -247,51 +268,13 @@ function ProductViewerContent({ initialProduct }) {
         }
     };
 
-    const handleSaveToBoard = async (boardId, boardName) => {
-        setIsSavingToBoard(true);
-        try {
-            const productToSave = {
-                productId: productData.id,
-                name: productData.displayTitle,
-                colorSku: activeColor?.sku || '',
-                colorName: activeColor?.name || '',
-                category: productData.category || '',
-                imgPrefix: productData.imgPrefix || '',
-                addedAt: new Date().toISOString()
-            };
-
-            const boardRef = doc(db, 'artifacts', appId, 'public', 'data', 'client_boards', boardId);
-            await updateDoc(boardRef, {
-                products: arrayUnion(productToSave)
-            });
-            
-            setBoardSaveMessage(`Saved to ${boardName}`);
-            setIsBoardsMenuOpen(false);
-            setTimeout(() => setBoardSaveMessage(''), 3000);
-        } catch (err) {
-            console.error("Error saving to board", err);
-            alert("Failed to save to board.");
-        } finally {
-            setIsSavingToBoard(false);
-        }
-    };
-
+    // --- MATH & CALCULATIONS FOR BUILDER ---
     const isClientMode = clientMargin !== null;
     const basePrice = productData?.price || 0;
-    const finalPrice = isClientMode ? basePrice * (1 + clientMargin / 100) : basePrice;
-    
-    const wsPrice = finalPrice.toFixed(2);
-    const retailPrice = productData?.retailPrice ? parseFloat(productData.retailPrice).toFixed(2) : (basePrice * 2.2).toFixed(2);
-
     const isCarpet = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
-    const isSqft = !productData?.unit || productData?.unit === 'sqft';
     
-    const sqydWsPrice = isCarpet && isSqft ? (finalPrice * 9).toFixed(2) : null;
-    const sqydRetailPrice = isCarpet && isSqft ? (parseFloat(retailPrice) * 9).toFixed(2) : null;
-
     let cartonSqft = parseFloat(productData?.cartonSize);
     if (isNaN(cartonSqft) || cartonSqft <= 0) cartonSqft = parseFloat(productData?.boxSqft);
-
     if (!cartonSqft && productData?.specs && Array.isArray(productData.specs)) {
         const specText = productData.specs.join(' ').toLowerCase();
         const sqftMatch = specText.match(/([\d.]+)\s*(sq\.?ft\.?|sq\s*ft|sf)/);
@@ -301,14 +284,94 @@ function ProductViewerContent({ initialProduct }) {
 
     const l = parseFloat(calcLength) || 0;
     const w = parseFloat(calcWidth) || 0;
-    const calcNet = l * w;
-    const totalWithWaste = calcNet * parseFloat(calcWaste);
-    const calcTotal = isCarpet ? (totalWithWaste / 9).toFixed(2) : Math.ceil(totalWithWaste / cartonSqft);
+    const calcNetSqft = l * w;
+    const totalSqftWithWaste = calcNetSqft * parseFloat(calcWaste);
+    
+    const requiredSqYd = Math.ceil(totalSqftWithWaste / 9);
+    const requiredCartons = Math.ceil(totalSqftWithWaste / cartonSqft);
+    const finalMaterialQty = isCarpet ? requiredSqYd : requiredCartons;
+    const finalMaterialUnit = isCarpet ? 'sqyd' : 'cartons';
+    const finalMaterialCoverageSqft = isCarpet ? (requiredSqYd * 9) : (requiredCartons * cartonSqft);
+    
+    // Core Material Cost
+    const totalMaterialCost = isCarpet 
+        ? (requiredSqYd * (basePrice * 9)) 
+        : (requiredCartons * cartonSqft * basePrice);
 
-    const exitBtnBg = typeof window !== 'undefined' ? (sessionStorage.getItem('client_bg') || '#ef4444') : '#ef4444';
-    const exitBtnText = typeof window !== 'undefined' ? (sessionStorage.getItem('client_text') || '#ffffff') : '#ffffff';
+    // Add-on Costs
+    const totalPadCost = isCarpet && padSelection !== 'none' 
+        ? (requiredSqYd * (parseFloat(padCost) || 0)) 
+        : 0;
 
-    // Reusable Title Block for both Mobile and Desktop placement
+    const totalTrimCost = isCarpet ? 0 : 
+        (trimQty.tmold * trimCost.tmold) + 
+        (trimQty.reducer * trimCost.reducer) + 
+        (trimQty.stairnose * trimCost.stairnose) + 
+        (trimQty.quarterRound * trimCost.quarterRound);
+
+    // Services Cost
+    const totalLaborCost = (parseFloat(laborPrep) || 0) + (parseFloat(laborInstall) || 0) + (parseFloat(laborDelivery) || 0);
+
+    // Grand Totals
+    const totalWholesaleProjectCost = totalMaterialCost + totalPadCost + totalTrimCost + totalLaborCost;
+    const turnkeyRetailPrice = totalWholesaleProjectCost * (1 + (builderMargin / 100));
+
+
+    const handleSaveQuoteToBoard = async () => {
+        if (!selectedBoardId) return alert("Please select a board to save this proposal to.");
+        setIsSavingToBoard(true);
+
+        try {
+            let padName = '';
+            if (padSelection === '6lb') padName = "6lb Standard Cushion";
+            else if (padSelection === '8lb_hope') padName = "Premium 8lb 'Hope' Moisture Barrier Cushion";
+            else if (padSelection === '8lb_memory') padName = "Luxury 8lb Memory Foam Cushion";
+
+            const quoteObj = {
+                measurements: { length: l, width: w, waste: parseFloat(calcWaste), netSqft: calcNetSqft, coverageSqft: finalMaterialCoverageSqft },
+                material: { qty: finalMaterialQty, unit: finalMaterialUnit, wholesaleTotal: totalMaterialCost },
+                addons: {
+                    pad: padName ? { name: padName, cost: totalPadCost } : null,
+                    trims: !isCarpet && (trimQty.tmold > 0 || trimQty.reducer > 0 || trimQty.stairnose > 0 || trimQty.quarterRound > 0) ? { cost: totalTrimCost } : null
+                },
+                services: {
+                    prep: parseFloat(laborPrep) || 0,
+                    install: parseFloat(laborInstall) || 0,
+                    delivery: parseFloat(laborDelivery) || 0
+                },
+                totals: { wholesale: totalWholesaleProjectCost, margin: builderMargin, turnkeyRetail: turnkeyRetailPrice }
+            };
+
+            const productToSave = {
+                productId: productData.id,
+                name: productData.displayTitle,
+                colorSku: activeColor?.sku || '',
+                colorName: activeColor?.name || '',
+                category: productData.category || '',
+                imgPrefix: productData.imgPrefix || '',
+                quote: quoteObj,
+                addedAt: new Date().toISOString()
+            };
+
+            const boardRef = doc(db, 'artifacts', appId, 'public', 'data', 'client_boards', selectedBoardId);
+            await updateDoc(boardRef, { products: arrayUnion(productToSave) });
+            
+            const boardName = proBoards.find(b => b.id === selectedBoardId)?.name || 'Board';
+            setBoardSaveMessage(`Saved Proposal to ${boardName}`);
+            setTimeout(() => { setBoardSaveMessage(''); setIsBuilderOpen(false); }, 2000);
+        } catch (err) {
+            console.error("Error saving proposal", err);
+            alert("Failed to save proposal.");
+        } finally {
+            setIsSavingToBoard(false);
+        }
+    };
+
+    const finalPrice = isClientMode ? basePrice * (1 + clientMargin / 100) : basePrice;
+    const wsPrice = finalPrice.toFixed(2);
+    const retailPrice = productData?.retailPrice ? parseFloat(productData.retailPrice).toFixed(2) : (basePrice * 2.2).toFixed(2);
+
+    // Reusable Title Block
     const renderTitleBlock = (isDesktop) => (
         <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 lg:mb-2 gap-4 ${isDesktop ? 'hidden lg:flex' : 'flex lg:hidden'}`}>
             <div className="flex-1 min-w-0">
@@ -333,51 +396,10 @@ function ProductViewerContent({ initialProduct }) {
                     <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316M15 12a3 3 0 100 6 3 3 0 000-6zm0-6a3 3 0 100 6 3 3 0 000-6z"></path></svg>
                     {copied ? "Copied!" : "Share"}
                 </button>
-
-                {!isClientMode && user && !user.isAnonymous && (
-                    <div className="relative">
-                        <button 
-                            onClick={() => setIsBoardsMenuOpen(!isBoardsMenuOpen)}
-                            className="flex items-center gap-2 px-4 py-2 bg-black hover:bg-gold text-white hover:text-black border border-transparent rounded-full transition-all shadow-sm text-sm font-bold cursor-pointer outline-none max-w-[200px]"
-                        >
-                            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
-                            <span className="truncate">{boardSaveMessage ? `✓ ${boardSaveMessage}` : "Save"}</span>
-                        </button>
-
-                        {isBoardsMenuOpen && (
-                            <>
-                                <div className="fixed inset-0 z-40" onClick={() => setIsBoardsMenuOpen(false)}></div>
-                                <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 origin-top-right">
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-4 py-2 border-b border-gray-100 mb-2">Save to Client Board</h4>
-                                    {proBoards.length === 0 ? (
-                                        <div className="px-4 py-3 text-xs text-gray-500 italic">
-                                            No boards yet. Go to <Link href="/my-account" className="text-gold font-bold hover:underline" style={{textDecoration:'none'}}>My Account</Link> to create one!
-                                        </div>
-                                    ) : (
-                                        <div className="max-h-48 overflow-y-auto">
-                                            {proBoards.map(b => (
-                                                <button 
-                                                    key={b.id} 
-                                                    onClick={() => handleSaveToBoard(b.id, b.name)}
-                                                    disabled={isSavingToBoard}
-                                                    className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm font-bold text-gray-800 transition-colors flex items-center gap-2"
-                                                >
-                                                    <span className="text-gold shrink-0">📁</span> 
-                                                    <span className="truncate">{b.name}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </>
-                        )}
-                    </div>
-                )}
             </div>
         </div>
     );
 
-    // Reusable Color Swatches Block (Displays on Left for Mobile, Right for Desktop)
     const renderColorSwatches = (isDesktop) => (
         <div className={`${isDesktop ? 'hidden lg:block my-6' : 'block lg:hidden mt-8'}`}>
             <div className="flex justify-between items-end mb-4 pr-2">
@@ -409,12 +431,7 @@ function ProductViewerContent({ initialProduct }) {
                             router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
                             setActiveColor(c);
                         }}>
-                            <img 
-                                src={fbPath} 
-                                onError={(e) => e.target.src = TBD_IMG} 
-                                className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} 
-                                alt={c.name} 
-                            />
+                            <img src={fbPath} onError={(e) => e.target.src = TBD_IMG} className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} alt={c.name} />
                             <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
                         </div>
                     );
@@ -426,77 +443,39 @@ function ProductViewerContent({ initialProduct }) {
     return (
         <div className="flex-1 max-w-[1400px] mx-auto px-4 py-10 w-full flex flex-col lg:flex-row gap-10 relative">
           
-          {isClientMode && !isMagicLink && (
-              <button 
-                  onClick={() => { 
-                      sessionStorage.removeItem('client_margin'); 
-                      sessionStorage.removeItem('client_brand');
-                      sessionStorage.removeItem('client_logo');
-                      sessionStorage.removeItem('client_bg');
-                      sessionStorage.removeItem('client_text');
-                      sessionStorage.removeItem('magic_link_client');
-                      window.location.reload(); 
-                  }} 
-                  className="fixed bottom-6 left-6 px-5 py-3 rounded-full font-bold text-xs uppercase tracking-widest shadow-2xl z-[200] transition-opacity hover:opacity-80 flex items-center gap-2 border border-black/10"
-                  style={{ backgroundColor: exitBtnBg, color: exitBtnText }}
-              >
-                  <span>✕</span> Exit Client Mode
-              </button>
-          )}
-
-          {/* MOBILE TITLE BLOCK (Hidden on Desktop) */}
+          {/* MOBILE TITLE */}
           {renderTitleBlock(false)}
 
-          {/* LEFT COLUMN: IMAGE VIEWER & MOBILE SWATCHES */}
+          {/* LEFT COLUMN */}
           <div className="flex-1 w-full lg:min-w-[450px] lg:sticky lg:top-24 self-start z-10">
-            <div
-                className="w-full aspect-[4/3] rounded-lg bg-gray-50 border border-gray-200 overflow-hidden relative cursor-zoom-in group"
-                onClick={() => activeView !== 'VIDEO' && setIsLightboxOpen(true)}
-            >
+            <div className="w-full aspect-[4/3] rounded-lg bg-gray-50 border border-gray-200 overflow-hidden relative cursor-zoom-in group" onClick={() => activeView !== 'VIDEO' && setIsLightboxOpen(true)}>
                 {activeView === 'VIDEO' ? (
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
-                    <img
-                       src={getMediaPath(activeView) || TBD_IMG}
-                       alt="Product"
-                       className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85"
-                       onError={(e) => e.target.src = TBD_IMG}
-                       style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }}
-                    />
+                    <img src={getMediaPath(activeView) || TBD_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => e.target.src = TBD_IMG} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
                 )}
             </div>
 
             {productData.views && (
                 <div className="mt-4 flex gap-3">
                     {productData.views.map(v => (
-                         <img
-                            key={v}
-                            src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)}
-                            className={`w-[75px] h-[75px] object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`}
-                            onClick={() => setActiveView(v)}
-                            onError={(e) => e.target.src = TBD_IMG}
-                            alt={`View ${v}`}
-                         />
+                         <img key={v} src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)} className={`w-[75px] h-[75px] object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} onClick={() => setActiveView(v)} onError={(e) => e.target.src = TBD_IMG} alt={`View ${v}`} />
                     ))}
                 </div>
             )}
 
             <div className="flex gap-4 mt-6">
                 {!isClientMode && (
-                    <Link href={`/quote?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-black text-white text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-gold transition-colors border-2 border-black hover:border-gold" style={{ textDecoration: 'none' }}>Request Quote</Link>
+                    <Link href={`/quote?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-black text-white text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-gold transition-colors border-2 border-black hover:border-gold" style={{ textDecoration: 'none' }}>Get A Quote</Link>
                 )}
                 <Link href={`/order-sample?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
             </div>
 
-            {/* COLOR SWATCHES - Displays only on Mobile/Tablet */}
             {renderColorSwatches(false)}
-
           </div>
 
-          {/* RIGHT COLUMN: DETAILS */}
+          {/* RIGHT COLUMN */}
           <div className="flex-1 w-full lg:min-w-[400px]">
-            
-            {/* DESKTOP TITLE BLOCK (Hidden on Mobile) */}
             {renderTitleBlock(true)}
 
             <p className="text-[1.05rem] text-gray-500 mb-6 italic mt-4 lg:mt-0">{productData.desc || 'Premium flooring collection.'}</p>
@@ -504,14 +483,11 @@ function ProductViewerContent({ initialProduct }) {
             <div className="my-5 p-4 border-l-4 border-gold bg-[#fdfdfd] relative overflow-hidden">
                 {isClientMode ? (
                     <>
-                        <div className="absolute top-0 right-0 bg-gray-900 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-widest shadow-sm">
-                            Client Pricing
-                        </div>
+                        <div className="absolute top-0 right-0 bg-gray-900 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-widest shadow-sm">Client Pricing</div>
                         <div className="mt-1">
                             <span className="text-[1.1rem] text-gray-900 font-bold mr-2">Price:</span>
                             <span className="text-[2.2rem] text-gray-900 font-black leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
                         </div>
-                        {isCarpet && isSqft && <div className="text-sm text-gray-500 font-bold mt-1">That's ${sqydWsPrice} per sqyd</div>}
                     </>
                 ) : user && !user.isAnonymous ? (
                     <>
@@ -519,28 +495,23 @@ function ProductViewerContent({ initialProduct }) {
                             <span className="w-1.5 h-1.5 rounded-full bg-white inline-block animate-pulse"></span> Wholesale Live
                         </div>
                         <span className="text-[0.9rem] text-gray-500 line-through mb-1 block">Retail: ${retailPrice} <span className="text-sm">/</span><span className="text-sm">{productData.unit || 'sqft'}</span></span>
-                        {isCarpet && isSqft && <span className="text-[0.8rem] text-gray-400 italic block -mt-1 mb-2">(That's ${sqydRetailPrice} / sqyd)</span>}
                         <div className="mt-3 pt-3 border-t border-gray-200">
                             <div className="flex items-end gap-2">
                                 <span className="text-[1.1rem] text-gray-900 font-bold text-gold mb-1">Wholesale Price:</span>
                                 <span className="text-[2rem] text-red-700 font-bold leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/</span><span className="text-sm font-normal text-gray-500">{productData.unit || 'sqft'}</span></span>
                             </div>
-                            {isCarpet && isSqft && <div className="text-sm text-gray-500 font-bold mt-1">That's ${sqydWsPrice} per sqyd</div>}
                         </div>
                     </>
                 ) : (
                     <>
                         <span className="text-[1.5rem] text-gray-900 font-bold mb-1 block">Retail: ${retailPrice} <span className="text-sm">/</span><span className="text-sm">{productData.unit || 'sqft'}</span></span>
-                        {isCarpet && isSqft && <span className="text-[1rem] text-gray-500 font-bold italic block mb-2">That's ${sqydRetailPrice} per sqyd</span>}
                         <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
                             <button onClick={() => window.dispatchEvent(new Event('open-login-modal'))} className="block w-full text-left text-[10px] font-bold uppercase tracking-widest text-gold hover:text-black transition-colors underline bg-transparent border-none cursor-pointer outline-none">Log in for wholesale pricing</button>
-                            <Link href="/wholesale-request" className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gold" style={{ textDecoration: 'none' }}>Request access here</Link>
                         </div>
                     </>
                 )}
             </div>
 
-            {/* COLOR SWATCHES - Displays only on Desktop */}
             {renderColorSwatches(true)}
 
             {productData.specs && productData.specs.length > 0 && (
@@ -557,58 +528,171 @@ function ProductViewerContent({ initialProduct }) {
             )}
           </div>
 
-          {/* Calc and Lightbox Logic */}
-          <div className="fixed bottom-5 right-5 md:bottom-8 md:right-8 bg-black text-white px-5 py-3 md:px-6 md:py-4 rounded-full cursor-pointer font-bold shadow-xl z-40 transition-colors border-2 border-black hover:bg-gold hover:text-black hover:border-gold flex items-center gap-2 text-sm md:text-base" onClick={() => setIsCalcOpen(!isCalcOpen)}>
-              <span className="mr-1">📐</span> Room Calculator
-          </div>
+          {/* THE NEW PROPOSAL BUILDER TRIGGER BUTTON */}
+          {!isClientMode && user && !user.isAnonymous && (
+              <button 
+                  className="fixed bottom-5 right-5 md:bottom-8 md:right-8 bg-black text-white px-6 py-4 rounded-full cursor-pointer font-bold shadow-2xl z-40 transition-all border-2 border-black hover:bg-gold hover:text-black hover:border-gold flex items-center gap-2 text-sm md:text-base hover:scale-105" 
+                  onClick={() => setIsBuilderOpen(true)}
+              >
+                  <span>📋</span> Build Custom Proposal
+              </button>
+          )}
 
-          {isCalcOpen && (
-              <div className="fixed bottom-20 right-5 md:bottom-24 md:right-8 w-[280px] bg-white rounded-xl shadow-2xl z-50 p-5 border border-gray-100 animate-in slide-in-from-bottom-5 duration-300">
-                  <h4 className="m-0 mb-4 font-bold">Project Estimator</h4>
-                  <div className="mb-3">
-                      <label className="block text-xs mb-1 font-bold uppercase text-gray-600">Room Length (ft)</label>
-                      <input type="number" value={calcLength} onChange={e => setCalcLength(e.target.value)} className="w-full p-2 border border-gray-300 rounded focus:border-gold outline-none text-sm" />
-                  </div>
-                  <div className="mb-3">
-                      <label className="block text-xs mb-1 font-bold uppercase text-gray-600">Room Width (ft)</label>
-                      <input type="number" value={calcWidth} onChange={e => setCalcWidth(e.target.value)} className="w-full p-2 border border-gray-300 rounded focus:border-gold outline-none text-sm" />
-                  </div>
-                  <div className="mb-3">
-                      <label className="block text-xs mb-1 font-bold uppercase text-gray-600">Waste Factor</label>
-                      <select value={calcWaste} onChange={e => setCalcWaste(e.target.value)} className="w-full p-2 border border-gray-300 rounded focus:border-gold outline-none text-sm bg-white">
-                          <option value="1.05">5%</option>
-                          <option value="1.10">10%</option>
-                          <option value="1.15">15%</option>
-                      </select>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg mt-4 border-l-4 border-gold">
-                      <div className="flex justify-between text-sm mb-1 text-gray-600"><span>Net Area:</span> <span><span className="font-bold text-gray-900">{calcNet.toFixed(2)}</span> sq.ft</span></div>
-                      <div className="flex justify-between text-[1.1rem] font-bold border-t border-gray-200 pt-2 mt-2">
-                          <span className="text-gray-800">{isCarpet ? 'Square Yards:' : 'Cartons Needed:'}</span> 
-                          <span className="text-red-700">{calcTotal}</span>
+          {/* SLIDE OUT PROPOSAL BUILDER DRAWER */}
+          {isBuilderOpen && (
+              <div className="fixed inset-0 z-50 flex justify-end">
+                  {/* Dark Backdrop */}
+                  <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={() => setIsBuilderOpen(false)}></div>
+                  
+                  {/* The Drawer */}
+                  <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl relative z-10 animate-in slide-in-from-right flex flex-col">
+                      
+                      <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center sticky top-0 z-20">
+                          <div>
+                              <h3 className="text-lg font-black uppercase tracking-tight text-gray-900">Proposal Builder</h3>
+                              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{productData.displayTitle}</p>
+                          </div>
+                          <button onClick={() => setIsBuilderOpen(false)} className="text-gray-400 hover:text-black text-2xl font-bold bg-transparent border-none cursor-pointer outline-none p-2">✕</button>
                       </div>
-                      {!isCarpet && <div className="text-[9px] text-gray-500 font-normal mt-1 text-right">*Based on {cartonSqft} sq.ft. per carton</div>}
+
+                      <div className="p-6 space-y-8 flex-1">
+                          
+                          {/* STEP 1: MEASUREMENTS */}
+                          <div>
+                              <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>1</span> Room Measurements</h4>
+                              <div className="grid grid-cols-2 gap-3 mb-3">
+                                  <div>
+                                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Length (ft)</label>
+                                      <input type="number" value={calcLength} onChange={e => setCalcLength(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-gray-50" />
+                                  </div>
+                                  <div>
+                                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Width (ft)</label>
+                                      <input type="number" value={calcWidth} onChange={e => setCalcWidth(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-gray-50" />
+                                  </div>
+                              </div>
+                              <div>
+                                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Waste Factor</label>
+                                  <select value={calcWaste} onChange={e => setCalcWaste(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-gray-50">
+                                      <option value="1.00">Exact Net (0%)</option>
+                                      <option value="1.05">Standard (5%)</option>
+                                      <option value="1.10">Safe (10%)</option>
+                                      <option value="1.15">Complex / Diagonal (15%)</option>
+                                  </select>
+                              </div>
+                              <div className="mt-3 bg-blue-50 border border-blue-100 p-3 rounded-lg flex justify-between items-center text-xs font-bold text-blue-900">
+                                  <span>Coverage Required:</span>
+                                  <span>{finalMaterialCoverageSqft.toFixed(1)} sqft ({finalMaterialQty} {finalMaterialUnit})</span>
+                              </div>
+                          </div>
+
+                          {/* STEP 2: ACCESSORIES */}
+                          <div>
+                              <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>2</span> Add-Ons & Accessories</h4>
+                              
+                              {isCarpet ? (
+                                  <div className="space-y-3">
+                                      <div>
+                                          <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Select Carpet Cushion</label>
+                                          <select value={padSelection} onChange={e => setPadSelection(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white">
+                                              <option value="none">No Pad Included</option>
+                                              <option value="6lb">6lb Standard Cushion</option>
+                                              <option value="8lb_hope">Premium 8lb "Hope" Moisture Barrier</option>
+                                              <option value="8lb_memory">Luxury 8lb Memory Foam</option>
+                                          </select>
+                                      </div>
+                                      {padSelection !== 'none' && (
+                                          <div className="flex items-center gap-2">
+                                              <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 flex-1">Your Cost per sqyd ($)</label>
+                                              <input type="number" step="0.01" value={padCost} onChange={e => setPadCost(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm text-right bg-white" />
+                                          </div>
+                                      )}
+                                  </div>
+                              ) : (
+                                  <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                      <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
+                                          <span className="text-xs font-bold text-gray-700">T-Molding</span>
+                                          <input type="number" min="0" placeholder="Qty" value={trimQty.tmold || ''} onChange={e => setTrimQty({...trimQty, tmold: parseInt(e.target.value)||0})} className="w-16 p-2 border rounded-lg text-xs text-center" />
+                                          <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.tmold} onChange={e=>setTrimCost({...trimCost, tmold: parseFloat(e.target.value)||0})} className="w-12 p-1 border rounded bg-white text-right"/></div>
+                                      </div>
+                                      <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
+                                          <span className="text-xs font-bold text-gray-700">Reducer</span>
+                                          <input type="number" min="0" placeholder="Qty" value={trimQty.reducer || ''} onChange={e => setTrimQty({...trimQty, reducer: parseInt(e.target.value)||0})} className="w-16 p-2 border rounded-lg text-xs text-center" />
+                                          <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.reducer} onChange={e=>setTrimCost({...trimCost, reducer: parseFloat(e.target.value)||0})} className="w-12 p-1 border rounded bg-white text-right"/></div>
+                                      </div>
+                                      <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
+                                          <span className="text-xs font-bold text-gray-700">Stair Nose</span>
+                                          <input type="number" min="0" placeholder="Qty" value={trimQty.stairnose || ''} onChange={e => setTrimQty({...trimQty, stairnose: parseInt(e.target.value)||0})} className="w-16 p-2 border rounded-lg text-xs text-center" />
+                                          <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.stairnose} onChange={e=>setTrimCost({...trimCost, stairnose: parseFloat(e.target.value)||0})} className="w-12 p-1 border rounded bg-white text-right"/></div>
+                                      </div>
+                                  </div>
+                              )}
+                          </div>
+
+                          {/* STEP 3: LABOR */}
+                          <div>
+                              <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>3</span> Labor & Logistics (Your Cost)</h4>
+                              <div className="space-y-3">
+                                  <div className="flex items-center justify-between">
+                                      <label className="text-xs font-bold text-gray-700">Tear Out & Prep ($)</label>
+                                      <input type="number" placeholder="0.00" value={laborPrep} onChange={e => setLaborPrep(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                      <label className="text-xs font-bold text-gray-700">Installation Labor ($)</label>
+                                      <input type="number" placeholder="0.00" value={laborInstall} onChange={e => setLaborInstall(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                      <label className="text-xs font-bold text-gray-700">Fuel & Delivery ($)</label>
+                                      <input type="number" placeholder="0.00" value={laborDelivery} onChange={e => setLaborDelivery(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
+                                  </div>
+                              </div>
+                          </div>
+
+                      </div>
+
+                      {/* STEP 4: FOOTER & SAVE */}
+                      <div className="bg-gray-900 text-white p-6 sticky bottom-0 z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.1)]">
+                          <div className="flex justify-between items-end mb-4">
+                              <div>
+                                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Base Cost</div>
+                                  <div className="text-lg font-mono text-gray-200">${totalWholesaleProjectCost.toFixed(2)}</div>
+                              </div>
+                              <div className="text-right">
+                                  <div className="text-[10px] text-gold font-bold uppercase tracking-widest flex items-center gap-2 justify-end">
+                                      Margin: {builderMargin}%
+                                  </div>
+                                  <div className="text-2xl font-black text-white font-mono">${turnkeyRetailPrice.toFixed(2)}</div>
+                                  <div className="text-[9px] text-emerald-400 font-bold uppercase tracking-widest mt-1">Gross Profit: ${(turnkeyRetailPrice - totalWholesaleProjectCost).toFixed(2)}</div>
+                              </div>
+                          </div>
+                          
+                          <input type="range" min="0" max="100" step="1" value={builderMargin} onChange={e => setBuilderMargin(Number(e.target.value))} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold mb-6" />
+
+                          {proBoards.length > 0 ? (
+                              <div className="space-y-3">
+                                  <select value={selectedBoardId} onChange={e => setSelectedBoardId(e.target.value)} className="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl text-sm font-bold text-white outline-none focus:border-gold">
+                                      {proBoards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                  </select>
+                                  <button onClick={handleSaveQuoteToBoard} disabled={isSavingToBoard || calcNetSqft === 0} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50">
+                                      {boardSaveMessage ? `✓ ${boardSaveMessage}` : (isSavingToBoard ? "Saving..." : "Save Turnkey Proposal")}
+                                  </button>
+                              </div>
+                          ) : (
+                              <div className="text-center text-xs text-gray-400 italic bg-gray-800 p-4 rounded-xl">
+                                  Go to <Link href="/my-account" className="text-gold font-bold not-italic hover:underline">My Account</Link> to create a Client Board first!
+                              </div>
+                          )}
+                      </div>
+
                   </div>
               </div>
           )}
 
+          {/* LIGHTBOX */}
           {isLightboxOpen && (
               <div className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center backdrop-blur-sm transition-opacity" onClick={(e) => { if (e.target === e.currentTarget) setIsLightboxOpen(false); }}>
                   <button className="absolute top-5 right-5 bg-black/60 text-white border-2 border-white rounded-full w-11 h-11 text-2xl flex items-center justify-center cursor-pointer hover:bg-gold hover:border-gold hover:text-black transition-colors z-[10000] outline-none" onClick={() => setIsLightboxOpen(false)}>✕</button>
-                  <div 
-                      className="w-[90vw] max-w-[1200px] h-[85vh] relative rounded-lg overflow-hidden cursor-crosshair touch-none" 
-                      onMouseMove={handleZoomPan} 
-                      onTouchMove={handleZoomPan} 
-                      onMouseLeave={() => setZoomPos({x:50, y:50})} 
-                      onTouchEnd={() => setZoomPos({x:50, y:50})}
-                  >
-                      <img 
-                          src={getMediaPath(activeView) || TBD_IMG} 
-                          alt="Zoomed Product" 
-                          className="w-full h-full object-contain transition-transform duration-150 ease-out hover:scale-[2.2]"
-                          style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }}
-                          onError={(e) => e.target.src = TBD_IMG}
-                      />
+                  <div className="w-[90vw] max-w-[1200px] h-[85vh] relative rounded-lg overflow-hidden cursor-crosshair touch-none" onMouseMove={handleZoomPan} onTouchMove={handleZoomPan} onMouseLeave={() => setZoomPos({x:50, y:50})} onTouchEnd={() => setZoomPos({x:50, y:50})}>
+                      <img src={getMediaPath(activeView) || TBD_IMG} alt="Zoomed Product" className="w-full h-full object-contain transition-transform duration-150 ease-out hover:scale-[2.2]" style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }} onError={(e) => e.target.src = TBD_IMG} />
                   </div>
               </div>
           )}
@@ -618,11 +702,7 @@ function ProductViewerContent({ initialProduct }) {
 
 export default function ProductViewer({ initialProduct }) {
     return (
-        <Suspense fallback={
-            <div className="flex-1 flex items-center justify-center min-h-[50vh]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold border-t-transparent"></div>
-            </div>
-        }>
+        <Suspense fallback={<div className="flex-1 flex items-center justify-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold border-t-transparent"></div></div>}>
             <ProductViewerContent initialProduct={initialProduct} />
         </Suspense>
     );

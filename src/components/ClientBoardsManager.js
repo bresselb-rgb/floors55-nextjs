@@ -1,277 +1,245 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, serverTimestamp } from "firebase/firestore";
-import { db, appId } from "../lib/firebase";
+import React, { useState, useEffect, use } from 'react';
+import Link from 'next/link';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { auth, db, appId } from "../../../lib/firebase";
 
-export default function ClientBoardsManager({ proId }) {
-  const [boards, setBoards] = useState([]);
-  const [newBoardName, setNewBoardName] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
-  const [isInfoOpen, setIsInfoOpen] = useState(false);
-  
-  const [showToast, setShowToast] = useState(false);
+export default function ClientBoardPage({ params }) {
+    const unwrappedParams = use(params);
+    const slug = unwrappedParams.slug;
 
-  // Load the Pro's existing boards
-  useEffect(() => {
-    if (!proId || !db) return;
-    const fetchBoards = async () => {
-      try {
-          const q = query(collection(db, "artifacts", appId, "public", "data", "client_boards"), where("proId", "==", proId));
-          const querySnapshot = await getDocs(q);
-          const boardsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          // Sort newest first
-          boardsData.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-          setBoards(boardsData);
-      } catch (e) {
-          console.error("Error fetching client boards:", e);
-      }
-    };
-    fetchBoards();
-  }, [proId]);
+    const [board, setBoard] = useState(null);
+    const [proProfile, setProProfile] = useState(null);
+    const [products, setProducts] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(false);
 
-  const handleCreateBoard = async (e) => {
-    e.preventDefault();
-    if (!newBoardName.trim() || !db) return;
-    setIsCreating(true);
+    useEffect(() => {
+        let isMounted = true;
 
-    const randomString = Math.random().toString(36).substring(2, 6);
-    const slug = `${newBoardName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${randomString}`;
+        const fetchBoardData = async () => {
+            try {
+                const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'client_boards'), where('slug', '==', slug));
+                const querySnapshot = await getDocs(q);
 
-    // Fetch the absolute latest margin AND branding directly from the database right now
-    let lockedMargin = 20;
-    let lockedBusiness = "Your Flooring Professional";
-    let lockedLogo = "";
-    let lockedBgColor = "#ffffff";
-    let lockedTextColor = "#000000";
+                if (querySnapshot.empty) {
+                    if (isMounted) { setError(true); setIsLoading(false); }
+                    return;
+                }
 
-    try {
-        const proRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', proId);
-        const proSnap = await getDoc(proRef);
-        if (proSnap.exists()) {
-            const data = proSnap.data();
-            if (data.clientMargin !== undefined) lockedMargin = Number(data.clientMargin);
-            if (data.business) lockedBusiness = data.business;
-            if (data.logoUrl) lockedLogo = data.logoUrl;
-            if (data.brandBgColor) lockedBgColor = data.brandBgColor;
-            if (data.brandTextColor) lockedTextColor = data.brandTextColor;
+                const boardDoc = querySnapshot.docs[0];
+                const boardData = boardDoc.data();
+                if (isMounted) setBoard(boardData);
+
+                if (boardData.proId) {
+                    const proRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', boardData.proId);
+                    const proSnap = await getDoc(proRef);
+                    if (proSnap.exists() && isMounted) setProProfile(proSnap.data());
+                }
+
+                if (boardData.products && boardData.products.length > 0) {
+                    const prodPromises = boardData.products.map(async (savedItem) => {
+                        const pDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', savedItem.productId));
+                        if (pDoc.exists()) {
+                            return {
+                                id: pDoc.id,
+                                ...pDoc.data(),
+                                savedColorSku: savedItem.colorSku,
+                                savedColorName: savedItem.colorName,
+                                quote: savedItem.quote || null // Extract the new quote object if it exists!
+                            };
+                        }
+                        return null;
+                    });
+                    const resolvedProducts = (await Promise.all(prodPromises)).filter(p => p !== null);
+                    if (isMounted) setProducts(resolvedProducts);
+                }
+
+            } catch (err) {
+                console.error("Error loading client board:", err);
+                if (isMounted) setError(true);
+            } finally {
+                if (isMounted) setIsLoading(false);
+            }
+        };
+
+        const unsub = onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                signInAnonymously(auth).catch(() => {});
+            } else if (isMounted && slug) {
+                fetchBoardData();
+            }
+        });
+
+        return () => {
+            isMounted = false;
+            unsub();
+        };
+    }, [slug]);
+
+    useEffect(() => {
+        if (board) {
+            const bName = board.businessName || proProfile?.business || "Your Flooring Professional";
+            const mgn = board.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
+            const lUrl = board.logoUrl || proProfile?.logoUrl || "";
+            const bBg = board.brandBgColor || proProfile?.brandBgColor || "#ffffff";
+            const bText = board.brandTextColor || proProfile?.brandTextColor || "#000000";
+
+            sessionStorage.setItem('client_brand', bName);
+            if (lUrl) sessionStorage.setItem('client_logo', lUrl);
+            else sessionStorage.removeItem('client_logo');
+            
+            sessionStorage.setItem('client_bg', bBg);
+            sessionStorage.setItem('client_text', bText);
+            sessionStorage.setItem('client_margin', mgn);
+            sessionStorage.setItem('magic_link_client', 'true');
         }
-    } catch(err) {
-        console.error("Could not fetch pro profile for margin locking:", err);
-    }
+    }, [board, proProfile]);
 
-    const newBoard = {
-      proId: proId,
-      name: newBoardName,
-      slug: slug,
-      products: [],
-      margin: lockedMargin, // Permanently snapshotted!
-      businessName: lockedBusiness,
-      logoUrl: lockedLogo,
-      brandBgColor: lockedBgColor,
-      brandTextColor: lockedTextColor,
-      createdAt: serverTimestamp(),
-    };
-
-    try {
-      const docRef = await addDoc(collection(db, "artifacts", appId, "public", "data", "client_boards"), newBoard);
-      setBoards([{ id: docRef.id, ...newBoard }, ...boards]);
-      setNewBoardName("");
-    } catch (error) {
-      console.error("Error creating new client board:", error);
-      alert("Failed to create board. Please try again.");
-    }
-    setIsCreating(false);
-  };
-
-  const handleDelete = async (boardId, boardName) => {
-      if (!db) return;
-      if (window.confirm(`Are you sure you want to permanently delete the board "${boardName}"?`)) {
-          try {
-              await deleteDoc(doc(db, "artifacts", appId, "public", "data", "client_boards", boardId));
-              setBoards(boards.filter(b => b.id !== boardId));
-          } catch (error) {
-              console.error("Error deleting client board:", error);
-              alert("Failed to delete board.");
-          }
-      }
-  };
-
-  const triggerToast = () => {
-      setShowToast(true);
-      setTimeout(() => {
-          setShowToast(false);
-      }, 3000);
-  };
-
-  const copyToClipboard = (slug) => {
-      const url = `${window.location.origin}/client/${slug}`;
-      if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(url).then(triggerToast).catch(err => {
-              console.error('Failed to copy', err);
-          });
-      } else {
-          const tempInput = document.createElement("input");
-          tempInput.value = url;
-          document.body.appendChild(tempInput);
-          tempInput.select();
-          try {
-              document.execCommand("copy");
-              triggerToast();
-          } catch (err) {
-              console.error('Fallback copy failed', err);
-          }
-          document.body.removeChild(tempInput);
-      }
-  };
-
-  return (
-    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-1.5 bg-black"></div>
-      
-      <div className="flex items-center justify-between mb-1">
-          <h2 className="text-xl font-black uppercase tracking-tight">Client Presentations</h2>
-          <button 
-              onClick={() => setIsInfoOpen(true)}
-              className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gold transition-colors flex items-center gap-1 bg-gray-50 hover:bg-gold/10 px-3 py-1.5 rounded-full border border-gray-200 outline-none cursor-pointer"
-          >
-              <span>❓</span> How to use
-          </button>
-      </div>
-      
-      <p className="text-sm text-gray-500 mb-6">Create curated product boards to share with your clients.</p>
-      
-      {/* Create New Board Form */}
-      <form onSubmit={handleCreateBoard} className="flex flex-col sm:flex-row gap-3 mb-8">
-        <input
-          type="text"
-          value={newBoardName}
-          onChange={(e) => setNewBoardName(e.target.value)}
-          placeholder="e.g., Smith Kitchen Remodel"
-          className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-gold text-sm transition-colors"
-          required
-        />
-        <button 
-          type="submit" 
-          disabled={isCreating}
-          className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50 whitespace-nowrap"
-        >
-          {isCreating ? "Creating..." : "+ New Board"}
-        </button>
-      </form>
-
-      {}
-      <div className="space-y-4">
-        {boards.length === 0 ? (
-          <p className="text-gray-400 text-sm italic text-center py-6 bg-gray-50 rounded-xl border border-gray-100">No client boards created yet.</p>
-        ) : (
-          boards.map((board) => {
-            // Calculate Markup and Margin for display
-            const markupVal = board.margin !== undefined ? Number(board.margin) : 0;
-            const marginVal = markupVal > 0 ? Math.round((markupVal / (100 + markupVal)) * 100) : 0;
-
-            return (
-              <div key={board.id} className="flex flex-col md:flex-row md:items-center justify-between p-5 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md transition-all gap-4">
-                <div>
-                  <h3 className="font-bold text-gray-900 text-lg mb-1">{board.name}</h3>
-                  <div className="flex flex-wrap items-center gap-3">
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                      {board.products?.length || 0} Products
-                      </p>
-                      {board.margin !== undefined && (
-                          <span className="text-[10px] font-black bg-gold/10 text-gold px-2 py-0.5 rounded uppercase tracking-widest border border-gold/20">
-                              Locked @ {markupVal}% Markup / {marginVal}% Margin
-                          </span>
-                      )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => copyToClipboard(board.slug)} className="flex-1 md:flex-none bg-white border border-gray-200 hover:border-gold hover:text-gold text-black px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors text-center cursor-pointer outline-none">
-                      Copy Link
-                  </button>
-                  <button onClick={() => handleDelete(board.id, board.name)} className="bg-white border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-600 px-3 py-2.5 rounded-lg transition-colors cursor-pointer outline-none" title="Delete Board">
-                      🗑️
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-
-      {}
-      <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-          <span className="font-black text-gold">✓</span>
-          <p className="font-bold text-xs uppercase tracking-widest m-0">Link Copied</p>
-      </div>
-
-      {/* Info Modal / Instructions */}
-      {isInfoOpen && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg relative">
-                <button 
-                    onClick={() => setIsInfoOpen(false)}
-                    className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black transition-colors font-bold outline-none"
-                >
-                    ✕
-                </button>
-                
-                <h3 className="text-2xl font-black mb-2 text-gray-900">How to Use Project Boards</h3>
-                <p className="text-gray-500 text-sm mb-6 pb-4 border-b border-gray-100">
-                    Create beautiful, white-labeled presentations curated specifically for your clients.
-                </p>
-
-                <div className="space-y-5">
-                    <div className="flex gap-4">
-                        <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-black shrink-0">1</div>
-                        <div>
-                            <h4 className="font-bold text-gray-900 text-sm">Customize Your Brand</h4>
-                            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                Upload your company logo and pick your brand colors in the profile section so your presentations look extremely professional.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex gap-4">
-                        <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-black shrink-0">2</div>
-                        <div>
-                            <h4 className="font-bold text-gray-900 text-sm">Lock Your Pricing</h4>
-                            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                Adjust your retail margin slider to the desired markup for this specific client. When you click "+ New Board", it permanently locks that price and your current branding into the board forever.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex gap-4">
-                        <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-black shrink-0">3</div>
-                        <div>
-                            <h4 className="font-bold text-gray-900 text-sm">Add Products from the Catalog</h4>
-                            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                Navigate to any product in the catalog. At the top of the product page, click the black &quot;Save&quot; button to drop that specific colorway right into your client&apos;s board.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex gap-4">
-                        <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-black shrink-0">4</div>
-                        <div>
-                            <h4 className="font-bold text-gray-900 text-sm">Share the Link</h4>
-                            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                Click &quot;Copy Link&quot; and text or email it to your client. They will see a beautifully branded, private showroom with your retail pricing!
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mt-8 pt-4 border-t border-gray-100 flex justify-end">
-                    <button 
-                        onClick={() => setIsInfoOpen(false)}
-                        className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors"
-                    >
-                        Got it!
-                    </button>
-                </div>
+    if (isLoading) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black border-t-transparent mb-4"></div>
+                <p className="text-sm font-bold uppercase tracking-widest text-gray-400">Loading Presentation...</p>
             </div>
-        </div>
-      )}
+        );
+    }
 
-    </div>
-  );
+    if (error || !board) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 text-center">
+                <h1 className="text-3xl font-black mb-2">Project Not Found</h1>
+                <p className="text-gray-500 max-w-md">We couldn't locate this project board. The link may be invalid or the project was removed by the contractor.</p>
+            </div>
+        );
+    }
+
+    const businessName = board?.businessName || proProfile?.business || "Your Flooring Professional";
+    const margin = board?.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
+    const logoUrl = board?.logoUrl || proProfile?.logoUrl || "";
+    const brandBgColor = board?.brandBgColor || proProfile?.brandBgColor || "#ffffff";
+    const brandTextColor = board?.brandTextColor || proProfile?.brandTextColor || "#000000";
+    
+    let cmToken = '';
+    let cbToken = '';
+    try {
+        cmToken = btoa(margin.toString());
+        cbToken = btoa(businessName);
+    } catch(e) {}
+
+    return (
+        <div className="min-h-screen bg-gray-50 font-sans flex flex-col">
+            <header className="border-b border-gray-200 py-6 px-6 text-center shadow-sm" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
+                {logoUrl ? (
+                    <img src={logoUrl} alt={businessName} className="h-16 md:h-20 w-auto mx-auto object-contain" />
+                ) : (
+                    <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none">{businessName}</h1>
+                )}
+                <p className="text-[10px] md:text-xs font-black italic tracking-widest uppercase mt-2 opacity-80">Curated Project Presentation</p>
+            </header>
+
+            <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
+                <div className="text-center mb-12">
+                    <h2 className="text-3xl md:text-4xl font-black mb-3">{board.name}</h2>
+                    <p className="text-gray-500 max-w-2xl mx-auto">We have hand-selected the following premium flooring options specifically for your project. Click on any product to view details, specifications, and room scenes.</p>
+                </div>
+
+                {products.length === 0 ? (
+                    <div className="text-center py-20 text-gray-400 text-sm italic bg-white border border-gray-200 rounded-2xl">No products have been added to this board yet.</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {products.map(p => {
+                            const displayTitle = (p.usePrivateName && p.privateName) ? p.privateName : (p.name || 'Unnamed Product');
+                            const safePrefix = p.imgPrefix || '';
+                            const displaySku = p.savedColorSku || (p.colors?.[0]?.sku || '01');
+                            
+                            const safeName = (p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                            const safeSku = (p.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                            let folderName = 'images'; 
+                            if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                            else if (safeName) folderName = safeName;
+                            folderName = folderName.replace(/-+$/, '');
+
+                            const mainType = p.category === 'Carpet' ? 'main' : 'main';
+                            const rawPath = `images/${folderName}/${safePrefix}${displaySku}_${mainType}.jpg`.toLowerCase();
+                            const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+                            const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
+
+                            const productLink = `/product/${p.id}?pro=${board.proId || ''}&cm=${cmToken}#${p.id}?color=${displaySku}`;
+
+                            // Check if this product has a Turnkey Proposal attached
+                            const hasQuote = p.quote && p.quote.totals;
+
+                            return (
+                                <div key={p.id + displaySku} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition group">
+                                    <Link href={productLink} className="block overflow-hidden h-64 bg-gray-50 relative" style={{ textDecoration: 'none' }}>
+                                        <img src={fbPath} className="w-full h-full object-cover transition duration-500 group-hover:scale-105" onError={e => e.target.src=TBD_IMG} />
+                                        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-4">
+                                            <span className="text-white font-bold text-sm bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-sm">Color: {p.savedColorName}</span>
+                                        </div>
+                                    </Link>
+
+                                    <div className="p-8 flex-1 flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                                                <span>{p.category}</span>
+                                            </div>
+                                            <h3 className="text-2xl font-black text-gray-900 leading-tight mb-6">
+                                                <Link href={productLink} style={{ textDecoration: 'none', color: 'inherit' }}>{displayTitle}</Link>
+                                            </h3>
+
+                                            {hasQuote ? (
+                                                <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 mb-6">
+                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-gold mb-3">Proposal Inclusions</h4>
+                                                    <ul className="space-y-2.5 text-sm text-gray-700">
+                                                        <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>{Math.ceil(p.quote.measurements.coverageSqft)} sqft of {displayTitle} in {p.savedColorName}</span></li>
+                                                        {p.quote.addons?.pad && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>{p.quote.addons.pad.name}</span></li>}
+                                                        {p.quote.addons?.trims && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>Matching transition moldings & stair noses</span></li>}
+                                                        {p.quote.services?.prep > 0 && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>Tear out and subfloor preparation</span></li>}
+                                                        {p.quote.services?.install > 0 && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>Professional installation labor</span></li>}
+                                                        {p.quote.services?.delivery > 0 && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>Materials delivery & logistics</span></li>}
+                                                    </ul>
+                                                </div>
+                                            ) : (
+                                                <p className="text-gray-500 text-sm line-clamp-3 mb-6">{p.desc || 'Premium flooring collection.'}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-4 pt-6 border-t border-gray-100">
+                                            {hasQuote ? (
+                                                <div className="flex justify-between items-baseline">
+                                                    <span className="text-sm text-gray-400 uppercase font-black tracking-wider">Turnkey Project Total</span>
+                                                    <span className="text-3xl font-black text-gray-900 font-mono">${p.quote.totals.turnkeyRetail.toFixed(2)}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex justify-between items-baseline">
+                                                    <span className="text-xs text-gray-400 uppercase font-black tracking-wider">Material Price</span>
+                                                    <span className="text-2xl font-black text-gray-900 font-mono">${(p.price * (1 + margin / 100)).toFixed(2)} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
+                                                </div>
+                                            )}
+                                            
+                                            <Link href={productLink} className="w-full block text-center hover:opacity-80 font-black uppercase py-4 rounded-xl transition text-xs tracking-widest mt-2 shadow-sm hover:shadow-md" style={{ textDecoration: 'none', backgroundColor: brandBgColor, color: brandTextColor, border: `1px solid ${brandTextColor}` }}>
+                                                View Product Details & Photos
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </main>
+
+            <footer className="py-12 text-center mt-auto border-t border-gray-200" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
+                {logoUrl && (
+                    <img src={logoUrl} alt={businessName} className="h-12 w-auto mx-auto object-contain mb-4 opacity-80" style={{ filter: brandBgColor.toLowerCase() === '#ffffff' ? 'none' : 'brightness(0) invert(1) opacity(0.8)' }} />
+                )}
+                <p className="text-xs uppercase tracking-widest font-bold opacity-80">
+                    © {new Date().getFullYear()} {businessName}. All Rights Reserved.
+                </p>
+            </footer>
+        </div>
+    );
 }
