@@ -252,7 +252,7 @@ Thank you!`;
       <div className="flex items-center justify-between mb-1">
           <h2 className="text-xl font-black uppercase tracking-tight">Active Proposals</h2>
       </div>
-      <p className="text-sm text-gray-500 mb-6">Manage your quotes and submit formal Purchase Orders to the warehouse.</p>
+      <p className="text-sm text-gray-500 mb-6">Manage your quotes and submit formal Quote requests/Purchase Orders floors55pros.com</p>
 
       {isLoading ? (
           <div className="flex justify-center py-6"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div></div>
