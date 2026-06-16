@@ -144,7 +144,6 @@
                                         <option value="Hardwood">Hardwood</option>
                                         <option value="Laminate">Laminate</option>
                                         <option value="Luxury Vinyl (LVP)">Luxury Vinyl (LVP)</option>
-                                        <option value="Carpet Cushion">Carpet Cushion</option>
                                     </select>
                                 </div>
                                 <div>
@@ -743,7 +742,7 @@
             2. Match every color name to its correct corresponding numeric SKU value (such as '00732' for 'Slate').
             3. Set "imgPrefix" to exactly "${prefix}".
             4. Make sure "category" is exactly "${category}".
-            5. Set "calcType" to "carton" (if Hardwood, Laminate, or Luxury Vinyl LVP) or "carpet" (if Carpet or Carpet Cushion).
+            5. Set "calcType" to "carton" (if Hardwood, Laminate, or Luxury Vinyl LVP) or "carpet" (if Carpet).
             6. Set "cartonSize" to ${cartonSize !== 'N/A' && cartonSize !== 'Unknown' ? parseFloat(cartonSize) : 1} or the numeric box coverage (like 31.09) if it represents carton-based calculations.
             7. Ensure "views" includes "VIDEO" as a supported view (e.g., ["MAIN", "ROOM", "SWATCH", "VIDEO"]) so the product details page can display and render the video playback tiles for scraped media.
             8. IMPORTANT: You MUST add a spec line to the "specs" array explicitly stating the carton size or square foot coverage (e.g., "Carton Size: ${cartonSize} sqft").
@@ -759,8 +758,8 @@
               "desc": "Write a 1-2 sentence rich, descriptive e-commerce product description highlighting style, composition, and durability.",
               "price": 0.00,
               "retailPrice": 0.00,
-              "unit": "${category === 'Carpet' || category === 'Carpet Cushion' ? 'sqyd' : 'sqft'}",
-              "calcType": "${category === 'Carpet' || category === 'Carpet Cushion' ? 'carpet' : 'carton'}",
+              "unit": "sqft",
+              "calcType": "${category === 'Carpet' ? 'carpet' : 'carton'}",
               "cartonSize": ${cartonSize !== 'N/A' && cartonSize !== 'Unknown' ? parseFloat(cartonSize) : 1},
               "colors": [
                 { "sku": "color number/sku", "name": "Color Name" }
