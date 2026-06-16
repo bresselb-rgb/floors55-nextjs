@@ -1,466 +1,609 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, getDoc } from "firebase/firestore";
-import { db, appId } from "../lib/firebase";
+import React, { useState, useEffect, use } from 'react';
+import Link from 'next/link';
+import { doc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { auth, db, appId } from "../../../lib/firebase";
 
-export default function ProposalsManager({ proId }) {
-  const [quotes, setQuotes] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
-  
-  const [editingQuote, setEditingQuote] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
+export default function ProposalPage({ params }) {
+    const unwrappedParams = use(params);
+    const proposalId = unwrappedParams.id;
 
-  // New simplified editor state variables
-  const [editClientName, setEditClientName] = useState('');
-  const [editProjectName, setEditProjectName] = useState('');
-  const [editNetSqft, setEditNetSqft] = useState('');
-  const [editWaste, setEditWaste] = useState('1.10');
-  const [editPadSelection, setEditPadSelection] = useState('none');
-  const [editPadCost, setEditPadCost] = useState('0.00');
-  const [editTrimQty, setEditTrimQty] = useState({ standard: 0, stairnose: 0, quarterRound: 0 });
-  const [editTrimCost, setEditTrimCost] = useState({ standard: 25, stairnose: 45, quarterRound: 10 });
-  const [editLaborInstall, setEditLaborInstall] = useState('');
-  const [editLaborPrep, setEditLaborPrep] = useState('');
-  const [editLaborDelivery, setEditLaborDelivery] = useState('');
-  const [editCustomLabor1Name, setEditCustomLabor1Name] = useState('');
-  const [editCustomLabor1Cost, setEditCustomLabor1Cost] = useState('');
-  const [editCustomLabor2Name, setEditCustomLabor2Name] = useState('');
-  const [editCustomLabor2Cost, setEditCustomLabor2Cost] = useState('');
-  const [editMargin, setEditMargin] = useState(20);
-  const [productDetailsCache, setProductDetailsCache] = useState(null);
+    const [quote, setQuote] = useState(null);
+    const [proProfile, setProProfile] = useState(null);
+    const [productDetails, setProductDetails] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(false);
 
-  useEffect(() => {
-    if (!proId || !db) return;
-    const fetchQuotes = async () => {
-      try {
-          const q = query(collection(db, "artifacts", appId, "public", "data", "pro_quotes"), where("proId", "==", proId));
-          const querySnapshot = await getDocs(q);
-          const quotesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          quotesData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          setQuotes(quotesData);
-      } catch (e) {
-          console.error("Error fetching quotes:", e);
-      } finally {
-          setIsLoading(false);
-      }
-    };
-    fetchQuotes();
-  }, [proId]);
+    useEffect(() => {
+        let isMounted = true;
 
-  const handleDelete = async (quoteId, clientName) => {
-      if (window.confirm(`Are you sure you want to permanently delete the proposal for ${clientName}?`)) {
-          try {
-              await deleteDoc(doc(db, "artifacts", appId, "public", "data", "pro_quotes", quoteId));
-              setQuotes(quotes.filter(q => q.id !== quoteId));
-              triggerToast("Proposal deleted.");
-          } catch (error) {
-              console.error("Error deleting quote:", error);
-              alert("Failed to delete proposal.");
-          }
-      }
-  };
+        const fetchProposal = async () => {
+            try {
+                // 1. Fetch the specific quote
+                const quoteRef = doc(db, 'artifacts', appId, 'public', 'data', 'pro_quotes', proposalId);
+                const quoteSnap = await getDoc(quoteRef);
 
-  const triggerToast = (msg) => {
-      setToastMsg(msg);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
-  };
+                if (!quoteSnap.exists()) {
+                    if (isMounted) { setError(true); setIsLoading(false); }
+                    return;
+                }
 
-  const copyToClipboard = (id) => {
-      const url = `${window.location.origin}/proposal/${id}`;
-      if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(url).then(() => triggerToast("Link Copied!")).catch(console.error);
-      } else {
-          const tempInput = document.createElement("input");
-          tempInput.value = url;
-          document.body.appendChild(tempInput);
-          tempInput.select();
-          try { document.execCommand("copy"); triggerToast("Link Copied!"); } catch (err) { console.error('Fallback copy failed', err); }
-          document.body.removeChild(tempInput);
-      }
-  };
+                const quoteData = quoteSnap.data();
+                if (isMounted) setQuote(quoteData);
 
-  const handleEditClick = async (quote) => {
-      setIsLoading(true);
-      try {
-          // We need to fetch the live product to calculate math accurately!
-          const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'pricing', quote.productId);
-          const prodSnap = await getDoc(prodRef);
-          if (prodSnap.exists()) {
-              setProductDetailsCache(prodSnap.data());
-          } else {
-              alert("Original product data could not be loaded for math recalculations.");
-              setIsLoading(false);
-              return;
-          }
+                // 2. Fetch the Pro's branding profile
+                if (quoteData.proId) {
+                    const proRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', quoteData.proId);
+                    const proSnap = await getDoc(proRef);
+                    if (proSnap.exists() && isMounted) setProProfile(proSnap.data());
+                }
 
-          // Populate the builder states!
-          setEditClientName(quote.clientName || '');
-          setEditProjectName(quote.projectName || '');
-          setEditNetSqft(quote.measurements?.netSqft || '');
-          setEditWaste(quote.measurements?.waste?.toFixed(2) || '1.10');
-          
-          if (quote.addons?.pad) {
-              if (quote.addons.pad.name.includes("6lb")) setEditPadSelection('6lb');
-              else if (quote.addons.pad.name.includes("Hope")) setEditPadSelection('8lb_hope');
-              else if (quote.addons.pad.name.includes("Memory")) setEditPadSelection('8lb_memory');
-              else setEditPadSelection('none');
-              
-              // Reverse engineer per-sqyd pad cost
-              const requiredSqYd = Math.ceil(((quote.measurements?.netSqft || 0) * (quote.measurements?.waste || 1.1)) / 9);
-              if (requiredSqYd > 0) setEditPadCost((quote.addons.pad.cost / requiredSqYd).toFixed(2));
-          } else {
-              setEditPadSelection('none');
-              setEditPadCost('0.00');
-          }
+                // 3. Fetch the latest product image/details just in case
+                if (quoteData.productId) {
+                    const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'pricing', quoteData.productId);
+                    const prodSnap = await getDoc(prodRef);
+                    if (prodSnap.exists() && isMounted) setProductDetails(prodSnap.data());
+                }
 
-          setEditTrimQty({
-              standard: quote.addons?.trims?.details?.standard || 0,
-              stairnose: quote.addons?.trims?.details?.stairnose || 0,
-              quarterRound: quote.addons?.trims?.details?.quarterRound || 0
-          });
+            } catch (err) {
+                console.error("Error loading proposal:", err);
+                if (isMounted) setError(true);
+            } finally {
+                if (isMounted) setIsLoading(false);
+            }
+        };
 
-          // Reverse engineer labor per sqft
-          const installCost = quote.services?.installTotal || 0;
-          const net = quote.measurements?.netSqft || 0;
-          setEditLaborInstall(net > 0 ? (installCost / net).toFixed(2) : '');
+        const unsub = onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                signInAnonymously(auth).catch(() => {});
+            } else if (isMounted && proposalId) {
+                fetchProposal();
+            }
+        });
 
-          setEditLaborPrep(quote.services?.prep || '');
-          setEditLaborDelivery(quote.services?.delivery || '');
-          
-          setEditCustomLabor1Name(quote.services?.custom1?.name || '');
-          setEditCustomLabor1Cost(quote.services?.custom1?.cost || '');
-          setEditCustomLabor2Name(quote.services?.custom2?.name || '');
-          setEditCustomLabor2Cost(quote.services?.custom2?.cost || '');
+        return () => {
+            isMounted = false;
+            unsub();
+        };
+    }, [proposalId]);
 
-          setEditMargin(quote.totals?.margin || 0);
+    useEffect(() => {
+        if (proProfile) {
+            const bName = proProfile.business || "Your Flooring Professional";
+            const mgn = quote?.totals?.margin || proProfile.clientMargin || 20;
+            const lUrl = proProfile.logoUrl || "";
+            const bBg = proProfile.brandBgColor || "#ffffff";
+            const bText = proProfile.brandTextColor || "#000000";
 
-          setEditingQuote(quote);
-      } catch (err) {
-          console.error(err);
-          alert("Error loading quote editor.");
-      }
-      setIsLoading(false);
-  };
+            sessionStorage.setItem('client_brand', bName);
+            if (lUrl) sessionStorage.setItem('client_logo', lUrl);
+            else sessionStorage.removeItem('client_logo');
+            
+            sessionStorage.setItem('client_bg', bBg);
+            sessionStorage.setItem('client_text', bText);
+            sessionStorage.setItem('client_margin', mgn);
+            sessionStorage.setItem('magic_link_client', 'true');
+        }
+    }, [proProfile, quote]);
 
-  useEffect(() => {
-        if (editPadSelection === '6lb') setEditPadCost('2.50');
-        else if (editPadSelection === '8lb_hope') setEditPadCost('3.75');
-        else if (editPadSelection === '8lb_memory') setEditPadCost('4.50');
-        else if (editPadSelection === 'none') setEditPadCost('0.00');
-  }, [editPadSelection]);
-
-  // Recalculate Totals
-  const isCarpet = editingQuote?.category === 'Carpet' || (editingQuote?.category || '').toLowerCase().includes('carpet');
-  const basePrice = productDetailsCache?.price || 0;
-  
-  let cartonSqft = parseFloat(productDetailsCache?.cartonSize);
-  if (isNaN(cartonSqft) || cartonSqft <= 0) cartonSqft = parseFloat(productDetailsCache?.boxSqft);
-  if (!cartonSqft && productDetailsCache?.specs && Array.isArray(productDetailsCache.specs)) {
-      const specText = productDetailsCache.specs.join(' ').toLowerCase();
-      const sqftMatch = specText.match(/([\d.]+)\s*(sq\.?ft\.?|sq\s*ft|sf)/);
-      if (sqftMatch && parseFloat(sqftMatch[1]) > 0) cartonSqft = parseFloat(sqftMatch[1]);
-  }
-  cartonSqft = cartonSqft || 20;
-
-  const netSqftNum = parseFloat(editNetSqft) || 0;
-  const totalSqftWithWaste = netSqftNum * parseFloat(editWaste);
-  
-  const requiredSqYd = Math.ceil(totalSqftWithWaste / 9);
-  const requiredCartons = Math.ceil(totalSqftWithWaste / cartonSqft);
-  const finalMaterialQty = isCarpet ? requiredSqYd : requiredCartons;
-  const finalMaterialUnit = isCarpet ? 'sqyd' : 'cartons';
-  const finalMaterialCoverageSqft = isCarpet ? (requiredSqYd * 9) : (requiredCartons * cartonSqft);
-  
-  const totalMaterialCost = isCarpet 
-      ? (requiredSqYd * (basePrice * 9)) 
-      : (requiredCartons * cartonSqft * basePrice);
-
-  const totalPadCost = isCarpet && editPadSelection !== 'none' 
-      ? (requiredSqYd * (parseFloat(editPadCost) || 0)) 
-      : 0;
-
-  const totalTrimCost = isCarpet ? 0 : 
-      (editTrimQty.standard * editTrimCost.standard) + 
-      (editTrimQty.stairnose * editTrimCost.stairnose) + 
-      (editTrimQty.quarterRound * editTrimCost.quarterRound);
-
-  const totalLaborCost = 
-      (parseFloat(editLaborPrep) || 0) + 
-      (netSqftNum * (parseFloat(editLaborInstall) || 0)) + 
-      (parseFloat(editLaborDelivery) || 0) + 
-      (parseFloat(editCustomLabor1Cost) || 0) + 
-      (parseFloat(editCustomLabor2Cost) || 0);
-
-  const currentWholesale = totalMaterialCost + totalPadCost + totalTrimCost + totalLaborCost;
-  const currentTurnkeyRetail = currentWholesale * (1 + (editMargin / 100));
-
-
-  const saveEdit = async () => {
-      setIsSaving(true);
-      try {
-          let padName = '';
-          if (editPadSelection === '6lb') padName = "6lb Standard Cushion";
-          else if (editPadSelection === '8lb_hope') padName = "Premium 8lb 'Hope' Moisture Barrier Cushion";
-          else if (editPadSelection === '8lb_memory') padName = "Luxury 8lb Memory Foam Cushion";
-
-          const updatedQuote = {
-              clientName: editClientName,
-              projectName: editProjectName || 'Flooring Project',
-              measurements: { waste: parseFloat(editWaste), netSqft: netSqftNum, coverageSqft: finalMaterialCoverageSqft },
-              material: { qty: finalMaterialQty, unit: finalMaterialUnit, wholesaleTotal: totalMaterialCost },
-              addons: {
-                  pad: padName ? { name: padName, cost: totalPadCost } : null,
-                  trims: !isCarpet && (editTrimQty.standard > 0 || editTrimQty.stairnose > 0 || editTrimQty.quarterRound > 0) ? { 
-                      cost: totalTrimCost, 
-                      details: { standard: editTrimQty.standard, stairnose: editTrimQty.stairnose, quarterRound: editTrimQty.quarterRound } 
-                  } : null
-              },
-              services: {
-                  prep: parseFloat(editLaborPrep) || 0,
-                  installTotal: netSqftNum * (parseFloat(editLaborInstall) || 0),
-                  delivery: parseFloat(editLaborDelivery) || 0,
-                  custom1: (editCustomLabor1Name && parseFloat(editCustomLabor1Cost) > 0) ? { name: editCustomLabor1Name, cost: parseFloat(editCustomLabor1Cost) } : null,
-                  custom2: (editCustomLabor2Name && parseFloat(editCustomLabor2Cost) > 0) ? { name: editCustomLabor2Name, cost: parseFloat(editCustomLabor2Cost) } : null
-              },
-              totals: { wholesale: currentWholesale, margin: editMargin, turnkeyRetail: currentTurnkeyRetail }
-          };
-
-          await updateDoc(doc(db, "artifacts", appId, "public", "data", "pro_quotes", editingQuote.id), updatedQuote);
-          
-          setQuotes(quotes.map(q => q.id === editingQuote.id ? { ...q, ...updatedQuote } : q));
-          setEditingQuote(null);
-          triggerToast("Proposal updated!");
-      } catch (err) {
-          console.error(err);
-          alert("Failed to save changes.");
-      }
-      setIsSaving(false);
-  };
-
-  if (isLoading) return <div className="text-center py-10"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gold mx-auto"></div></div>;
-
-  return (
-    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden mb-8">
-      <div className="absolute top-0 left-0 w-full h-1.5 bg-gold"></div>
-      
-      <div className="flex items-center justify-between mb-1">
-          <h2 className="text-xl font-black uppercase tracking-tight">My Proposals</h2>
-      </div>
-      <p className="text-sm text-gray-500 mb-6">Manage, edit, and share your generated turnkey quotes.</p>
-
-      {/* Quote List */}
-      <div className="space-y-4">
-        {quotes.length === 0 ? (
-          <p className="text-gray-400 text-sm italic text-center py-6 bg-gray-50 rounded-xl border border-gray-100">No proposals created yet. Go to a product page to build one.</p>
-        ) : (
-          quotes.map((quote) => (
-            <div key={quote.id} className="flex flex-col md:flex-row md:items-center justify-between p-5 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md transition-all gap-4">
-              <div>
-                <h3 className="font-bold text-gray-900 text-lg mb-0.5">{quote.clientName}</h3>
-                <p className="text-xs text-gray-500 mb-2">{quote.projectName} &bull; {new Date(quote.createdAt).toLocaleDateString()}</p>
-                <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] font-black bg-black text-white px-2 py-0.5 rounded uppercase tracking-widest">
-                        {quote.productName}
-                    </span>
-                    <span className="text-[10px] font-black bg-gold/10 text-gold border border-gold/20 px-2 py-0.5 rounded uppercase tracking-widest">
-                        ${quote.totals?.turnkeyRetail?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} Total
-                    </span>
-                </div>
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-2">
-                <Link href={`/proposal/${quote.id}`} target="_blank" className="flex-1 md:flex-none bg-white border border-gray-200 hover:border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors text-center" style={{ textDecoration: 'none' }}>
-                    Preview
-                </Link>
-                <button onClick={() => copyToClipboard(quote.id)} className="flex-1 md:flex-none bg-black hover:bg-gold hover:text-black text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors text-center outline-none cursor-pointer">
-                    Copy Link
-                </button>
-                <button onClick={() => handleEditClick(quote)} className="bg-white border border-gray-200 hover:border-gray-300 text-gray-500 px-3 py-2.5 rounded-lg transition-colors cursor-pointer outline-none" title="Edit Proposal">
-                    ✏️
-                </button>
-                <button onClick={() => handleDelete(quote.id, quote.clientName)} className="bg-white border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-600 px-3 py-2.5 rounded-lg transition-colors cursor-pointer outline-none" title="Delete Proposal">
-                    🗑️
-                </button>
-              </div>
+    if (isLoading) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50 print:hidden">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black border-t-transparent mb-4"></div>
+                <p className="text-sm font-bold uppercase tracking-widest text-gray-400">Loading Proposal...</p>
             </div>
-          ))
-        )}
-      </div>
+        );
+    }
 
-      {/* THE SLIDE-OUT EDIT DRAWER */}
-      {editingQuote && (
-          <div className="fixed inset-0 z-50 flex justify-end text-left">
-              <div className="absolute inset-0 bg-black/60 transition-opacity backdrop-blur-sm" onClick={() => setEditingQuote(null)}></div>
-              
-              <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl relative z-10 animate-in slide-in-from-right flex flex-col">
-                  
-                  <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center sticky top-0 z-20">
-                      <div>
-                          <h3 className="text-lg font-black uppercase tracking-tight text-gray-900">Edit Proposal</h3>
-                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{editingQuote.productName}</p>
-                      </div>
-                      <button onClick={() => setEditingQuote(null)} className="text-gray-400 hover:text-black text-2xl font-bold bg-transparent border-none cursor-pointer outline-none p-2">✕</button>
-                  </div>
+    if (error || !quote) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 text-center print:hidden">
+                <h1 className="text-3xl font-black mb-2">Proposal Not Found</h1>
+                <p className="text-gray-500 max-w-md">We couldn't locate this proposal. The link may be invalid or the project was removed by your contractor.</p>
+            </div>
+        );
+    }
 
-                  <div className="p-6 space-y-8 flex-1">
-                      
-                      {/* PROPOSAL DETAILS */}
-                      <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Proposal Details</h4>
-                          <div className="space-y-3">
-                              <div>
-                                  <input type="text" placeholder="Client Name (e.g. Smith Family) *" value={editClientName} onChange={e => setEditClientName(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
-                              </div>
-                              <div>
-                                  <input type="text" placeholder="Project / Room (e.g. Kitchen Remodel)" value={editProjectName} onChange={e => setEditProjectName(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
-                              </div>
-                          </div>
-                      </div>
+    const businessName = proProfile?.business || "Your Flooring Professional";
+    const logoUrl = proProfile?.logoUrl || "";
+    const brandBgColor = proProfile?.brandBgColor || "#ffffff";
+    const brandTextColor = proProfile?.brandTextColor || "#000000";
+    
+    // Product Image Logic
+    const safePrefix = quote.imgPrefix || productDetails?.imgPrefix || '';
+    const displaySku = quote.colorSku || '01';
+    const safeName = (quote.productName || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const safeSku = (productDetails?.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    let folderName = 'images'; 
+    if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+    else if (safeName) folderName = safeName;
+    folderName = folderName.replace(/-+$/, '');
 
-                      {/* STEP 1: MEASUREMENTS */}
-                      <div>
-                          <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>1</span> Measurements</h4>
-                          <div className="grid grid-cols-2 gap-3 mb-3">
-                              <div>
-                                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Net Square Footage</label>
-                                  <input type="number" value={editNetSqft} onChange={e => setEditNetSqft(e.target.value)} placeholder="e.g. 500" className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-gray-50" />
-                              </div>
-                              <div>
-                                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Waste Factor</label>
-                                  <select value={editWaste} onChange={e => setEditWaste(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-gray-50">
-                                      <option value="1.00">Exact Net (0%)</option>
-                                      <option value="1.05">Standard (5%)</option>
-                                      <option value="1.10">Safe (10%)</option>
-                                      <option value="1.15">Complex / Diagonal (15%)</option>
-                                  </select>
-                              </div>
-                          </div>
-                          <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg flex justify-between items-center text-xs font-bold text-blue-900">
-                              <span>Coverage Required:</span>
-                              <span>{finalMaterialCoverageSqft.toFixed(1)} sqft ({finalMaterialQty} {finalMaterialUnit})</span>
-                          </div>
-                      </div>
+    const mainType = quote.category === 'Carpet' ? 'main' : 'main';
+    const rawPath = `images/${folderName}/${safePrefix}${displaySku}_${mainType}.jpg`.toLowerCase();
+    const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+    const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
-                      {/* STEP 2: ACCESSORIES */}
-                      <div>
-                          <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>2</span> Add-Ons & Accessories</h4>
-                          
-                          {isCarpet ? (
-                              <div className="space-y-3">
-                                  <div>
-                                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Select Carpet Cushion</label>
-                                      <select value={editPadSelection} onChange={e => setEditPadSelection(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white">
-                                          <option value="none">No Pad Included</option>
-                                          <option value="6lb">6lb Standard Cushion</option>
-                                          <option value="8lb_hope">Premium 8lb "Hope" Moisture Barrier</option>
-                                          <option value="8lb_memory">Luxury 8lb Memory Foam</option>
-                                      </select>
-                                  </div>
-                                  {editPadSelection !== 'none' && (
-                                      <div className="flex items-center gap-2">
-                                          <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1 flex-1">Your Cost per sqyd ($)</label>
-                                          <input type="number" step="0.01" value={editPadCost} onChange={e => setEditPadCost(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm text-right bg-white" />
-                                      </div>
-                                  )}
-                              </div>
-                          ) : (
-                              <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                  <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
-                                      <div className="flex flex-col">
-                                        <span className="text-xs font-bold text-gray-700">Standard Transitions</span>
-                                        <span className="text-[9px] text-gray-400">T-Mold, Reducer, End Cap</span>
-                                      </div>
-                                      <input type="number" min="0" placeholder="Qty" value={editTrimQty.standard || ''} onChange={e => setEditTrimQty({...editTrimQty, standard: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold bg-white" />
-                                      <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={editTrimCost.standard} onChange={e=>setEditTrimCost({...editTrimCost, standard: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
-                                  </div>
-                                  <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
-                                      <span className="text-xs font-bold text-gray-700">Stair Nose</span>
-                                      <input type="number" min="0" placeholder="Qty" value={editTrimQty.stairnose || ''} onChange={e => setEditTrimQty({...editTrimQty, stairnose: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold bg-white" />
-                                      <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={editTrimCost.stairnose} onChange={e=>setEditTrimCost({...editTrimCost, stairnose: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
-                                  </div>
-                                  <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
-                                      <span className="text-xs font-bold text-gray-700">Quarter Round</span>
-                                      <input type="number" min="0" placeholder="Qty" value={editTrimQty.quarterRound || ''} onChange={e => setEditTrimQty({...editTrimQty, quarterRound: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold bg-white" />
-                                      <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={editTrimCost.quarterRound} onChange={e=>setEditTrimCost({...editTrimCost, quarterRound: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
-                                  </div>
-                              </div>
-                          )}
-                      </div>
+    // Dynamic Trim Text
+    let trimParts = [];
+    if (quote.addons?.trims?.details) {
+        if (quote.addons.trims.details.standard > 0) trimParts.push('Transitions');
+        if (quote.addons.trims.details.stairnose > 0) trimParts.push('Stair Noses');
+        if (quote.addons.trims.details.quarterRound > 0) trimParts.push('Quarter Round');
+    }
+    const trimText = trimParts.length > 0 ? `Matching ${trimParts.join(', ').replace(/, ([^,]*)$/, ' and $1')}` : 'Matching transition moldings';
 
-                      {/* STEP 3: LABOR */}
-                      <div>
-                          <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>3</span> Labor & Logistics (Your Cost)</h4>
-                          <div className="space-y-3">
-                              <div className="flex items-center justify-between">
-                                  <label className="text-xs font-bold text-gray-700">Basic Install <span className="text-[10px] text-gray-400 font-normal ml-1">/ sqft</span></label>
-                                  <input type="number" placeholder="0.00" value={editLaborInstall} onChange={e => setEditLaborInstall(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
-                              </div>
-                              <div className="flex items-center justify-between">
-                                  <label className="text-xs font-bold text-gray-700">Tear Out & Prep <span className="text-[10px] text-gray-400 font-normal ml-1">Lump Sum</span></label>
-                                  <input type="number" placeholder="0.00" value={editLaborPrep} onChange={e => setEditLaborPrep(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
-                              </div>
-                              <div className="flex items-center justify-between">
-                                  <label className="text-xs font-bold text-gray-700">Fuel & Delivery <span className="text-[10px] text-gray-400 font-normal ml-1">Lump Sum</span></label>
-                                  <input type="number" placeholder="0.00" value={editLaborDelivery} onChange={e => setEditLaborDelivery(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
-                              </div>
+    // Magic Link Generation for Product Image
+    let cmToken = '';
+    try { cmToken = btoa((quote.totals.margin).toString()); } catch(e) {}
+    
+    // UPDATED: Use proper query parameters instead of hash
+    const productLink = `/product/${quote.productId}?color=${displaySku}&pro=${quote.proId}&cm=${cmToken}`;
 
-                              <div className="pt-2 mt-2 border-t border-gray-100 space-y-2">
-                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Additional Custom Labor</p>
-                                  <div className="flex gap-2">
-                                      <input type="text" placeholder="e.g. Stair Labor" value={editCustomLabor1Name} onChange={e => setEditCustomLabor1Name(e.target.value)} className="flex-1 p-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-gold bg-white" />
-                                      <input type="number" placeholder="$ 0.00" value={editCustomLabor1Cost} onChange={e => setEditCustomLabor1Cost(e.target.value)} className="w-20 p-2 border border-gray-200 rounded-lg text-xs text-right outline-none focus:border-gold bg-gray-50" />
-                                  </div>
-                                  <div className="flex gap-2">
-                                      <input type="text" placeholder="e.g. Moving Appliances" value={editCustomLabor2Name} onChange={e => setEditCustomLabor2Name(e.target.value)} className="flex-1 p-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-gold bg-white" />
-                                      <input type="number" placeholder="$ 0.00" value={editCustomLabor2Cost} onChange={e => setEditCustomLabor2Cost(e.target.value)} className="w-20 p-2 border border-gray-200 rounded-lg text-xs text-right outline-none focus:border-gold bg-gray-50" />
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
+    return (
+        <div className="min-h-screen bg-gray-50 font-sans flex flex-col print:bg-white">
+            {/* Force tight page margins for printing so everything fits on one page */}
+            <style dangerouslySetInnerHTML={{__html: `
+                @media print {
+                    @page { margin: 0.4in; }
+                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                }
+            `}} />
 
-                  </div>
+            {/* BRANDED HEADER - Squashed for print */}
+            <header className="border-b border-gray-200 py-6 px-6 print:py-3 print:px-2 text-center shadow-sm print:shadow-none" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
+                {logoUrl ? (
+                    <img src={logoUrl} alt={businessName} className="h-16 md:h-20 print:h-10 w-auto mx-auto object-contain" />
+                ) : (
+                    <h1 className="text-2xl md:text-3xl print:text-xl font-black uppercase tracking-tighter leading-none m-0">{businessName}</h1>
+                )}
+                <p className="text-[10px] md:text-xs print:text-[8px] font-black italic tracking-widest uppercase mt-2 print:mt-1 opacity-80 m-0">Official Turnkey Proposal</p>
+            </header>
 
-                  {/* Save Footer */}
-                  <div className="bg-gray-900 text-white p-6 sticky bottom-0 z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.1)]">
-                      <div className="flex justify-between items-end mb-4">
-                          <div>
-                              <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Your Base Cost</div>
-                              <div className="text-lg font-mono text-gray-200">${currentWholesale.toFixed(2)}</div>
-                          </div>
-                          <div className="text-right">
-                              <div className="text-[10px] text-gold font-bold uppercase tracking-widest flex items-center gap-2 justify-end">
-                                  Margin: {editMargin}%
-                              </div>
-                              <div className="text-2xl font-black text-white font-mono">${currentTurnkeyRetail.toFixed(2)}</div>
-                              <div className="text-[9px] text-emerald-400 font-bold uppercase tracking-widest mt-1">Gross Profit: ${(currentTurnkeyRetail - currentWholesale).toFixed(2)}</div>
-                          </div>
-                      </div>
-                      
-                      <input type="range" min="0" max="100" step="1" value={editMargin} onChange={e => setEditMargin(Number(e.target.value))} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold mb-6" />
+            <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-12 print:py-4 print:px-0">
+                
+                {/* ACTION BAR (Hidden on PDF) */}
+                <div className="flex justify-end mb-6 print:hidden">
+                    <button onClick={() => window.print()} className="bg-gray-900 text-white px-6 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors flex items-center gap-2 outline-none cursor-pointer shadow-md">
+                        <span>📄</span> Download PDF / Print
+                    </button>
+                </div>
 
-                      <div className="space-y-3">
-                          <button onClick={saveEdit} disabled={isSaving || netSqftNum === 0 || !editClientName.trim()} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50 cursor-pointer outline-none">
-                              {isSaving ? 'Saving...' : 'Update Proposal'}
-                          </button>
-                          {(!editClientName.trim() || netSqftNum === 0) && (
-                              <div className="text-[10px] text-red-400 text-center uppercase tracking-widest font-bold">Client Name & SqFt Required</div>
-                          )}
-                      </div>
-                  </div>
-              </div>
-          </div>
-      )}
+                {/* PROPOSAL TITLE BLOCK - Squashed for print */}
+                <div className="bg-white p-8 md:p-10 print:p-4 rounded-3xl print:rounded-xl shadow-sm border border-gray-100 mb-8 print:mb-3 relative overflow-hidden print:border-gray-300 print:shadow-none">
+                    <div className="absolute top-0 left-0 w-2 h-full print:w-1" style={{ backgroundColor: brandBgColor }}></div>
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6 print:gap-2">
+                        <div>
+                            <h2 className="text-[10px] print:text-[8px] font-black uppercase tracking-widest text-gray-400 mb-2 print:mb-0.5">Prepared For:</h2>
+                            <h1 className="text-3xl md:text-4xl print:text-xl font-black text-gray-900 leading-none">{quote.clientName}</h1>
+                            <p className="text-lg print:text-xs text-gray-500 mt-2 print:mt-0.5 font-medium">{quote.projectName}</p>
+                        </div>
+                        <div className="text-left md:text-right">
+                            <p className="text-xs print:text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1 print:mb-0">Date Issued</p>
+                            <p className="text-sm print:text-[10px] font-bold text-gray-900">{new Date(quote.createdAt).toLocaleDateString()}</p>
+                        </div>
+                    </div>
+                </div>
 
-      {/* Toast Notification */}
-      <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-          <span className="font-black text-gold">✓</span>
-          <p className="font-bold text-xs uppercase tracking-widest m-0">{toastMsg}</p>
-      </div>
-    </div>
-  );
+                {/* THE SELECTED PRODUCT - Squashed for print */}
+                <div className="bg-white rounded-3xl print:rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8 print:mb-3 flex flex-col md:flex-row group print:border-gray-300 print:shadow-none print:break-inside-avoid">
+                    <Link href={productLink} className="md:w-2/5 print:w-1/4 h-64 md:h-auto print:h-24 relative overflow-hidden bg-gray-100 block print:pointer-events-none" style={{ textDecoration: 'none' }}>
+                        <img src={fbPath} className="w-full h-full object-cover transition duration-500 group-hover:scale-105" onError={e => e.target.src=TBD_IMG} alt={quote.productName} />
+                        <div className="absolute bottom-4 left-4 print:bottom-1 print:left-1 bg-black/50 backdrop-blur-md px-3 py-1 print:px-1.5 print:py-0.5 rounded-full border border-white/20 shadow-sm print:bg-black/70">
+                            <span className="text-white font-bold text-xs print:text-[7px]">Color: {quote.colorName}</span>
+                        </div>
+                    </Link>
+                    <div className="p-8 print:p-4 flex-1 flex flex-col justify-center">
+                        <div className="text-[10px] print:text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-2 print:mb-0.5">{quote.category}</div>
+                        <h3 className="text-2xl print:text-sm font-black text-gray-900 mb-4 print:mb-1">{quote.productName}</h3>
+                        <p className="text-gray-500 text-sm print:text-[9px] print:leading-tight mb-6 print:mb-0 line-clamp-3 print:line-clamp-2">{productDetails?.desc || 'Premium flooring collection.'}</p>
+                        <Link href={productLink} className="inline-block text-center font-black uppercase py-3 px-6 rounded-xl transition text-xs tracking-widest w-full md:w-auto print:hidden" style={{ textDecoration: 'none', backgroundColor: brandBgColor, color: brandTextColor, border: `1px solid ${brandTextColor}` }}>
+                            View Photos & Specs
+                        </Link>
+                    </div>
+                </div>
+
+                {/* THE INCLUSIONS CHECKLIST - Squashed for print */}
+                <div className="bg-white p-8 md:p-10 print:p-4 rounded-3xl print:rounded-xl shadow-sm border border-gray-100 mb-8 print:mb-3 print:border-gray-300 print:shadow-none print:break-inside-avoid">
+                    <h3 className="text-xl print:text-sm font-black text-gray-900 mb-6 print:mb-2 border-b border-gray-100 pb-4 print:pb-1">Project Inclusions</h3>
+                    
+                    <ul className="space-y-4 print:space-y-1.5 text-base print:text-[10px] text-gray-700">
+                        {/* Material */}
+                        <li className="flex gap-4 print:gap-2 items-start">
+                            <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                            <div>
+                                <span className="font-bold text-gray-900 block print:leading-tight">Premium Flooring Material</span>
+                                <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">{Math.ceil(quote.measurements.netSqft)} net sqft of {quote.productName} in {quote.colorName}.</span>
+                            </div>
+                        </li>
+                        
+                        {/* Pad */}
+                        {quote.addons?.pad && (
+                            <li className="flex gap-4 print:gap-2 items-start">
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                                <div>
+                                    <span className="font-bold text-gray-900 block print:leading-tight">Carpet Cushion</span>
+                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">{quote.addons.pad.name}.</span>
+                                </div>
+                            </li>
+                        )}
+
+                        {/* Trims */}
+                        {quote.addons?.trims && (
+                            <li className="flex gap-4 print:gap-2 items-start">
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                                <div>
+                                    <span className="font-bold text-gray-900 block print:leading-tight">Transitions & Moldings</span>
+                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">{trimText} included.</span>
+                                </div>
+                            </li>
+                        )}
+
+                        {/* Prep */}
+                        {quote.services?.prep > 0 && (
+                            <li className="flex gap-4 print:gap-2 items-start">
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                                <div>
+                                    <span className="font-bold text-gray-900 block print:leading-tight">Tear Out & Prep</span>
+                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">Removal of old flooring and subfloor preparation.</span>
+                                </div>
+                            </li>
+                        )}
+
+                        {/* Install */}
+                        {quote.services?.installTotal > 0 && (
+                            <li className="flex gap-4 print:gap-2 items-start">
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                                <div>
+                                    <span className="font-bold text-gray-900 block print:leading-tight">Professional Installation</span>
+                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">Expert installation of {quote.measurements.netSqft} net sqft.</span>
+                                </div>
+                            </li>
+                        )}
+
+                        {/* Delivery */}
+                        {quote.services?.delivery > 0 && (
+                            <li className="flex gap-4 print:gap-2 items-start">
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                                <div>
+                                    <span className="font-bold text-gray-900 block print:leading-tight">Materials Delivery</span>
+                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">Logistics and handling to job site.</span>
+                                </div>
+                            </li>
+                        )}
+
+                        {/* Custom Lines */}
+                        {quote.services?.custom1 && (
+                            <li className="flex gap-4 print:gap-2 items-start">
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                                <div>
+                                    <span className="font-bold text-gray-900 block print:leading-tight">{quote.services.custom1.name}</span>
+                                </div>
+                            </li>
+                        )}
+                        {quote.services?.custom2 && (
+                            <li className="flex gap-4 print:gap-2 items-start">
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                                <div>
+                                    <span className="font-bold text-gray-900 block print:leading-tight">{quote.services.custom2.name}</span>
+                                </div>
+                            </li>
+                        )}
+                    </ul>
+                </div>
+
+                {/* THE GRAND TOTAL - Squashed for print */}
+                <div className="bg-gray-900 p-8 md:p-12 print:p-4 rounded-3xl print:rounded-xl shadow-2xl text-center md:text-right text-white mb-12 print:mb-3 print:shadow-none print:bg-gray-100 print:text-black print:border print:border-gray-300 print:break-inside-avoid">
+                    <p className="text-xs md:text-sm print:text-[9px] font-bold text-gray-400 print:text-gray-500 uppercase tracking-widest mb-2 print:mb-0.5">Turnkey Project Total</p>
+                    <p className="text-4xl md:text-6xl print:text-2xl font-black font-mono text-white print:text-black tracking-tight mb-2 print:mb-0.5">
+                        ${quote.totals.turnkeyRetail.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    <p className="text-[10px] print:text-[7px] text-gray-500 uppercase tracking-widest font-bold m-0">Includes materials, accessories, and labor as detailed above.</p>
+                </div>
+
+                {/* TERMS AND CONDITIONS - Squashed for print */}
+                <div className="bg-white p-8 md:p-10 print:p-4 rounded-3xl print:rounded-xl shadow-sm border border-gray-100 print:border-gray-300 print:shadow-none print:break-inside-avoid">
+                    <h3 className="text-lg print:text-xs font-black text-gray-900 mb-4 print:mb-1.5 border-b border-gray-100 print:border-gray-200 pb-2 print:pb-1">Terms & Conditions</h3>
+                    <ul className="text-xs print:text-[8px] text-gray-600 space-y-3 print:space-y-1 list-disc pl-4 leading-relaxed print:leading-tight m-0 mb-8 print:mb-4">
+                        <li><strong>Proposal Validity:</strong> This proposal and its pricing are valid for 30 days from the date issued. Following this period, material costs are subject to manufacturer price increases.</li>
+                        <li><strong>Site Conditions & Acclimation:</strong> The job site must be climate-controlled (65-75°F with 35-55% humidity) with an operational HVAC system before, during, and after installation to ensure material integrity and maintain manufacturer warranties.</li>
+                        <li><strong>Unforeseen Subfloor Issues:</strong> This proposal assumes a standard, structurally sound subfloor. Any hidden damage, dry rot, severe leveling requirements, or moisture issues discovered after the removal of existing flooring will require a separate change order and additional costs.</li>
+                        <li><strong>Material Waste & Excess:</strong> Measurements include a standard industry waste factor. It is customary and recommended to keep 1-2 unopened boxes of leftover material stored in a climate-controlled area for future repairs (dye lots will vary over time).</li>
+                        <li><strong>Payment Terms:</strong> A standard project deposit is required to order materials and reserve your installation date. The remaining balance is due upon project completion.</li>
+                    </ul>
+
+                    {/* NEW SIGNATURE BLOCK */}
+                    <div className="pt-8 print:pt-4 border-t-2 border-dashed border-gray-200 print:border-gray-300 mt-8 print:mt-4">
+                        <h3 className="text-sm print:text-[10px] font-black uppercase tracking-widest text-gray-900 mb-6 print:mb-4">Proposal Acceptance</h3>
+                        <p className="text-xs print:text-[8px] text-gray-600 mb-8 print:mb-6">The prices, specifications, and conditions are satisfactory and are hereby accepted. You are authorized to do the work as specified.</p>
+                        
+                        <div className="grid grid-cols-2 gap-8 print:gap-6">
+                            <div className="border-t border-gray-400 print:border-gray-500 pt-2 print:pt-1">
+                                <span className="text-xs print:text-[8px] font-bold text-gray-500 uppercase tracking-widest block">Signature</span>
+                            </div>
+                            <div className="border-t border-gray-400 print:border-gray-500 pt-2 print:pt-1">
+                                <span className="text-xs print:text-[8px] font-bold text-gray-500 uppercase tracking-widest block">Date</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+
+            {/* BRANDED FOOTER */}
+            <footer className="py-12 print:py-2 text-center mt-auto border-t border-gray-200 print:hidden" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
+                {logoUrl && (
+                    <img src={logoUrl} alt={businessName} className="h-12 w-auto mx-auto object-contain mb-4 opacity-80" style={{ filter: brandBgColor.toLowerCase() === '#ffffff' ? 'none' : 'brightness(0) invert(1) opacity(0.8)' }} />
+                )}
+                <p className="text-xs uppercase tracking-widest font-bold opacity-80 m-0">
+                    © {new Date().getFullYear()} {businessName}. All Rights Reserved.
+                </p>
+            </footer>
+        </div>
+    );
+}
+```
+
+### 2. The Client Presentation Board Page
+
+```javascript:Client Presentation Page:src/app/client/[slug]/page.js
+"use client";
+
+import React, { useState, useEffect, use } from 'react';
+import Link from 'next/link';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { auth, db, appId } from "../../../lib/firebase";
+
+export default function ClientBoardPage({ params }) {
+    const unwrappedParams = use(params);
+    const slug = unwrappedParams.slug;
+
+    const [board, setBoard] = useState(null);
+    const [proProfile, setProProfile] = useState(null);
+    const [products, setProducts] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchBoardData = async () => {
+            try {
+                const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'client_boards'), where('slug', '==', slug));
+                const querySnapshot = await getDocs(q);
+
+                if (querySnapshot.empty) {
+                    if (isMounted) { setError(true); setIsLoading(false); }
+                    return;
+                }
+
+                const boardDoc = querySnapshot.docs[0];
+                const boardData = boardDoc.data();
+                if (isMounted) setBoard(boardData);
+
+                if (boardData.proId) {
+                    const proRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', boardData.proId);
+                    const proSnap = await getDoc(proRef);
+                    if (proSnap.exists() && isMounted) setProProfile(proSnap.data());
+                }
+
+                if (boardData.products && boardData.products.length > 0) {
+                    const prodPromises = boardData.products.map(async (savedItem) => {
+                        const pDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', savedItem.productId));
+                        if (pDoc.exists()) {
+                            return {
+                                id: pDoc.id,
+                                ...pDoc.data(),
+                                savedColorSku: savedItem.colorSku,
+                                savedColorName: savedItem.colorName,
+                                quote: savedItem.quote || null 
+                            };
+                        }
+                        return null;
+                    });
+                    const resolvedProducts = (await Promise.all(prodPromises)).filter(p => p !== null);
+                    if (isMounted) setProducts(resolvedProducts);
+                }
+
+            } catch (err) {
+                console.error("Error loading client board:", err);
+                if (isMounted) setError(true);
+            } finally {
+                if (isMounted) setIsLoading(false);
+            }
+        };
+
+        const unsub = onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                signInAnonymously(auth).catch(() => {});
+            } else if (isMounted && slug) {
+                fetchBoardData();
+            }
+        });
+
+        return () => {
+            isMounted = false;
+            unsub();
+        };
+    }, [slug]);
+
+    useEffect(() => {
+        if (board) {
+            const bName = board.businessName || proProfile?.business || "Your Flooring Professional";
+            const mgn = board.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
+            const lUrl = board.logoUrl || proProfile?.logoUrl || "";
+            const bBg = board.brandBgColor || proProfile?.brandBgColor || "#ffffff";
+            const bText = board.brandTextColor || proProfile?.brandTextColor || "#000000";
+
+            sessionStorage.setItem('client_brand', bName);
+            if (lUrl) sessionStorage.setItem('client_logo', lUrl);
+            else sessionStorage.removeItem('client_logo');
+            
+            sessionStorage.setItem('client_bg', bBg);
+            sessionStorage.setItem('client_text', bText);
+            sessionStorage.setItem('client_margin', mgn);
+            sessionStorage.setItem('magic_link_client', 'true');
+        }
+    }, [board, proProfile]);
+
+    if (isLoading) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black border-t-transparent mb-4"></div>
+                <p className="text-sm font-bold uppercase tracking-widest text-gray-400">Loading Presentation...</p>
+            </div>
+        );
+    }
+
+    if (error || !board) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 text-center">
+                <h1 className="text-3xl font-black mb-2">Project Not Found</h1>
+                <p className="text-gray-500 max-w-md">We couldn't locate this project board. The link may be invalid or the project was removed by the contractor.</p>
+            </div>
+        );
+    }
+
+    const businessName = board?.businessName || proProfile?.business || "Your Flooring Professional";
+    const margin = board?.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
+    const logoUrl = board?.logoUrl || proProfile?.logoUrl || "";
+    const brandBgColor = board?.brandBgColor || proProfile?.brandBgColor || "#ffffff";
+    const brandTextColor = board?.brandTextColor || proProfile?.brandTextColor || "#000000";
+    
+    let cmToken = '';
+    let cbToken = '';
+    try {
+        cmToken = btoa(margin.toString());
+        cbToken = btoa(businessName);
+    } catch(e) {}
+
+    return (
+        <div className="min-h-screen bg-gray-50 font-sans flex flex-col">
+            <header className="border-b border-gray-200 py-6 px-6 text-center shadow-sm" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
+                {logoUrl ? (
+                    <img src={logoUrl} alt={businessName} className="h-16 md:h-20 w-auto mx-auto object-contain" />
+                ) : (
+                    <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none">{businessName}</h1>
+                )}
+                <p className="text-[10px] md:text-xs font-black italic tracking-widest uppercase mt-2 opacity-80">Curated Project Presentation</p>
+            </header>
+
+            <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12">
+                <div className="text-center mb-12">
+                    <h2 className="text-3xl md:text-4xl font-black mb-3">{board.name}</h2>
+                    <p className="text-gray-500 max-w-2xl mx-auto">We have hand-selected the following premium flooring options specifically for your project. Click on any product to view details, specifications, and room scenes.</p>
+                </div>
+
+                {products.length === 0 ? (
+                    <div className="text-center py-20 text-gray-400 text-sm italic bg-white border border-gray-200 rounded-2xl">No products have been added to this board yet.</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {products.map(p => {
+                            const displayTitle = (p.usePrivateName && p.privateName) ? p.privateName : (p.name || 'Unnamed Product');
+                            const safePrefix = p.imgPrefix || '';
+                            const displaySku = p.savedColorSku || (p.colors?.[0]?.sku || '01');
+                            
+                            const safeName = (p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                            const safeSku = (p.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                            let folderName = 'images'; 
+                            if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                            else if (safeName) folderName = safeName;
+                            folderName = folderName.replace(/-+$/, '');
+
+                            const mainType = p.category === 'Carpet' ? 'main' : 'main';
+                            const rawPath = `images/${folderName}/${safePrefix}${displaySku}_${mainType}.jpg`.toLowerCase();
+                            const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+                            const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
+
+                            const productLink = `/product/${p.id}?color=${displaySku}&pro=${board.proId || ''}&cm=${cmToken}`;
+
+                            const hasQuote = p.quote && p.quote.totals;
+
+                            // Format the trim text dynamically based on what they selected
+                            let trimParts = [];
+                            if (p.quote?.addons?.trims?.details) {
+                                if (p.quote.addons.trims.details.standard > 0) trimParts.push('Transitions');
+                                if (p.quote.addons.trims.details.stairnose > 0) trimParts.push('Stair Noses');
+                                if (p.quote.addons.trims.details.quarterRound > 0) trimParts.push('Quarter Round');
+                            }
+                            const trimText = trimParts.length > 0 ? `Matching ${trimParts.join(', ').replace(/, ([^,]*)$/, ' and $1')}` : 'Matching transition moldings';
+
+                            return (
+                                <div key={p.id + displaySku} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition group">
+                                    <Link href={productLink} className="block overflow-hidden h-64 bg-gray-50 relative" style={{ textDecoration: 'none' }}>
+                                        <img src={fbPath} className="w-full h-full object-cover transition duration-500 group-hover:scale-105" onError={e => e.target.src=TBD_IMG} />
+                                        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-4">
+                                            <span className="text-white font-bold text-sm bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-sm">Color: {p.savedColorName}</span>
+                                        </div>
+                                    </Link>
+
+                                    <div className="p-8 flex-1 flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+                                                <span>{p.category}</span>
+                                            </div>
+                                            <h3 className="text-2xl font-black text-gray-900 leading-tight mb-6">
+                                                <Link href={productLink} style={{ textDecoration: 'none', color: 'inherit' }}>{displayTitle}</Link>
+                                            </h3>
+
+                                            {hasQuote ? (
+                                                <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 mb-6">
+                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-gold mb-3">Proposal Inclusions</h4>
+                                                    <ul className="space-y-2.5 text-sm text-gray-700">
+                                                        <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>{Math.ceil(p.quote.measurements.coverageSqft)} sqft of {displayTitle} in {p.savedColorName}</span></li>
+                                                        
+                                                        {p.quote.addons?.pad && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>{p.quote.addons.pad.name}</span></li>}
+                                                        {p.quote.addons?.trims && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>{trimText}</span></li>}
+                                                        
+                                                        {p.quote.services?.prep > 0 && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>Tear out and subfloor preparation</span></li>}
+                                                        {p.quote.services?.installTotal > 0 && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>Professional installation</span></li>}
+                                                        {p.quote.services?.delivery > 0 && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>Materials delivery & logistics</span></li>}
+                                                        
+                                                        {p.quote.services?.custom1 && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>{p.quote.services.custom1.name}</span></li>}
+                                                        {p.quote.services?.custom2 && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>{p.quote.services.custom2.name}</span></li>}
+                                                    </ul>
+                                                </div>
+                                            ) : (
+                                                <p className="text-gray-500 text-sm line-clamp-3 mb-6">{p.desc || 'Premium flooring collection.'}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-4 pt-6 border-t border-gray-100">
+                                            {hasQuote ? (
+                                                <div className="flex justify-between items-baseline">
+                                                    <span className="text-sm text-gray-400 uppercase font-black tracking-wider">Turnkey Project Total</span>
+                                                    <span className="text-3xl font-black text-gray-900 font-mono">${p.quote.totals.turnkeyRetail.toFixed(2)}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex justify-between items-baseline">
+                                                    <span className="text-xs text-gray-400 uppercase font-black tracking-wider">Material Price</span>
+                                                    <span className="text-2xl font-black text-gray-900 font-mono">${(p.price * (1 + margin / 100)).toFixed(2)} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
+                                                </div>
+                                            )}
+                                            
+                                            <Link href={productLink} className="w-full block text-center hover:opacity-80 font-black uppercase py-4 rounded-xl transition text-xs tracking-widest mt-2 shadow-sm hover:shadow-md" style={{ textDecoration: 'none', backgroundColor: brandBgColor, color: brandTextColor, border: `1px solid ${brandTextColor}` }}>
+                                                View Product Details & Photos
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </main>
+
+            <footer className="py-12 text-center mt-auto border-t border-gray-200" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
+                {logoUrl && (
+                    <img src={logoUrl} alt={businessName} className="h-12 w-auto mx-auto object-contain mb-4 opacity-80" style={{ filter: brandBgColor.toLowerCase() === '#ffffff' ? 'none' : 'brightness(0) invert(1) opacity(0.8)' }} />
+                )}
+                <p className="text-xs uppercase tracking-widest font-bold opacity-80">
+                    © {new Date().getFullYear()} {businessName}. All Rights Reserved.
+                </p>
+            </footer>
+        </div>
+    );
 }
