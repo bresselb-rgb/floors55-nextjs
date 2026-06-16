@@ -80,26 +80,6 @@ export default function ProposalsManager({ proId }) {
       }
   };
 
-  const handleOrderRequest = (quote) => {
-      const subject = encodeURIComponent(`PO / Quote Request: ${quote.clientName} - ${quote.projectName || 'Project'}`);
-      const body = encodeURIComponent(`Hello Floors 55 Team,
-
-I would like to request a formal wholesale quote / submit a PO for the following proposal:
-
-Project Details:
-- Client Name: ${quote.clientName}
-- Project: ${quote.projectName || 'N/A'}
-- Product: ${quote.productName} (${quote.colorSku ? quote.colorSku + ' - ' : ''}${quote.colorName})
-- Required Material: ${quote.material?.qty} ${quote.material?.unit} (${quote.measurements?.coverageSqft?.toFixed(1)} sqft)
-
-[If you are submitting a formal Purchase Order, please attach the PDF to this email.]
-
-Thank you!`);
-      
-      // Opens the user's default email client
-      window.location.href = `mailto:admin@floors55pro.com?subject=${subject}&body=${body}`;
-  };
-
   const confirmDelete = async () => {
       if (!quoteToDelete || !db) return;
       try {
@@ -114,6 +94,7 @@ Thank you!`);
   };
 
   const handleEditClick = async (quote) => {
+      // 1. Fetch the raw product so we can recalculate material costs properly
       try {
           const prodRef = doc(db, 'artifacts', appId, 'public', 'data', 'pricing', quote.productId);
           const prodSnap = await getDoc(prodRef);
@@ -124,6 +105,7 @@ Thank you!`);
           console.error("Error fetching product for edit calculations", e);
       }
 
+      // 2. Pre-fill the edit drawer states with the existing quote data
       setEditClientName(quote.clientName || '');
       setEditProjectName(quote.projectName || '');
       setCalcNetSqft(quote.measurements?.netSqft || '');
@@ -163,6 +145,7 @@ Thank you!`);
       setEditingQuote(quote);
   };
 
+  // --- REAL-TIME MATH CALCULATIONS FOR EDIT DRAWER ---
   const isCarpet = editingProduct?.category === 'Carpet' || (editingProduct?.category || '').toLowerCase().includes('carpet');
   let cartonSqft = parseFloat(editingProduct?.cartonSize) || parseFloat(editingProduct?.boxSqft) || 20;
   const basePrice = editingProduct?.price || 0;
@@ -237,7 +220,7 @@ Thank you!`);
       <div className="flex items-center justify-between mb-1">
           <h2 className="text-xl font-black uppercase tracking-tight">Active Proposals</h2>
       </div>
-      <p className="text-sm text-gray-500 mb-6">Manage your quotes and submit formal Purchase Orders to the warehouse.</p>
+      <p className="text-sm text-gray-500 mb-6">Manage and edit your saved standalone product quotes.</p>
 
       {isLoading ? (
           <div className="flex justify-center py-6"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div></div>
@@ -267,12 +250,6 @@ Thank you!`);
                         </Link>
                         <button onClick={() => copyToClipboard(quote.id)} className="flex-1 md:flex-none bg-black hover:bg-gold hover:text-black text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors text-center outline-none cursor-pointer shadow-md">
                             Copy Link
-                        </button>
-                        
-                        <div className="h-6 w-px bg-gray-200 hidden md:block mx-1"></div>
-                        
-                        <button onClick={() => handleOrderRequest(quote)} className="bg-white border border-blue-200 hover:bg-blue-50 text-blue-600 px-3 py-2.5 rounded-lg transition-colors cursor-pointer outline-none shadow-sm" title="Email PO / Request Formal Quote">
-                            📤 Order
                         </button>
                         <button onClick={() => setViewingCostsQuote(quote)} className="bg-white border border-emerald-200 hover:bg-emerald-50 text-emerald-600 px-3 py-2.5 rounded-lg transition-colors cursor-pointer outline-none shadow-sm" title="Internal Cost Breakdown">
                             💲
@@ -308,13 +285,7 @@ Thank you!`);
                           <h4 className="text-[10px] font-black uppercase tracking-widest text-gold mb-3 border-b border-gray-100 pb-1">Materials & Add-Ons</h4>
                           <div className="space-y-2 text-sm text-gray-700">
                               <div className="flex justify-between items-start gap-4">
-                                  <span>
-                                      {viewingCostsQuote.productName} 
-                                      <br/>
-                                      <span className="text-[10px] text-gray-400 uppercase tracking-widest">
-                                          ({viewingCostsQuote.material?.qty} {viewingCostsQuote.material?.unit} &bull; {viewingCostsQuote.measurements?.coverageSqft?.toFixed(1)} sqft)
-                                      </span>
-                                  </span>
+                                  <span>{viewingCostsQuote.productName} <br/><span className="text-[10px] text-gray-400 uppercase tracking-widest">({viewingCostsQuote.material?.qty} {viewingCostsQuote.material?.unit})</span></span>
                                   <span className="font-mono font-bold">${viewingCostsQuote.material?.wholesaleTotal?.toFixed(2) || '0.00'}</span>
                               </div>
                               {viewingCostsQuote.addons?.pad && (
@@ -337,7 +308,7 @@ Thank you!`);
                           <h4 className="text-[10px] font-black uppercase tracking-widest text-gold mb-3 border-b border-gray-100 pb-1">Labor & Services</h4>
                           <div className="space-y-2 text-sm text-gray-700">
                               <div className="flex justify-between items-start gap-4">
-                                  <span>Installation <br/><span className="text-[10px] text-gray-400 uppercase tracking-widest">({viewingCostsQuote.measurements?.netSqft} net sqft)</span></span>
+                                  <span>Installation <br/><span className="text-[10px] text-gray-400 uppercase tracking-widest">({viewingCostsQuote.measurements?.netSqft} sqft)</span></span>
                                   <span className="font-mono font-bold">${viewingCostsQuote.services?.installTotal?.toFixed(2) || '0.00'}</span>
                               </div>
                               {viewingCostsQuote.services?.prep > 0 && (
@@ -562,7 +533,7 @@ Thank you!`);
           </div>
       )}
 
-      {}
+      {/* Toast Notification */}
       <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
           <span className="font-black text-gold">✓</span>
           <p className="font-bold text-xs uppercase tracking-widest m-0">{toastMsg}</p>
