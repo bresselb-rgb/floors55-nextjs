@@ -1,123 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { collection, onSnapshot, doc, getDoc } from "firebase/firestore";
-
-let Link;
-let usePathname = () => '';
-let useRouter = () => ({ push: () => {}, replace: () => {} });
-let useSearchParams = () => {
-    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-    return { get: (key) => params.get(key) };
-};
-let auth, db, appId;
-
-try {
-    const nextLink = 'next/link';
-    Link = require(nextLink).default || require(nextLink);
-    const nextNav = 'next/navigation';
-    const nav = require(nextNav);
-    usePathname = nav.usePathname;
-    useRouter = nav.useRouter;
-    useSearchParams = nav.useSearchParams;
-} catch (e) {
-    Link = ({ href, children, className, style, onClick }) => <a href={href} className={className} style={style} onClick={onClick}>{children}</a>;
-    usePathname = () => typeof window !== 'undefined' ? window.location.pathname : '';
-    useRouter = () => ({ push: (url) => { if (typeof window !== 'undefined') window.location.href = url; }, replace: (url) => { if (typeof window !== 'undefined') window.location.href = url; } });
-    useSearchParams = () => {
-        const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-        return { get: (key) => params.get(key) };
-    };
-}
-
-try {
-    const fbPath = '../lib/firebase';
-    const fb = require(fbPath);
-    auth = fb.auth;
-    db = fb.db;
-    appId = fb.appId;
-} catch (e) {
-    console.warn("Firebase lib not found in current environment context.");
-}
-
-// --- SPEC NORMALIZATION ENGINE ---
-// Standardizes the labels on the left side of the colon
-const normalizeSpecKey = (rawKey) => {
-    const k = rawKey.toLowerCase().trim();
-    if (k === 'core' || k === 'construction' || k === 'core material' || k === 'core type') return 'Construction / Core';
-    if (k === 'pad' || k === 'cushion' || k === 'underlayment' || k === 'attached pad') return 'Attached Pad';
-    if (k === 'style' || k === 'pattern' || k === 'style type') return 'Style Type';
-    if (k === 'wearlayer' || k === 'wear layer') return 'Wear Layer';
-    if (k === 'overall thickness' || k === 'total thickness' || k === 'thickness') return 'Thickness';
-    if (k === 'waterproof' || k === 'water resistance') return 'Waterproof';
-    return rawKey.trim();
-};
-
-// Standardizes the values on the right side of the colon into specific buckets
-const normalizeSpecValue = (key, rawValue, category = '') => {
-    const val = rawValue.trim();
-    const lowerVal = val.toLowerCase();
-
-    // 1. Thickness Bucketing
-    if (key.toLowerCase() === "thickness") {
-        const match = val.match(/[\d.]+/);
-        if (match) {
-            const num = parseFloat(match[0]);
-            if (num < 5) return "< 5mm";
-            if (num >= 5 && num <= 7) return "5mm - 7mm";
-            if (num > 7 && num <= 10) return "7mm - 10mm";
-            if (num > 10) return "10mm+";
-        }
-    }
-
-    // 2. Construction / Core Type Extraction
-    if (key.toLowerCase() === "construction / core") {
-        // LVP manufacturers often use "Solid Polymer Core" for SPC
-        if (category === 'Luxury Vinyl (LVP)' && lowerVal.includes("solid")) return "SPC";
-        
-        if (lowerVal.includes("solid")) return "Solid";
-        if (lowerVal.includes("wpc")) return "WPC";
-        if (lowerVal.includes("spc") || lowerVal.includes("rigid")) return "SPC";
-        
-        // Catch anything that implies engineered hardwood (HDF, Multi-ply, veneer)
-        if (lowerVal.includes("engineered") || lowerVal.includes("ply") || lowerVal.includes("hdf") || lowerVal.includes("veneer") || lowerVal.includes("multi")) return "Engineered";
-        
-        return val;
-    }
-
-    // 3. Attached Pad Extraction
-    if (key.toLowerCase() === "attached pad" || key.toLowerCase() === "pad") {
-        if (lowerVal.includes("cork")) return "Attached Cork";
-        if (lowerVal.includes("no") || lowerVal === "none" || lowerVal === "n/a" || lowerVal === "false") return "None";
-        return "Attached Pad"; 
-    }
-
-    // 4. Carpet Style Type Bucketing
-    if (key.toLowerCase() === "style type") {
-        if ((lowerVal.includes("texture") || lowerVal.includes("cut pile")) && !lowerVal.includes("loop")) return "Texture / Cut Pile";
-        if (lowerVal.includes("pattern") || (lowerVal.includes("cut") && lowerVal.includes("loop"))) return "Pattern / Cut & Loop";
-        if (lowerVal.includes("loop") || lowerVal.includes("berber")) return "Loop";
-    }
-
-    // 5. Wear Layer Cleanup
-    if (key.toLowerCase() === "wear layer") {
-         const match = val.match(/(\d+)/);
-         if (match) return `${match[1]} mil`;
-    }
-    
-    // 6. Waterproof Normalization
-    if (key.toLowerCase() === "waterproof") {
-        if (lowerVal.includes("no") || lowerVal === "false") return "None";
-        return "100% Waterproof";
-    }
-
-    return val;
-};
-
-// Hardcoded sort order so Thickness buckets don't sort alphabetically
-const THICKNESS_ORDER = { "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4 };
-// ---------------------------------
+import { auth, db, appId } from "../lib/firebase";
 
 function CategoryViewerContent({ initialCategory }) {
   const router = useRouter();
@@ -135,8 +23,6 @@ function CategoryViewerContent({ initialCategory }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [maxPrice, setMaxPrice] = useState(10000); 
   const [selectedPrograms, setSelectedPrograms] = useState([]);
-  const [selectedBrands, setSelectedBrands] = useState([]);
-  const [selectedSpecs, setSelectedSpecs] = useState({});
   const [sortMode, setSortMode] = useState('price-asc');
   const [isListView, setIsListView] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -151,9 +37,10 @@ function CategoryViewerContent({ initialCategory }) {
 
           const cmParam = searchParams.get('cm');
           const proParam = searchParams.get('pro');
-          const cbParam = searchParams.get('cb'); 
+          const cbParam = searchParams.get('cb'); // fallback
 
           if (proParam) {
+                // Fetch the Pro's live branding directly from the database!
                 const fetchProBranding = async () => {
                     try {
                         const proDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', proParam));
@@ -170,6 +57,7 @@ function CategoryViewerContent({ initialCategory }) {
                                 const decoded = parseInt(atob(cmParam), 10);
                                 if (!isNaN(decoded)) sessionStorage.setItem('client_margin', decoded);
                             } else if (pData.clientMargin !== undefined) {
+                                // Robust Fallback: If URL doesn't have &cm, use the Pro's database default!
                                 sessionStorage.setItem('client_margin', pData.clientMargin);
                             }
                             
@@ -265,58 +153,7 @@ function CategoryViewerContent({ initialCategory }) {
           } else {
               data.category = cat || 'Uncategorized';
           }
-
-          // SMART AUTO-TAGGER: Fills in the blanks if manufacturers forgot specs!
-          const fullDesc = (data.desc || '').toLowerCase();
-          let existingSpecs = data.specs || [];
           
-          // Helper to safely check if a normalized spec exists
-          const hasSpec = (targetKey) => {
-              return existingSpecs.some(s => {
-                  const parts = s.split(':');
-                  return parts.length > 1 && normalizeSpecKey(parts[0]) === targetKey;
-              });
-          };
-          
-          if (data.category === 'Luxury Vinyl (LVP)') {
-              // Ensure Waterproof exists
-              if (!hasSpec('Waterproof')) {
-                  existingSpecs.push('Waterproof: 100% Waterproof');
-              }
-              
-              // Ensure Pad exists
-              if (!hasSpec('Attached Pad')) {
-                  if (fullDesc.includes('cork')) existingSpecs.push('Attached Pad: Attached Cork');
-                  else existingSpecs.push('Attached Pad: Attached Pad');
-              }
-
-              // Ensure Core exists
-              if (!hasSpec('Construction / Core')) {
-                  if (fullDesc.includes('wpc')) existingSpecs.push('Construction / Core: WPC');
-                  else if (fullDesc.includes('spc') || fullDesc.includes('rigid') || fullDesc.includes('solid')) existingSpecs.push('Construction / Core: SPC');
-              }
-          } else if (data.category === 'Hardwood') {
-              // Ensure Core exists for Hardwood (Engineered vs Solid)
-              if (!hasSpec('Construction / Core')) {
-                  if (fullDesc.includes('solid') || data.displayTitle.toLowerCase().includes('solid')) {
-                      existingSpecs.push('Construction / Core: Solid');
-                  } else {
-                      existingSpecs.push('Construction / Core: Engineered');
-                  }
-              }
-          } else {
-              // Non-LVP/Hardwood auto-tags just in case
-              if (fullDesc.includes('cork') && !hasSpec('Attached Pad')) {
-                  existingSpecs.push('Attached Pad: Attached Cork');
-              }
-              
-              if (!hasSpec('Construction / Core')) {
-                  if (fullDesc.includes('wpc')) existingSpecs.push('Construction / Core: WPC');
-                  else if (fullDesc.includes('spc') || fullDesc.includes('rigid') || fullDesc.includes('solid')) existingSpecs.push('Construction / Core: SPC');
-              }
-          }
-
-          data.specs = existingSpecs;
           arr.push({ id: d.id, ...data });
         }
       });
@@ -369,106 +206,6 @@ function CategoryViewerContent({ initialCategory }) {
      }
   }, [priceBounds.max, activeCategory]);
 
-  const dynamicBrands = useMemo(() => {
-      const brands = new Set();
-      const relevantProducts = liveProductsRaw.filter(p => 
-          activeCategory === "All Products" || 
-          (activeCategory === "Hot Buys" && p.isSale) || 
-          p.category === activeCategory
-      );
-      
-      relevantProducts.forEach(p => {
-          if (p.manufacturer) {
-              brands.add(p.manufacturer.trim());
-          }
-      });
-
-      return [...brands].sort();
-  }, [liveProductsRaw, activeCategory]);
-
-  const dynamicSpecs = useMemo(() => {
-      const TARGET_SPECS = [
-          "Waterproof",
-          "Construction / Core",
-          "Thickness",
-          "Wear Layer",
-          "Attached Pad",
-          "Species",
-          "Style Type"
-      ];
-      
-      const specMap = {}; 
-      
-      const relevantProducts = liveProductsRaw.filter(p => 
-          activeCategory === "All Products" || 
-          (activeCategory === "Hot Buys" && p.isSale) || 
-          p.category === activeCategory
-      );
-
-      relevantProducts.forEach(p => {
-          (p.specs || []).forEach(s => {
-              const parts = s.split(':');
-              if (parts.length >= 2) {
-                  const rawKey = parts[0].trim();
-                  const val = parts.slice(1).join(':').trim();
-                  
-                  const key = normalizeSpecKey(rawKey);
-                  const matchedSpec = TARGET_SPECS.find(t => t.toLowerCase() === key.toLowerCase());
-                  
-                  if (matchedSpec && val.length > 0 && val.length < 40) {
-                      // Pass the product category into the normalization engine so it knows context
-                      const normalizedVal = normalizeSpecValue(matchedSpec, val, p.category);
-                      
-                      if (normalizedVal !== "None") {
-                          if (!specMap[matchedSpec]) specMap[matchedSpec] = new Set();
-                          specMap[matchedSpec].add(normalizedVal);
-                      }
-                  }
-              }
-          });
-      });
-
-      const result = {};
-      TARGET_SPECS.forEach(specName => {
-          if (specMap[specName] && specMap[specName].size > 0) { 
-              result[specName] = [...specMap[specName]].sort((a, b) => {
-                  if (specName === "Thickness") {
-                      return (THICKNESS_ORDER[a] || 99) - (THICKNESS_ORDER[b] || 99);
-                  }
-                  const numA = parseFloat(a);
-                  const numB = parseFloat(b);
-                  if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-                  return a.localeCompare(b);
-              });
-          }
-      });
-      return result;
-  }, [liveProductsRaw, activeCategory]);
-
-  const handleProgramToggle = (val) => {
-      setSelectedPrograms(prev => prev.includes(val) ? prev.filter(p => p !== val) : [...prev, val]);
-  };
-
-  const handleBrandToggle = (brand) => {
-      setSelectedBrands(prev => prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]);
-  };
-
-  const handleSpecToggle = (key, val) => {
-      setSelectedSpecs(prev => {
-          const current = prev[key] || [];
-          if (current.includes(val)) {
-              const next = current.filter(v => v !== val);
-              if (next.length === 0) {
-                  const copy = { ...prev };
-                  delete copy[key];
-                  return copy;
-              }
-              return { ...prev, [key]: next };
-          }
-          return { ...prev, [key]: [...current, val] };
-      });
-  };
-
   const filteredProducts = useMemo(() => {
     const searchVal = searchQuery.toLowerCase().trim();
     
@@ -503,34 +240,7 @@ function CategoryViewerContent({ initialCategory }) {
             });
         }
 
-        let matchesBrands = true;
-        if (selectedBrands.length > 0) {
-            matchesBrands = selectedBrands.includes(p.manufacturer?.trim());
-        }
-
-        let matchesSpecs = true;
-        if (Object.keys(selectedSpecs).length > 0) {
-            matchesSpecs = Object.entries(selectedSpecs).every(([key, vals]) => {
-                return p.specs?.some(s => {
-                    const parts = s.split(':');
-                    if (parts.length >= 2) {
-                        const rawKey = parts[0].trim();
-                        const pVal = parts.slice(1).join(':').trim();
-                        
-                        const pKey = normalizeSpecKey(rawKey);
-                        
-                        if (pKey.toLowerCase() === key.toLowerCase()) {
-                            // Pass the category dynamically to correctly map things like Solid hardwood vs SPC LVP
-                            const normalizedPVal = normalizeSpecValue(key, pVal, p.category);
-                            return vals.includes(normalizedPVal);
-                        }
-                    }
-                    return false;
-                });
-            });
-        }
-
-        return matchesSearch && matchesCategory && matchesPrice && matchesProgs && matchesBrands && matchesSpecs;
+        return matchesSearch && matchesCategory && matchesPrice && matchesProgs;
         
     }).sort((a, b) => {
         const pA = isClientMode ? a.price * (1 + clientMargin / 100) : (isWholesale ? a.price : (a.retailPrice ? parseFloat(a.retailPrice) : (a.price * 2.2)));
@@ -552,14 +262,16 @@ function CategoryViewerContent({ initialCategory }) {
         if (catCompare !== 0) return catCompare;
         return (a.displayTitle || '').localeCompare(b.displayTitle || '');
     });
-  }, [liveProductsRaw, activeCategory, searchQuery, maxPrice, selectedPrograms, selectedBrands, selectedSpecs, sortMode, isWholesale, isClientMode, clientMargin]);
+  }, [liveProductsRaw, activeCategory, searchQuery, maxPrice, selectedPrograms, sortMode, isWholesale, isClientMode, clientMargin]);
+
+  const handleProgramToggle = (val) => {
+      setSelectedPrograms(prev => prev.includes(val) ? prev.filter(p => p !== val) : [...prev, val]);
+  };
 
   const resetAllFilters = () => {
       setSearchQuery('');
       setMaxPrice(priceBounds.max);
       setSelectedPrograms([]);
-      setSelectedBrands([]);
-      setSelectedSpecs({});
       setSortMode('price-asc');
       if (isMobileDrawerOpen) setIsMobileDrawerOpen(false);
   };
@@ -576,57 +288,6 @@ function CategoryViewerContent({ initialCategory }) {
       router.push(getCategorySlug(catName), { scroll: true });
   };
 
-  const renderSpecFilters = () => {
-      return (
-          <>
-            {dynamicBrands.length > 0 && (
-                <div className="pt-4 mt-4 border-t border-gray-100">
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-3">Brands & Manufacturers</label>
-                    <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
-                        {dynamicBrands.map(brand => (
-                            <label key={brand} className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer hover:text-gold transition">
-                                <input 
-                                    type="checkbox" 
-                                    checked={selectedBrands.includes(brand)}
-                                    onChange={() => handleBrandToggle(brand)}
-                                    className="accent-gold h-3.5 w-3.5 rounded border-gray-300" 
-                                /> 
-                                <span className="truncate">{brand}</span>
-                            </label>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {Object.keys(dynamicSpecs).length > 0 && (
-                <div className="pt-4 mt-4 border-t border-gray-100">
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-3">Specifications</label>
-                    <div className="space-y-4">
-                        {Object.entries(dynamicSpecs).map(([specKey, specVals]) => (
-                            <div key={specKey}>
-                                <div className="text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">{specKey}</div>
-                                <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
-                                    {specVals.map(val => (
-                                        <label key={val} className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer hover:text-gold transition">
-                                            <input 
-                                                type="checkbox" 
-                                                checked={selectedSpecs[specKey]?.includes(val) || false}
-                                                onChange={() => handleSpecToggle(specKey, val)}
-                                                className="accent-gold h-3.5 w-3.5 rounded border-gray-300" 
-                                            /> 
-                                            <span className="truncate">{val}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-          </>
-      );
-  };
-
   let heroImage = 'images/heros/main-hero.jpg';
   if (activeCategory === 'Luxury Vinyl (LVP)') heroImage = 'images/heros/lvp.jpg';
   else if (activeCategory === 'Carpet') heroImage = 'images/heros/carpet.jpg';
@@ -636,11 +297,13 @@ function CategoryViewerContent({ initialCategory }) {
   const heroFbUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(heroImage)}?alt=media`;
   const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
+  // Fetch dynamic client button color for the Exit button
   const exitBtnBg = typeof window !== 'undefined' ? (sessionStorage.getItem('client_bg') || '#ef4444') : '#ef4444';
   const exitBtnText = typeof window !== 'undefined' ? (sessionStorage.getItem('client_text') || '#ffffff') : '#ffffff';
 
   return (
     <main className="bg-gray-50 text-gray-900 font-sans flex flex-col flex-1">
+      {/* Exit Client Mode Button */}
       {isClientMode && !isMagicLink && (
           <button 
               onClick={() => { 
@@ -652,7 +315,7 @@ function CategoryViewerContent({ initialCategory }) {
                   sessionStorage.removeItem('magic_link_client');
                   window.location.reload(); 
               }} 
-              className="fixed bottom-6 left-6 px-5 py-3 rounded-full font-bold text-xs uppercase tracking-widest shadow-2xl z-[200] transition-opacity hover:opacity-80 flex items-center gap-2 border border-black/10 cursor-pointer"
+              className="fixed bottom-6 left-6 px-5 py-3 rounded-full font-bold text-xs uppercase tracking-widest shadow-2xl z-[200] transition-opacity hover:opacity-80 flex items-center gap-2 border border-black/10"
               style={{ backgroundColor: exitBtnBg, color: exitBtnText }}
           >
               <span>✕</span> Exit Client Mode
@@ -676,7 +339,7 @@ function CategoryViewerContent({ initialCategory }) {
       <section className="py-6 flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row gap-8">
             
-            <aside className="hidden lg:block w-72 shrink-0 space-y-6 sticky top-24 self-start bg-white p-6 rounded-2xl border border-gray-100 shadow-sm overflow-y-auto max-h-[85vh]">
+            <aside className="hidden lg:block w-72 shrink-0 space-y-6 sticky top-24 self-start bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Search Catalog</label>
                     <div className="relative">
@@ -690,6 +353,7 @@ function CategoryViewerContent({ initialCategory }) {
                     <div className="space-y-1.5 flex flex-col">
                         <button onClick={() => handleCategorySwitch('All Products')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === 'All Products' ? 'bg-gold text-black font-black' : 'text-gray-500 hover:bg-gray-100'}`}>🌐 All Collections</button>
                         
+                        {/* Hidden from Clients */}
                         {!isClientMode && isWholesale && (
                             <button onClick={() => handleCategorySwitch('Hot Buys')} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === 'Hot Buys' ? 'bg-red-50 text-red-700 font-black' : 'text-gray-500 hover:bg-gray-100'}`}>🔥 Hot Buys (On Sale)</button>
                         )}
@@ -726,13 +390,9 @@ function CategoryViewerContent({ initialCategory }) {
                     </div>
                 )}
 
-                {renderSpecFilters()}
-
-                <div className="pt-4 border-t border-gray-100">
-                    <button onClick={resetAllFilters} className="w-full bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-black border border-gray-200 font-bold text-[10px] uppercase py-2 rounded-xl transition outline-none cursor-pointer">
-                        Clear Active Filters
-                    </button>
-                </div>
+                <button onClick={resetAllFilters} className="w-full bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-black border border-gray-200 font-bold text-[10px] uppercase py-2 rounded-xl transition outline-none cursor-pointer">
+                    Clear Active Filters
+                </button>
             </aside>
 
             <div className="flex-1 flex flex-col">
@@ -969,8 +629,6 @@ function CategoryViewerContent({ initialCategory }) {
                         </div>
                     </div>
                 )}
-                
-                {renderSpecFilters()}
 
                 <div className="pt-4 flex gap-3">
                     <button onClick={resetAllFilters} className="flex-1 bg-gray-50 border border-gray-200 font-bold text-xs uppercase py-3 rounded-xl transition text-center text-gray-500 outline-none cursor-pointer">Reset</button>
