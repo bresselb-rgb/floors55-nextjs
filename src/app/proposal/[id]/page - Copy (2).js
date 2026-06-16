@@ -4,7 +4,7 @@ import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { doc, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
-import { auth, db, appId } from "../../../../lib/firebase";
+import { auth, db, appId } from "../../../lib/firebase";
 
 export default function ProposalPage({ params }) {
     const unwrappedParams = use(params);
@@ -142,25 +142,18 @@ export default function ProposalPage({ params }) {
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans flex flex-col print:bg-white">
-            {/* Force tight page margins for printing so everything fits on one page */}
-            <style dangerouslySetInnerHTML={{__html: `
-                @media print {
-                    @page { margin: 0.4in; }
-                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                }
-            `}} />
-
-            {/* BRANDED HEADER - Squashed for print */}
-            <header className="border-b border-gray-200 py-6 px-6 print:py-3 print:px-2 text-center shadow-sm print:shadow-none" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
+            
+            {/* BRANDED HEADER - Force background colors to print */}
+            <header className="border-b border-gray-200 py-6 px-6 text-center shadow-sm print:shadow-none" style={{ backgroundColor: brandBgColor, color: brandTextColor, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
                 {logoUrl ? (
-                    <img src={logoUrl} alt={businessName} className="h-16 md:h-20 print:h-10 w-auto mx-auto object-contain" />
+                    <img src={logoUrl} alt={businessName} className="h-16 md:h-20 w-auto mx-auto object-contain" />
                 ) : (
-                    <h1 className="text-2xl md:text-3xl print:text-xl font-black uppercase tracking-tighter leading-none m-0">{businessName}</h1>
+                    <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none m-0">{businessName}</h1>
                 )}
-                <p className="text-[10px] md:text-xs print:text-[8px] font-black italic tracking-widest uppercase mt-2 print:mt-1 opacity-80 m-0">Official Turnkey Proposal</p>
+                <p className="text-[10px] md:text-xs font-black italic tracking-widest uppercase mt-2 opacity-80 m-0">Official Turnkey Proposal</p>
             </header>
 
-            <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-12 print:py-4 print:px-0">
+            <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-12 print:py-8">
                 
                 {/* ACTION BAR (Hidden on PDF) */}
                 <div className="flex justify-end mb-6 print:hidden">
@@ -169,142 +162,142 @@ export default function ProposalPage({ params }) {
                     </button>
                 </div>
 
-                {/* PROPOSAL TITLE BLOCK - Squashed for print */}
-                <div className="bg-white p-8 md:p-10 print:p-4 rounded-3xl print:rounded-xl shadow-sm border border-gray-100 mb-8 print:mb-3 relative overflow-hidden print:border-gray-300 print:shadow-none">
-                    <div className="absolute top-0 left-0 w-2 h-full print:w-1" style={{ backgroundColor: brandBgColor }}></div>
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6 print:gap-2">
+                {/* PROPOSAL TITLE BLOCK */}
+                <div className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100 mb-8 relative overflow-hidden print:border-gray-300 print:shadow-none">
+                    <div className="absolute top-0 left-0 w-2 h-full" style={{ backgroundColor: brandBgColor, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}></div>
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6">
                         <div>
-                            <h2 className="text-[10px] print:text-[8px] font-black uppercase tracking-widest text-gray-400 mb-2 print:mb-0.5">Prepared For:</h2>
-                            <h1 className="text-3xl md:text-4xl print:text-xl font-black text-gray-900 leading-none">{quote.clientName}</h1>
-                            <p className="text-lg print:text-xs text-gray-500 mt-2 print:mt-0.5 font-medium">{quote.projectName}</p>
+                            <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Prepared For:</h2>
+                            <h1 className="text-3xl md:text-4xl font-black text-gray-900 leading-none">{quote.clientName}</h1>
+                            <p className="text-lg text-gray-500 mt-2 font-medium">{quote.projectName}</p>
                         </div>
                         <div className="text-left md:text-right">
-                            <p className="text-xs print:text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1 print:mb-0">Date Issued</p>
-                            <p className="text-sm print:text-[10px] font-bold text-gray-900">{new Date(quote.createdAt).toLocaleDateString()}</p>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Date Issued</p>
+                            <p className="text-sm font-bold text-gray-900">{new Date(quote.createdAt).toLocaleDateString()}</p>
                         </div>
                     </div>
                 </div>
 
-                {/* THE SELECTED PRODUCT - Squashed for print */}
-                <div className="bg-white rounded-3xl print:rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8 print:mb-3 flex flex-col md:flex-row group print:border-gray-300 print:shadow-none print:break-inside-avoid">
-                    <Link href={productLink} className="md:w-2/5 print:w-1/4 h-64 md:h-auto print:h-24 relative overflow-hidden bg-gray-100 block print:pointer-events-none" style={{ textDecoration: 'none' }}>
+                {/* THE SELECTED PRODUCT */}
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-8 flex flex-col md:flex-row group print:border-gray-300 print:shadow-none print:break-inside-avoid">
+                    <Link href={productLink} className="md:w-2/5 h-64 md:h-auto relative overflow-hidden bg-gray-100 block print:pointer-events-none" style={{ textDecoration: 'none' }}>
                         <img src={fbPath} className="w-full h-full object-cover transition duration-500 group-hover:scale-105" onError={e => e.target.src=TBD_IMG} alt={quote.productName} />
-                        <div className="absolute bottom-4 left-4 print:bottom-1 print:left-1 bg-black/50 backdrop-blur-md px-3 py-1 print:px-1.5 print:py-0.5 rounded-full border border-white/20 shadow-sm print:bg-black/70">
-                            <span className="text-white font-bold text-xs print:text-[7px]">Color: {quote.colorName}</span>
+                        <div className="absolute bottom-4 left-4 bg-black/50 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-sm print:bg-black/70">
+                            <span className="text-white font-bold text-xs">Color: {quote.colorName}</span>
                         </div>
                     </Link>
-                    <div className="p-8 print:p-4 flex-1 flex flex-col justify-center">
-                        <div className="text-[10px] print:text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-2 print:mb-0.5">{quote.category}</div>
-                        <h3 className="text-2xl print:text-sm font-black text-gray-900 mb-4 print:mb-1">{quote.productName}</h3>
-                        <p className="text-gray-500 text-sm print:text-[9px] print:leading-tight mb-6 print:mb-0 line-clamp-3 print:line-clamp-2">{productDetails?.desc || 'Premium flooring collection.'}</p>
+                    <div className="p-8 flex-1 flex flex-col justify-center">
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">{quote.category}</div>
+                        <h3 className="text-2xl font-black text-gray-900 mb-4">{quote.productName}</h3>
+                        <p className="text-gray-500 text-sm mb-6 line-clamp-3 print:line-clamp-none">{productDetails?.desc || 'Premium flooring collection.'}</p>
                         <Link href={productLink} className="inline-block text-center font-black uppercase py-3 px-6 rounded-xl transition text-xs tracking-widest w-full md:w-auto print:hidden" style={{ textDecoration: 'none', backgroundColor: brandBgColor, color: brandTextColor, border: `1px solid ${brandTextColor}` }}>
                             View Photos & Specs
                         </Link>
                     </div>
                 </div>
 
-                {/* THE INCLUSIONS CHECKLIST - Squashed for print */}
-                <div className="bg-white p-8 md:p-10 print:p-4 rounded-3xl print:rounded-xl shadow-sm border border-gray-100 mb-8 print:mb-3 print:border-gray-300 print:shadow-none print:break-inside-avoid">
-                    <h3 className="text-xl print:text-sm font-black text-gray-900 mb-6 print:mb-2 border-b border-gray-100 pb-4 print:pb-1">Project Inclusions</h3>
+                {/* THE INCLUSIONS CHECKLIST */}
+                <div className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100 mb-8 print:border-gray-300 print:shadow-none print:break-inside-avoid">
+                    <h3 className="text-xl font-black text-gray-900 mb-6 border-b border-gray-100 pb-4">Project Inclusions</h3>
                     
-                    <ul className="space-y-4 print:space-y-1.5 text-base print:text-[10px] text-gray-700">
+                    <ul className="space-y-4 text-base text-gray-700">
                         {/* Material */}
-                        <li className="flex gap-4 print:gap-2 items-start">
-                            <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                        <li className="flex gap-4 items-start">
+                            <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
                             <div>
-                                <span className="font-bold text-gray-900 block print:leading-tight">Premium Flooring Material</span>
-                                <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">{Math.ceil(quote.measurements.netSqft)} net sqft of {quote.productName} in {quote.colorName}.</span>
+                                <span className="font-bold text-gray-900 block">Premium Flooring Material</span>
+                                <span className="text-sm text-gray-500">{Math.ceil(quote.measurements.netSqft)} net sqft of {quote.productName} in {quote.colorName}.</span>
                             </div>
                         </li>
                         
                         {/* Pad */}
                         {quote.addons?.pad && (
-                            <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                            <li className="flex gap-4 items-start">
+                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
                                 <div>
-                                    <span className="font-bold text-gray-900 block print:leading-tight">Carpet Cushion</span>
-                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">{quote.addons.pad.name}.</span>
+                                    <span className="font-bold text-gray-900 block">Carpet Cushion</span>
+                                    <span className="text-sm text-gray-500">{quote.addons.pad.name}.</span>
                                 </div>
                             </li>
                         )}
 
                         {/* Trims */}
                         {quote.addons?.trims && (
-                            <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                            <li className="flex gap-4 items-start">
+                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
                                 <div>
-                                    <span className="font-bold text-gray-900 block print:leading-tight">Transitions & Moldings</span>
-                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">{trimText} included.</span>
+                                    <span className="font-bold text-gray-900 block">Transitions & Moldings</span>
+                                    <span className="text-sm text-gray-500">{trimText} included.</span>
                                 </div>
                             </li>
                         )}
 
                         {/* Prep */}
                         {quote.services?.prep > 0 && (
-                            <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                            <li className="flex gap-4 items-start">
+                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
                                 <div>
-                                    <span className="font-bold text-gray-900 block print:leading-tight">Tear Out & Prep</span>
-                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">Removal of old flooring and subfloor preparation.</span>
+                                    <span className="font-bold text-gray-900 block">Tear Out & Prep</span>
+                                    <span className="text-sm text-gray-500">Removal of old flooring and subfloor preparation.</span>
                                 </div>
                             </li>
                         )}
 
                         {/* Install */}
                         {quote.services?.installTotal > 0 && (
-                            <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                            <li className="flex gap-4 items-start">
+                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
                                 <div>
-                                    <span className="font-bold text-gray-900 block print:leading-tight">Professional Installation</span>
-                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">Expert installation of {quote.measurements.netSqft} net sqft.</span>
+                                    <span className="font-bold text-gray-900 block">Professional Installation</span>
+                                    <span className="text-sm text-gray-500">Expert installation of {quote.measurements.netSqft} net sqft.</span>
                                 </div>
                             </li>
                         )}
 
                         {/* Delivery */}
                         {quote.services?.delivery > 0 && (
-                            <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                            <li className="flex gap-4 items-start">
+                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
                                 <div>
-                                    <span className="font-bold text-gray-900 block print:leading-tight">Materials Delivery</span>
-                                    <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">Logistics and handling to job site.</span>
+                                    <span className="font-bold text-gray-900 block">Materials Delivery</span>
+                                    <span className="text-sm text-gray-500">Logistics and handling to job site.</span>
                                 </div>
                             </li>
                         )}
 
                         {/* Custom Lines */}
                         {quote.services?.custom1 && (
-                            <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                            <li className="flex gap-4 items-start">
+                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
                                 <div>
-                                    <span className="font-bold text-gray-900 block print:leading-tight">{quote.services.custom1.name}</span>
+                                    <span className="font-bold text-gray-900 block">{quote.services.custom1.name}</span>
                                 </div>
                             </li>
                         )}
                         {quote.services?.custom2 && (
-                            <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:border-emerald-600 print:text-[8px]">✓</span> 
+                            <li className="flex gap-4 items-start">
+                                <span className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold shrink-0 mt-0.5 print:border print:border-emerald-600">✓</span> 
                                 <div>
-                                    <span className="font-bold text-gray-900 block print:leading-tight">{quote.services.custom2.name}</span>
+                                    <span className="font-bold text-gray-900 block">{quote.services.custom2.name}</span>
                                 </div>
                             </li>
                         )}
                     </ul>
                 </div>
 
-                {/* THE GRAND TOTAL - Squashed for print */}
-                <div className="bg-gray-900 p-8 md:p-12 print:p-4 rounded-3xl print:rounded-xl shadow-2xl text-center md:text-right text-white mb-12 print:mb-3 print:shadow-none print:bg-gray-100 print:text-black print:border print:border-gray-300 print:break-inside-avoid">
-                    <p className="text-xs md:text-sm print:text-[9px] font-bold text-gray-400 print:text-gray-500 uppercase tracking-widest mb-2 print:mb-0.5">Turnkey Project Total</p>
-                    <p className="text-4xl md:text-6xl print:text-2xl font-black font-mono text-white print:text-black tracking-tight mb-2 print:mb-0.5">
+                {/* THE GRAND TOTAL */}
+                <div className="bg-gray-900 p-8 md:p-12 rounded-3xl shadow-2xl text-center md:text-right text-white mb-12 print:shadow-none print:border print:border-gray-800 print:break-inside-avoid" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                    <p className="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Turnkey Project Total</p>
+                    <p className="text-4xl md:text-6xl font-black font-mono text-white tracking-tight mb-2">
                         ${quote.totals.turnkeyRetail.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
-                    <p className="text-[10px] print:text-[7px] text-gray-500 uppercase tracking-widest font-bold m-0">Includes materials, accessories, and labor as detailed above.</p>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Includes materials, accessories, and labor as detailed above.</p>
                 </div>
 
-                {/* TERMS AND CONDITIONS - Squashed for print */}
-                <div className="bg-white p-8 md:p-10 print:p-4 rounded-3xl print:rounded-xl shadow-sm border border-gray-100 print:border-gray-300 print:shadow-none print:break-inside-avoid">
-                    <h3 className="text-lg print:text-xs font-black text-gray-900 mb-4 print:mb-1.5 border-b border-gray-100 print:border-gray-200 pb-2 print:pb-1">Terms & Conditions</h3>
-                    <ul className="text-xs print:text-[8px] text-gray-600 space-y-3 print:space-y-1 list-disc pl-4 leading-relaxed print:leading-tight m-0">
+                {/* TERMS AND CONDITIONS */}
+                <div className="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100 print:border-gray-300 print:shadow-none print:break-inside-avoid">
+                    <h3 className="text-lg font-black text-gray-900 mb-4 border-b border-gray-100 pb-2">Terms & Conditions</h3>
+                    <ul className="text-xs text-gray-600 space-y-3 list-disc pl-4 leading-relaxed">
                         <li><strong>Proposal Validity:</strong> This proposal and its pricing are valid for 30 days from the date issued. Following this period, material costs are subject to manufacturer price increases.</li>
                         <li><strong>Site Conditions & Acclimation:</strong> The job site must be climate-controlled (65-75°F with 35-55% humidity) with an operational HVAC system before, during, and after installation to ensure material integrity and maintain manufacturer warranties.</li>
                         <li><strong>Unforeseen Subfloor Issues:</strong> This proposal assumes a standard, structurally sound subfloor. Any hidden damage, dry rot, severe leveling requirements, or moisture issues discovered after the removal of existing flooring will require a separate change order and additional costs.</li>
@@ -316,11 +309,11 @@ export default function ProposalPage({ params }) {
             </main>
 
             {/* BRANDED FOOTER */}
-            <footer className="py-12 print:py-2 text-center mt-auto border-t border-gray-200 print:hidden" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
+            <footer className="py-12 text-center mt-auto border-t border-gray-200 print:hidden" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
                 {logoUrl && (
                     <img src={logoUrl} alt={businessName} className="h-12 w-auto mx-auto object-contain mb-4 opacity-80" style={{ filter: brandBgColor.toLowerCase() === '#ffffff' ? 'none' : 'brightness(0) invert(1) opacity(0.8)' }} />
                 )}
-                <p className="text-xs uppercase tracking-widest font-bold opacity-80 m-0">
+                <p className="text-xs uppercase tracking-widest font-bold opacity-80">
                     © {new Date().getFullYear()} {businessName}. All Rights Reserved.
                 </p>
             </footer>

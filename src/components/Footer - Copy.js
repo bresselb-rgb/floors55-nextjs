@@ -43,7 +43,7 @@ export default function Footer() {
       }
   }, [pathname]);
 
-  if (pathname && (pathname.startsWith('/client/') || pathname.startsWith('/proposal/'))) return null;
+  if (pathname && pathname.startsWith('/client/')) return null;
   
   // FIX: Intercept rendering entirely to prevent the brief branding flash
   if (isProcessingMagicLink) return null;
