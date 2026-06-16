@@ -35,7 +35,7 @@ export default function ClientBoardPage({ params }) {
                 const boardData = boardDoc.data();
                 if (isMounted) setBoard(boardData);
 
-                // 2. Fetch the Pro's Profile (for Margin and Business Name)
+                // 2. Fetch the Pro's Profile (for backup Margin and Business Name)
                 if (boardData.proId) {
                     const proRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', boardData.proId);
                     const proSnap = await getDoc(proRef);
@@ -84,6 +84,26 @@ export default function ClientBoardPage({ params }) {
             unsub();
         };
     }, [slug]);
+
+    // FIX: Aggressively push all branding data into sessionStorage so it persists across product clicks
+    useEffect(() => {
+        if (board) {
+            const bName = board.businessName || proProfile?.business || "Your Flooring Professional";
+            const mgn = board.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
+            const lUrl = board.logoUrl || proProfile?.logoUrl || "";
+            const bBg = board.brandBgColor || proProfile?.brandBgColor || "#ffffff";
+            const bText = board.brandTextColor || proProfile?.brandTextColor || "#000000";
+
+            sessionStorage.setItem('client_brand', bName);
+            if (lUrl) sessionStorage.setItem('client_logo', lUrl);
+            else sessionStorage.removeItem('client_logo');
+            
+            sessionStorage.setItem('client_bg', bBg);
+            sessionStorage.setItem('client_text', bText);
+            sessionStorage.setItem('client_margin', mgn);
+            sessionStorage.setItem('magic_link_client', 'true');
+        }
+    }, [board, proProfile]);
 
     if (isLoading) {
         return (
@@ -160,7 +180,8 @@ export default function ClientBoardPage({ params }) {
                             const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
                             const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
-                            const productLink = `/product/${p.id}?cm=${cmToken}&cb=${cbToken}#${p.id}?color=${displaySku}`;
+                            // FIX: Added the specific ?pro= link target so double-verifies branding when exiting the board
+                            const productLink = `/product/${p.id}?pro=${board.proId || ''}&cm=${cmToken}#${p.id}?color=${displaySku}`;
 
                             return (
                                 <div key={p.id + displaySku} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition group">
@@ -187,7 +208,7 @@ export default function ClientBoardPage({ params }) {
                                                 <span className="text-xs text-gray-400 uppercase font-black tracking-wider">Project Price</span>
                                                 <span className="text-xl font-black text-gray-900 font-mono">${finalPrice} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
                                             </div>
-                                            <Link href={productLink} className="w-full block text-center hover:bg-gold hover:text-black font-black uppercase py-3 rounded-xl transition text-xs tracking-widest" style={{ textDecoration: 'none', backgroundColor: brandBgColor, color: brandTextColor, border: `1px solid ${brandTextColor}` }}>
+                                            <Link href={productLink} className="w-full block text-center hover:opacity-80 font-black uppercase py-3 rounded-xl transition text-xs tracking-widest" style={{ textDecoration: 'none', backgroundColor: brandBgColor, color: brandTextColor, border: `1px solid ${brandTextColor}` }}>
                                                 View Details & Photos
                                             </Link>
                                         </div>
@@ -199,6 +220,7 @@ export default function ClientBoardPage({ params }) {
                 )}
             </main>
 
+            {/* Custom White-Labeled Footer */}
             <footer className="py-12 text-center mt-auto border-t border-gray-200" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
                 {logoUrl && (
                     <img src={logoUrl} alt={businessName} className="h-12 w-auto mx-auto object-contain mb-4 opacity-80" style={{ filter: brandBgColor.toLowerCase() === '#ffffff' ? 'none' : 'brightness(0) invert(1) opacity(0.8)' }} />

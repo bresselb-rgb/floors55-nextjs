@@ -7,7 +7,6 @@ import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { auth, db, appId } from "../../../lib/firebase";
 
 export default function ClientBoardPage({ params }) {
-    // Safely unwrap the URL parameters for Next.js
     const unwrappedParams = use(params);
     const slug = unwrappedParams.slug;
 
@@ -22,7 +21,6 @@ export default function ClientBoardPage({ params }) {
 
         const fetchBoardData = async () => {
             try {
-                // 1. Find the board by its unique slug
                 const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'client_boards'), where('slug', '==', slug));
                 const querySnapshot = await getDocs(q);
 
@@ -35,16 +33,12 @@ export default function ClientBoardPage({ params }) {
                 const boardData = boardDoc.data();
                 if (isMounted) setBoard(boardData);
 
-                // 2. Fetch the Pro's Profile (for backup Margin and Business Name)
                 if (boardData.proId) {
                     const proRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', boardData.proId);
                     const proSnap = await getDoc(proRef);
-                    if (proSnap.exists()) {
-                        if (isMounted) setProProfile(proSnap.data());
-                    }
+                    if (proSnap.exists() && isMounted) setProProfile(proSnap.data());
                 }
 
-                // 3. Fetch the specific products
                 if (boardData.products && boardData.products.length > 0) {
                     const prodPromises = boardData.products.map(async (savedItem) => {
                         const pDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', savedItem.productId));
@@ -53,7 +47,8 @@ export default function ClientBoardPage({ params }) {
                                 id: pDoc.id,
                                 ...pDoc.data(),
                                 savedColorSku: savedItem.colorSku,
-                                savedColorName: savedItem.colorName
+                                savedColorName: savedItem.colorName,
+                                quote: savedItem.quote || null // Extract the new quote object if it exists!
                             };
                         }
                         return null;
@@ -70,7 +65,6 @@ export default function ClientBoardPage({ params }) {
             }
         };
 
-        // Authenticate the homeowner anonymously so Firebase allows them to read the board
         const unsub = onAuthStateChanged(auth, async (user) => {
             if (!user) {
                 signInAnonymously(auth).catch(() => {});
@@ -85,7 +79,6 @@ export default function ClientBoardPage({ params }) {
         };
     }, [slug]);
 
-    // FIX: Aggressively push all branding data into sessionStorage so it persists across product clicks
     useEffect(() => {
         if (board) {
             const bName = board.businessName || proProfile?.business || "Your Flooring Professional";
@@ -129,7 +122,6 @@ export default function ClientBoardPage({ params }) {
     const brandBgColor = board?.brandBgColor || proProfile?.brandBgColor || "#ffffff";
     const brandTextColor = board?.brandTextColor || proProfile?.brandTextColor || "#000000";
     
-    // Encode state to pass to product page via URL
     let cmToken = '';
     let cbToken = '';
     try {
@@ -139,7 +131,6 @@ export default function ClientBoardPage({ params }) {
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans flex flex-col">
-            {/* Custom White-Labeled Header */}
             <header className="border-b border-gray-200 py-6 px-6 text-center shadow-sm" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
                 {logoUrl ? (
                     <img src={logoUrl} alt={businessName} className="h-16 md:h-20 w-auto mx-auto object-contain" />
@@ -158,13 +149,9 @@ export default function ClientBoardPage({ params }) {
                 {products.length === 0 ? (
                     <div className="text-center py-20 text-gray-400 text-sm italic bg-white border border-gray-200 rounded-2xl">No products have been added to this board yet.</div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {products.map(p => {
-                            // Calculate proper display title!
                             const displayTitle = (p.usePrivateName && p.privateName) ? p.privateName : (p.name || 'Unnamed Product');
-                            const finalPrice = (p.price * (1 + margin / 100)).toFixed(2);
-                            
-                            const safeDesc = p.desc || 'Premium flooring collection.';
                             const safePrefix = p.imgPrefix || '';
                             const displaySku = p.savedColorSku || (p.colors?.[0]?.sku || '01');
                             
@@ -180,11 +167,13 @@ export default function ClientBoardPage({ params }) {
                             const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
                             const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
-                            // FIX: Added the specific ?pro= link target so double-verifies branding when exiting the board
                             const productLink = `/product/${p.id}?pro=${board.proId || ''}&cm=${cmToken}#${p.id}?color=${displaySku}`;
 
+                            // Check if this product has a Turnkey Proposal attached
+                            const hasQuote = p.quote && p.quote.totals;
+
                             return (
-                                <div key={p.id + displaySku} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition group">
+                                <div key={p.id + displaySku} className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition group">
                                     <Link href={productLink} className="block overflow-hidden h-64 bg-gray-50 relative" style={{ textDecoration: 'none' }}>
                                         <img src={fbPath} className="w-full h-full object-cover transition duration-500 group-hover:scale-105" onError={e => e.target.src=TBD_IMG} />
                                         <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/60 to-transparent p-4">
@@ -192,24 +181,47 @@ export default function ClientBoardPage({ params }) {
                                         </div>
                                     </Link>
 
-                                    <div className="p-6 flex-1 flex flex-col justify-between">
-                                        <div className="space-y-1 mb-6">
-                                            <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                    <div className="p-8 flex-1 flex flex-col justify-between">
+                                        <div>
+                                            <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
                                                 <span>{p.category}</span>
                                             </div>
-                                            <h3 className="text-xl font-black text-gray-900 leading-tight">
+                                            <h3 className="text-2xl font-black text-gray-900 leading-tight mb-6">
                                                 <Link href={productLink} style={{ textDecoration: 'none', color: 'inherit' }}>{displayTitle}</Link>
                                             </h3>
-                                            <p className="text-gray-500 text-sm line-clamp-2 mt-2">{safeDesc}</p>
+
+                                            {hasQuote ? (
+                                                <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 mb-6">
+                                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-gold mb-3">Proposal Inclusions</h4>
+                                                    <ul className="space-y-2.5 text-sm text-gray-700">
+                                                        <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>{Math.ceil(p.quote.measurements.coverageSqft)} sqft of {displayTitle} in {p.savedColorName}</span></li>
+                                                        {p.quote.addons?.pad && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>{p.quote.addons.pad.name}</span></li>}
+                                                        {p.quote.addons?.trims && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>Matching transition moldings & stair noses</span></li>}
+                                                        {p.quote.services?.prep > 0 && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>Tear out and subfloor preparation</span></li>}
+                                                        {p.quote.services?.install > 0 && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>Professional installation labor</span></li>}
+                                                        {p.quote.services?.delivery > 0 && <li className="flex gap-2 items-start"><span className="text-emerald-500 font-bold">✓</span> <span>Materials delivery & logistics</span></li>}
+                                                    </ul>
+                                                </div>
+                                            ) : (
+                                                <p className="text-gray-500 text-sm line-clamp-3 mb-6">{p.desc || 'Premium flooring collection.'}</p>
+                                            )}
                                         </div>
 
-                                        <div className="space-y-4 pt-4 border-t border-gray-100">
-                                            <div className="flex justify-between items-baseline">
-                                                <span className="text-xs text-gray-400 uppercase font-black tracking-wider">Project Price</span>
-                                                <span className="text-xl font-black text-gray-900 font-mono">${finalPrice} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
-                                            </div>
-                                            <Link href={productLink} className="w-full block text-center hover:opacity-80 font-black uppercase py-3 rounded-xl transition text-xs tracking-widest" style={{ textDecoration: 'none', backgroundColor: brandBgColor, color: brandTextColor, border: `1px solid ${brandTextColor}` }}>
-                                                View Details & Photos
+                                        <div className="space-y-4 pt-6 border-t border-gray-100">
+                                            {hasQuote ? (
+                                                <div className="flex justify-between items-baseline">
+                                                    <span className="text-sm text-gray-400 uppercase font-black tracking-wider">Turnkey Project Total</span>
+                                                    <span className="text-3xl font-black text-gray-900 font-mono">${p.quote.totals.turnkeyRetail.toFixed(2)}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex justify-between items-baseline">
+                                                    <span className="text-xs text-gray-400 uppercase font-black tracking-wider">Material Price</span>
+                                                    <span className="text-2xl font-black text-gray-900 font-mono">${(p.price * (1 + margin / 100)).toFixed(2)} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
+                                                </div>
+                                            )}
+                                            
+                                            <Link href={productLink} className="w-full block text-center hover:opacity-80 font-black uppercase py-4 rounded-xl transition text-xs tracking-widest mt-2 shadow-sm hover:shadow-md" style={{ textDecoration: 'none', backgroundColor: brandBgColor, color: brandTextColor, border: `1px solid ${brandTextColor}` }}>
+                                                View Product Details & Photos
                                             </Link>
                                         </div>
                                     </div>
@@ -220,7 +232,6 @@ export default function ClientBoardPage({ params }) {
                 )}
             </main>
 
-            {/* Custom White-Labeled Footer */}
             <footer className="py-12 text-center mt-auto border-t border-gray-200" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
                 {logoUrl && (
                     <img src={logoUrl} alt={businessName} className="h-12 w-auto mx-auto object-contain mb-4 opacity-80" style={{ filter: brandBgColor.toLowerCase() === '#ffffff' ? 'none' : 'brightness(0) invert(1) opacity(0.8)' }} />
