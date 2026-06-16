@@ -1,9 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    // This allows Vercel to successfully build even if there are unescaped apostrophes
-    ignoreDuringBuilds: true,
-  },
   images: {
     remotePatterns: [
       {

@@ -8,6 +8,21 @@ import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "fi
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc } from "firebase/firestore";
 import { auth, db, appId } from "../lib/firebase";
 
+// Safely handle Next.js Image fallbacks without causing srcset hydration crashes
+const CatalogImage = ({ src, alt, fallbackSrc, priority, ...props }) => {
+    const [error, setError] = useState(false);
+    useEffect(() => { setError(false); }, [src]);
+    return (
+        <Image 
+            src={error ? fallbackSrc : src} 
+            alt={alt} 
+            onError={() => setError(true)} 
+            priority={priority}
+            {...props} 
+        />
+    );
+};
+
 function ProductViewerContent({ initialProduct }) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -465,7 +480,9 @@ function ProductViewerContent({ initialProduct }) {
                             router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
                             setActiveColor(c);
                         }}>
-                            <img src={fbPath} onError={(e) => e.target.src = TBD_IMG} className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} alt={c.name} />
+                            <div className={`relative w-full aspect-square border-2 rounded-md transition duration-200 bg-gray-100 overflow-hidden ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`}>
+                                <CatalogImage src={fbPath} fallbackSrc={TBD_IMG} alt={c.name} fill sizes="85px" className="object-cover" />
+                            </div>
                             <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
                         </div>
                     );
@@ -486,14 +503,29 @@ function ProductViewerContent({ initialProduct }) {
                 {activeView === 'VIDEO' ? (
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
-                    <Image src={getMediaPath(activeView) || TBD_IMG} alt="Product" fill priority sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.srcset = ''; e.currentTarget.src = TBD_IMG; }} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
+                    <CatalogImage 
+                        src={getMediaPath(activeView) || TBD_IMG} 
+                        fallbackSrc={TBD_IMG}
+                        alt="Product" 
+                        fill 
+                        priority={true}
+                        sizes="(max-width: 1024px) 100vw, 50vw" 
+                        className="object-cover transition-opacity duration-200 group-hover:opacity-85" 
+                        style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} 
+                    />
                 )}
             </div>
 
             {productData.views && (
                 <div className="mt-4 flex gap-3">
                     {productData.views.map(v => (
-                         <img key={v} src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)} className={`w-[75px] h-[75px] object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} onClick={() => setActiveView(v)} onError={(e) => e.target.src = TBD_IMG} alt={`View ${v}`} />
+                         <div key={v} className={`relative w-[75px] h-[75px] border-2 rounded cursor-pointer transition overflow-hidden bg-gray-100 ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200'}`} onClick={() => setActiveView(v)}>
+                             {v === 'VIDEO' ? (
+                                 <img src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' className="w-full h-full object-cover" alt="Video View" />
+                             ) : (
+                                 <CatalogImage src={getMediaPath(v) || TBD_IMG} fallbackSrc={TBD_IMG} fill sizes="75px" className="object-cover" alt={`View ${v}`} />
+                             )}
+                         </div>
                     ))}
                 </div>
             )}
@@ -572,8 +604,9 @@ function ProductViewerContent({ initialProduct }) {
                     <h4 className="mt-0 uppercase tracking-widest text-gold text-sm font-bold mb-4">Technical Specifications</h4>
                     <ul className="list-disc pl-5 space-y-2 text-gray-600 text-sm">
                         {productData.specs.map((s, i) => {
-                            if (!spec.includes(':')) return <li key={i} className="text-sm text-gray-600 font-medium pb-2 border-b border-gray-100">{spec}</li>;
-                            const [key, val] = spec.split(':');
+                            if (!s.includes(':')) return <li key={i} className="text-sm text-gray-600 font-medium pb-2 border-b border-gray-100">{s}</li>;
+                            const [key, ...rest] = s.split(':');
+                            const val = rest.join(':');
                             return (
                                 <li key={i} className="flex flex-col pb-2 border-b border-gray-100">
                                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">{key.trim()}</span>
@@ -768,7 +801,14 @@ function ProductViewerContent({ initialProduct }) {
               <div className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center backdrop-blur-sm transition-opacity" onClick={(e) => { if (e.target === e.currentTarget) setIsLightboxOpen(false); }}>
                   <button className="absolute top-5 right-5 bg-black/60 text-white border-2 border-white rounded-full w-11 h-11 text-2xl flex items-center justify-center cursor-pointer hover:bg-gold hover:border-gold hover:text-black transition-colors z-[10000] outline-none" onClick={() => setIsLightboxOpen(false)}>✕</button>
                   <div className="w-[90vw] max-w-[1200px] h-[85vh] relative rounded-lg overflow-hidden cursor-crosshair touch-none" onMouseMove={handleZoomPan} onTouchMove={handleZoomPan} onMouseLeave={() => setZoomPos({x:50, y:50})} onTouchEnd={() => setZoomPos({x:50, y:50})}>
-                      <img src={getMediaPath(activeView) || TBD_IMG} alt="Zoomed Product" className="w-full h-full object-contain transition-transform duration-150 ease-out hover:scale-[2.2]" style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }} onError={(e) => e.target.src = TBD_IMG} />
+                      <CatalogImage 
+                          src={getMediaPath(activeView) || TBD_IMG} 
+                          fallbackSrc={TBD_IMG}
+                          alt="Zoomed Product" 
+                          fill
+                          className="object-contain transition-transform duration-150 ease-out hover:scale-[2.2]" 
+                          style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }} 
+                      />
                   </div>
               </div>
           )}
