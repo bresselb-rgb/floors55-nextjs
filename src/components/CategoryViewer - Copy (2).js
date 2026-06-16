@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import Image from 'next/image';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { collection, onSnapshot, doc, getDoc } from "firebase/firestore";
 
@@ -676,8 +675,6 @@ function CategoryViewerContent({ initialCategory }) {
       );
   };
 
-  const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
-
   let heroImage = 'images/heros/main-hero.jpg';
   if (activeCategory === 'Luxury Vinyl (LVP)') heroImage = 'images/heros/lvp.jpg';
   else if (activeCategory === 'Carpet') heroImage = 'images/heros/carpet.jpg';
@@ -685,6 +682,7 @@ function CategoryViewerContent({ initialCategory }) {
   else if (activeCategory === 'Hardwood') heroImage = 'images/heros/hardwood.jpg';
 
   const heroFbUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(heroImage)}?alt=media`;
+  const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
   const exitBtnBg = typeof window !== 'undefined' ? (sessionStorage.getItem('client_bg') || '#ef4444') : '#ef4444';
   const exitBtnText = typeof window !== 'undefined' ? (sessionStorage.getItem('client_text') || '#ffffff') : '#ffffff';
@@ -855,8 +853,8 @@ function CategoryViewerContent({ initialCategory }) {
                                         </div>
                                     )}
 
-                                    <Link href={`/product/${p.id}`} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block relative" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
-                                        <Image src={fbPath} alt={p.displayTitle || 'Product'} fill sizes={isListView ? "(max-width: 640px) 100vw, 160px" : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"} className="object-cover transition duration-300 hover:scale-105" onError={(e) => { e.currentTarget.srcset = ''; e.currentTarget.src = TBD_IMG; }} />
+                                    <Link href={`/product/${p.id}`} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
+                                        <img src={fbPath} className="w-full h-full object-cover transition duration-300 hover:scale-105" onError={e => e.target.src=TBD_IMG} />
                                     </Link>
 
                                     {!isListView && (

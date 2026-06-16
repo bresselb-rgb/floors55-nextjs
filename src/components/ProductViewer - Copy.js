@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc } from "firebase/firestore";
@@ -486,7 +485,7 @@ function ProductViewerContent({ initialProduct }) {
                 {activeView === 'VIDEO' ? (
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
-                    <Image src={getMediaPath(activeView) || TBD_IMG} alt="Product" fill priority sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.srcset = ''; e.currentTarget.src = TBD_IMG; }} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
+                    <img src={getMediaPath(activeView) || TBD_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => e.target.src = TBD_IMG} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
                 )}
             </div>
 
@@ -572,14 +571,9 @@ function ProductViewerContent({ initialProduct }) {
                     <h4 className="mt-0 uppercase tracking-widest text-gold text-sm font-bold mb-4">Technical Specifications</h4>
                     <ul className="list-disc pl-5 space-y-2 text-gray-600 text-sm">
                         {productData.specs.map((s, i) => {
-                            if (!spec.includes(':')) return <li key={i} className="text-sm text-gray-600 font-medium pb-2 border-b border-gray-100">{spec}</li>;
-                            const [key, val] = spec.split(':');
-                            return (
-                                <li key={i} className="flex flex-col pb-2 border-b border-gray-100">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">{key.trim()}</span>
-                                    <span className="text-sm font-bold text-gray-900">{val.trim()}</span>
-                                </li>
-                            );
+                            const [label, ...rest] = s.split(':');
+                            if (rest.length === 0) return <li key={i}>{s}</li>;
+                            return <li key={i}><strong>{label}:</strong> {rest.join(':')}</li>;
                         })}
                     </ul>
                 </div>
