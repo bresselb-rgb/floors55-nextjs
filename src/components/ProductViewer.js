@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
-import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc } from "firebase/firestore";
 import { auth, db, appId } from "../lib/firebase";
 
 function ProductViewerContent({ initialProduct }) {
@@ -32,30 +32,24 @@ function ProductViewerContent({ initialProduct }) {
 
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     
-    // Proposal Builder States
     const [isBuilderOpen, setIsBuilderOpen] = useState(false);
     const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
 
-    // New: Quote Metadata
     const [quoteClientName, setQuoteClientName] = useState('');
     const [quoteProjectName, setQuoteProjectName] = useState('');
 
-    // Measurements
     const [calcNetSqft, setCalcNetSqft] = useState('');
     const [calcWaste, setCalcWaste] = useState('1.10');
     
-    // Add-ons
     const [padSelection, setPadSelection] = useState('none');
     const [padCost, setPadCost] = useState('0.00');
     
-    // Updated Trim Logic
     const [trimQty, setTrimQty] = useState({ standard: 0, stairnose: 0, quarterRound: 0 });
     const [trimCost, setTrimCost] = useState({ standard: 25, stairnose: 45, quarterRound: 10 });
 
-    // Services (Updated with Per Sqft Install & Custom Lines)
-    const [laborPrep, setLaborPrep] = useState(''); // Lump sum
-    const [laborInstallPerSqft, setLaborInstallPerSqft] = useState(''); // Per sqft
-    const [laborDelivery, setLaborDelivery] = useState(''); // Lump sum
+    const [laborPrep, setLaborPrep] = useState(''); 
+    const [laborInstallPerSqft, setLaborInstallPerSqft] = useState(''); 
+    const [laborDelivery, setLaborDelivery] = useState(''); 
     const [customLabor1Name, setCustomLabor1Name] = useState('');
     const [customLabor1Cost, setCustomLabor1Cost] = useState('');
     const [customLabor2Name, setCustomLabor2Name] = useState('');
@@ -205,7 +199,6 @@ function ProductViewerContent({ initialProduct }) {
         }
     }, [user]);
 
-    // Handle Pad Selection Updates
     useEffect(() => {
         if (padSelection === '6lb') setPadCost('2.50');
         else if (padSelection === '8lb_hope') setPadCost('3.75');
@@ -276,7 +269,6 @@ function ProductViewerContent({ initialProduct }) {
         }
     };
 
-    // --- MATH & CALCULATIONS FOR BUILDER ---
     const isClientMode = clientMargin !== null;
     const basePrice = productData?.price || 0;
     const isCarpet = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
@@ -299,12 +291,10 @@ function ProductViewerContent({ initialProduct }) {
     const finalMaterialUnit = isCarpet ? 'sqyd' : 'cartons';
     const finalMaterialCoverageSqft = isCarpet ? (requiredSqYd * 9) : (requiredCartons * cartonSqft);
     
-    // Core Material Cost
     const totalMaterialCost = isCarpet 
         ? (requiredSqYd * (basePrice * 9)) 
         : (requiredCartons * cartonSqft * basePrice);
 
-    // Add-on Costs
     const totalPadCost = isCarpet && padSelection !== 'none' 
         ? (requiredSqYd * (parseFloat(padCost) || 0)) 
         : 0;
@@ -314,7 +304,6 @@ function ProductViewerContent({ initialProduct }) {
         (trimQty.stairnose * trimCost.stairnose) + 
         (trimQty.quarterRound * trimCost.quarterRound);
 
-    // Services Cost (Prep + SqFt Install + Delivery + Custom 1 + Custom 2)
     const totalLaborCost = 
         (parseFloat(laborPrep) || 0) + 
         (netSqftNum * (parseFloat(laborInstallPerSqft) || 0)) + 
@@ -322,7 +311,6 @@ function ProductViewerContent({ initialProduct }) {
         (parseFloat(customLabor1Cost) || 0) + 
         (parseFloat(customLabor2Cost) || 0);
 
-    // Grand Totals
     const totalWholesaleProjectCost = totalMaterialCost + totalPadCost + totalTrimCost + totalLaborCost;
     const turnkeyRetailPrice = totalWholesaleProjectCost * (1 + (builderMargin / 100));
 
@@ -417,7 +405,6 @@ function ProductViewerContent({ initialProduct }) {
     const wsPrice = finalPrice.toFixed(2);
     const retailPrice = productData?.retailPrice ? parseFloat(productData.retailPrice).toFixed(2) : (basePrice * 2.2).toFixed(2);
 
-    // Reusable Title Block
     const renderTitleBlock = (isDesktop) => (
         <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 lg:mb-2 gap-4 ${isDesktop ? 'hidden lg:flex' : 'flex lg:hidden'}`}>
             <div className="flex-1 min-w-0">
@@ -622,7 +609,7 @@ function ProductViewerContent({ initialProduct }) {
 
                       <div className="p-6 space-y-8 flex-1">
 
-                          {/* NEW: PROPOSAL DETAILS */}
+                          {/* PROPOSAL DETAILS */}
                           <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
                               <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Proposal Details</h4>
                               <div className="space-y-3">
