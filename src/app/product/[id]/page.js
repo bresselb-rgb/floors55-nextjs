@@ -29,6 +29,13 @@ export async function generateMetadata({ params }) {
   return {
     title: `${title} | Floors 55`,
     description: data.desc || `View the ${title} premium flooring collection at Floors 55.`,
+    
+    // ✅ ACTION ITEM 2: Canonical URLs
+    // This tells Google to ignore any tracking/margin parameters in the URL
+    // and ONLY index this specific master version of the page.
+    alternates: {
+      canonical: `https://www.floors55pro.com/product/${id}`,
+    }
   };
 }
 
@@ -54,9 +61,60 @@ export default async function ProductPageServer({ params }) {
   }
 
   // Prep the data for the Client Component
-  const productData = { id: docSnap.id, ...docSnap.data() };
-  productData.displayTitle = (productData.usePrivateName && productData.privateName) ? productData.privateName : (productData.name || 'Unnamed Product');
+  const data = docSnap.data();
+  const productData = { id: docSnap.id, ...data };
+  productData.displayTitle = (data.usePrivateName && data.privateName) ? data.privateName : (data.name || 'Unnamed Product');
 
-  // Pass the server-fetched data directly into our interactive viewer
-  return <ProductViewer initialProduct={productData} />;
+  // ✅ ACTION ITEM 1: Generate Product Schema (Rich Snippets)
+  // 1a. Securely calculate the RETAIL price so your wholesale margins are never exposed
+  const retailPrice = data.retailPrice ? parseFloat(data.retailPrice).toFixed(2) : ((data.price || 0) * 2.2).toFixed(2);
+  
+  // 1b. Safely rebuild the main image path for Google Images
+  const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const safeSku = (data.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  let folderName = 'images'; 
+  if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+  else if (safeName) folderName = safeName;
+  folderName = folderName.replace(/-+$/, '');
+
+  const displaySku = data.colors?.[0]?.sku || '01';
+  const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
+  const imageUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+
+  // 1c. Build the strict JSON-LD payload
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": productData.displayTitle,
+    "image": imageUrl,
+    "description": data.desc || `View the ${productData.displayTitle} premium flooring collection.`,
+    "sku": data.sku || data.id,
+    "brand": {
+      "@type": "Brand",
+      "name": data.manufacturer || "Floors 55"
+    },
+    "offers": {
+      "@type": "Offer",
+      "url": `https://www.floors55pro.com/product/${id}`,
+      "priceCurrency": "USD",
+      "price": retailPrice,
+      "availability": "https://schema.org/InStock",
+      "seller": {
+        "@type": "Organization",
+        "name": "Floors 55"
+      }
+    }
+  };
+
+  // Pass the server-fetched data directly into our interactive viewer, 
+  // while secretly injecting the schema script at the top!
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <ProductViewer initialProduct={productData} />
+    </>
+  );
 }
