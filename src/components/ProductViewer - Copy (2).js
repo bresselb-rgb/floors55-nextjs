@@ -37,25 +37,21 @@ function ProductViewerContent({ initialProduct }) {
     const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
 
     // Measurements
-    const [calcNetSqft, setCalcNetSqft] = useState('');
+    const [calcLength, setCalcLength] = useState('');
+    const [calcWidth, setCalcWidth] = useState('');
     const [calcWaste, setCalcWaste] = useState('1.10');
     
     // Add-ons
     const [padSelection, setPadSelection] = useState('none');
     const [padCost, setPadCost] = useState('0.00');
     
-    // Updated Trim Logic
-    const [trimQty, setTrimQty] = useState({ standard: 0, stairnose: 0, quarterRound: 0 });
-    const [trimCost, setTrimCost] = useState({ standard: 25, stairnose: 45, quarterRound: 10 });
+    const [trimQty, setTrimQty] = useState({ tmold: 0, reducer: 0, stairnose: 0, quarterRound: 0 });
+    const [trimCost, setTrimCost] = useState({ tmold: 25, reducer: 25, stairnose: 45, quarterRound: 10 });
 
-    // Services (Updated with Per Sqft Install & Custom Lines)
-    const [laborPrep, setLaborPrep] = useState(''); // Lump sum
-    const [laborInstallPerSqft, setLaborInstallPerSqft] = useState(''); // Per sqft
-    const [laborDelivery, setLaborDelivery] = useState(''); // Lump sum
-    const [customLabor1Name, setCustomLabor1Name] = useState('');
-    const [customLabor1Cost, setCustomLabor1Cost] = useState('');
-    const [customLabor2Name, setCustomLabor2Name] = useState('');
-    const [customLabor2Cost, setCustomLabor2Cost] = useState('');
+    // Services
+    const [laborPrep, setLaborPrep] = useState('');
+    const [laborInstall, setLaborInstall] = useState('');
+    const [laborDelivery, setLaborDelivery] = useState('');
     
     const [clientMargin, setClientMargin] = useState(null);
     const [builderMargin, setBuilderMargin] = useState(20);
@@ -286,8 +282,10 @@ function ProductViewerContent({ initialProduct }) {
     }
     cartonSqft = cartonSqft || 20;
 
-    const netSqftNum = parseFloat(calcNetSqft) || 0;
-    const totalSqftWithWaste = netSqftNum * parseFloat(calcWaste);
+    const l = parseFloat(calcLength) || 0;
+    const w = parseFloat(calcWidth) || 0;
+    const calcNetSqft = l * w;
+    const totalSqftWithWaste = calcNetSqft * parseFloat(calcWaste);
     
     const requiredSqYd = Math.ceil(totalSqftWithWaste / 9);
     const requiredCartons = Math.ceil(totalSqftWithWaste / cartonSqft);
@@ -306,51 +304,18 @@ function ProductViewerContent({ initialProduct }) {
         : 0;
 
     const totalTrimCost = isCarpet ? 0 : 
-        (trimQty.standard * trimCost.standard) + 
+        (trimQty.tmold * trimCost.tmold) + 
+        (trimQty.reducer * trimCost.reducer) + 
         (trimQty.stairnose * trimCost.stairnose) + 
         (trimQty.quarterRound * trimCost.quarterRound);
 
-    // Services Cost (Prep + SqFt Install + Delivery + Custom 1 + Custom 2)
-    const totalLaborCost = 
-        (parseFloat(laborPrep) || 0) + 
-        (netSqftNum * (parseFloat(laborInstallPerSqft) || 0)) + 
-        (parseFloat(laborDelivery) || 0) + 
-        (parseFloat(customLabor1Cost) || 0) + 
-        (parseFloat(customLabor2Cost) || 0);
+    // Services Cost
+    const totalLaborCost = (parseFloat(laborPrep) || 0) + (parseFloat(laborInstall) || 0) + (parseFloat(laborDelivery) || 0);
 
     // Grand Totals
     const totalWholesaleProjectCost = totalMaterialCost + totalPadCost + totalTrimCost + totalLaborCost;
     const turnkeyRetailPrice = totalWholesaleProjectCost * (1 + (builderMargin / 100));
 
-    const handleSaveToBoard = async () => {
-        if (!selectedBoardId) return alert("Please select a board to save this product to.");
-        setIsSavingToBoard(true);
-
-        try {
-            const productToSave = {
-                productId: productData.id,
-                name: productData.displayTitle,
-                colorSku: activeColor?.sku || '',
-                colorName: activeColor?.name || '',
-                category: productData.category || '',
-                imgPrefix: productData.imgPrefix || '',
-                quote: null,
-                addedAt: new Date().toISOString()
-            };
-
-            const boardRef = doc(db, 'artifacts', appId, 'public', 'data', 'client_boards', selectedBoardId);
-            await updateDoc(boardRef, { products: arrayUnion(productToSave) });
-            
-            const boardName = proBoards.find(b => b.id === selectedBoardId)?.name || 'Board';
-            setBoardSaveMessage(`Saved to ${boardName}`);
-            setTimeout(() => setBoardSaveMessage(''), 2000);
-        } catch (err) {
-            console.error("Error saving product to board", err);
-            alert("Failed to save product.");
-        } finally {
-            setIsSavingToBoard(false);
-        }
-    };
 
     const handleSaveQuoteToBoard = async () => {
         if (!selectedBoardId) return alert("Please select a board to save this proposal to.");
@@ -363,21 +328,16 @@ function ProductViewerContent({ initialProduct }) {
             else if (padSelection === '8lb_memory') padName = "Luxury 8lb Memory Foam Cushion";
 
             const quoteObj = {
-                measurements: { waste: parseFloat(calcWaste), netSqft: netSqftNum, coverageSqft: finalMaterialCoverageSqft },
+                measurements: { length: l, width: w, waste: parseFloat(calcWaste), netSqft: calcNetSqft, coverageSqft: finalMaterialCoverageSqft },
                 material: { qty: finalMaterialQty, unit: finalMaterialUnit, wholesaleTotal: totalMaterialCost },
                 addons: {
                     pad: padName ? { name: padName, cost: totalPadCost } : null,
-                    trims: !isCarpet && (trimQty.standard > 0 || trimQty.stairnose > 0 || trimQty.quarterRound > 0) ? { 
-                        cost: totalTrimCost, 
-                        details: { standard: trimQty.standard, stairnose: trimQty.stairnose, quarterRound: trimQty.quarterRound } 
-                    } : null
+                    trims: !isCarpet && (trimQty.tmold > 0 || trimQty.reducer > 0 || trimQty.stairnose > 0 || trimQty.quarterRound > 0) ? { cost: totalTrimCost } : null
                 },
                 services: {
                     prep: parseFloat(laborPrep) || 0,
-                    installTotal: netSqftNum * (parseFloat(laborInstallPerSqft) || 0),
-                    delivery: parseFloat(laborDelivery) || 0,
-                    custom1: (customLabor1Name && parseFloat(customLabor1Cost) > 0) ? { name: customLabor1Name, cost: parseFloat(customLabor1Cost) } : null,
-                    custom2: (customLabor2Name && parseFloat(customLabor2Cost) > 0) ? { name: customLabor2Name, cost: parseFloat(customLabor2Cost) } : null
+                    install: parseFloat(laborInstall) || 0,
+                    delivery: parseFloat(laborDelivery) || 0
                 },
                 totals: { wholesale: totalWholesaleProjectCost, margin: builderMargin, turnkeyRetail: turnkeyRetailPrice }
             };
@@ -552,25 +512,6 @@ function ProductViewerContent({ initialProduct }) {
                 )}
             </div>
 
-            {/* QUICK SAVE TO BOARD */}
-            {!isClientMode && user && !user.isAnonymous && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                     <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Quick Save to Client Presentation</h4>
-                     {proBoards.length > 0 ? (
-                         <div className="flex gap-2">
-                             <select value={selectedBoardId} onChange={e => setSelectedBoardId(e.target.value)} className="flex-1 p-3 border border-gray-200 rounded-lg text-sm font-bold bg-white focus:border-gold outline-none cursor-pointer">
-                                 {proBoards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                             </select>
-                             <button onClick={handleSaveToBoard} disabled={isSavingToBoard} className="bg-black text-white px-6 py-3 rounded-lg font-bold uppercase tracking-widest text-xs hover:bg-gold hover:text-black transition-colors shrink-0 disabled:opacity-50 cursor-pointer">
-                                 {boardSaveMessage && !isBuilderOpen ? "Saved ✓" : (isSavingToBoard && !isBuilderOpen ? "Saving..." : "Save Product")}
-                             </button>
-                         </div>
-                     ) : (
-                         <div className="text-xs text-gray-500 italic">Go to <Link href="/my-account" className="text-gold font-bold not-italic hover:underline">My Account</Link> to create a Client Board.</div>
-                     )}
-                </div>
-            )}
-
             {renderColorSwatches(true)}
 
             {productData.specs && productData.specs.length > 0 && (
@@ -618,23 +559,27 @@ function ProductViewerContent({ initialProduct }) {
                           
                           {/* STEP 1: MEASUREMENTS */}
                           <div>
-                              <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>1</span> Measurements</h4>
+                              <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>1</span> Room Measurements</h4>
                               <div className="grid grid-cols-2 gap-3 mb-3">
                                   <div>
-                                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Net Square Footage</label>
-                                      <input type="number" value={calcNetSqft} onChange={e => setCalcNetSqft(e.target.value)} placeholder="e.g. 500" className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-gray-50" />
+                                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Length (ft)</label>
+                                      <input type="number" value={calcLength} onChange={e => setCalcLength(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-gray-50" />
                                   </div>
                                   <div>
-                                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Waste Factor</label>
-                                      <select value={calcWaste} onChange={e => setCalcWaste(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-gray-50">
-                                          <option value="1.00">Exact Net (0%)</option>
-                                          <option value="1.05">Standard (5%)</option>
-                                          <option value="1.10">Safe (10%)</option>
-                                          <option value="1.15">Complex / Diagonal (15%)</option>
-                                      </select>
+                                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Width (ft)</label>
+                                      <input type="number" value={calcWidth} onChange={e => setCalcWidth(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-gray-50" />
                                   </div>
                               </div>
-                              <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg flex justify-between items-center text-xs font-bold text-blue-900">
+                              <div>
+                                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Waste Factor</label>
+                                  <select value={calcWaste} onChange={e => setCalcWaste(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-gray-50">
+                                      <option value="1.00">Exact Net (0%)</option>
+                                      <option value="1.05">Standard (5%)</option>
+                                      <option value="1.10">Safe (10%)</option>
+                                      <option value="1.15">Complex / Diagonal (15%)</option>
+                                  </select>
+                              </div>
+                              <div className="mt-3 bg-blue-50 border border-blue-100 p-3 rounded-lg flex justify-between items-center text-xs font-bold text-blue-900">
                                   <span>Coverage Required:</span>
                                   <span>{finalMaterialCoverageSqft.toFixed(1)} sqft ({finalMaterialQty} {finalMaterialUnit})</span>
                               </div>
@@ -665,22 +610,19 @@ function ProductViewerContent({ initialProduct }) {
                               ) : (
                                   <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
                                       <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
-                                          <div className="flex flex-col">
-                                            <span className="text-xs font-bold text-gray-700">Standard Transitions</span>
-                                            <span className="text-[9px] text-gray-400">T-Mold, Reducer, End Cap</span>
-                                          </div>
-                                          <input type="number" min="0" placeholder="Qty" value={trimQty.standard || ''} onChange={e => setTrimQty({...trimQty, standard: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold" />
-                                          <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.standard} onChange={e=>setTrimCost({...trimCost, standard: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
+                                          <span className="text-xs font-bold text-gray-700">T-Molding</span>
+                                          <input type="number" min="0" placeholder="Qty" value={trimQty.tmold || ''} onChange={e => setTrimQty({...trimQty, tmold: parseInt(e.target.value)||0})} className="w-16 p-2 border rounded-lg text-xs text-center" />
+                                          <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.tmold} onChange={e=>setTrimCost({...trimCost, tmold: parseFloat(e.target.value)||0})} className="w-12 p-1 border rounded bg-white text-right"/></div>
+                                      </div>
+                                      <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
+                                          <span className="text-xs font-bold text-gray-700">Reducer</span>
+                                          <input type="number" min="0" placeholder="Qty" value={trimQty.reducer || ''} onChange={e => setTrimQty({...trimQty, reducer: parseInt(e.target.value)||0})} className="w-16 p-2 border rounded-lg text-xs text-center" />
+                                          <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.reducer} onChange={e=>setTrimCost({...trimCost, reducer: parseFloat(e.target.value)||0})} className="w-12 p-1 border rounded bg-white text-right"/></div>
                                       </div>
                                       <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
                                           <span className="text-xs font-bold text-gray-700">Stair Nose</span>
-                                          <input type="number" min="0" placeholder="Qty" value={trimQty.stairnose || ''} onChange={e => setTrimQty({...trimQty, stairnose: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold" />
-                                          <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.stairnose} onChange={e=>setTrimCost({...trimCost, stairnose: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
-                                      </div>
-                                      <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
-                                          <span className="text-xs font-bold text-gray-700">Quarter Round</span>
-                                          <input type="number" min="0" placeholder="Qty" value={trimQty.quarterRound || ''} onChange={e => setTrimQty({...trimQty, quarterRound: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold" />
-                                          <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.quarterRound} onChange={e=>setTrimCost({...trimCost, quarterRound: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
+                                          <input type="number" min="0" placeholder="Qty" value={trimQty.stairnose || ''} onChange={e => setTrimQty({...trimQty, stairnose: parseInt(e.target.value)||0})} className="w-16 p-2 border rounded-lg text-xs text-center" />
+                                          <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.stairnose} onChange={e=>setTrimCost({...trimCost, stairnose: parseFloat(e.target.value)||0})} className="w-12 p-1 border rounded bg-white text-right"/></div>
                                       </div>
                                   </div>
                               )}
@@ -691,28 +633,16 @@ function ProductViewerContent({ initialProduct }) {
                               <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>3</span> Labor & Logistics (Your Cost)</h4>
                               <div className="space-y-3">
                                   <div className="flex items-center justify-between">
-                                      <label className="text-xs font-bold text-gray-700">Basic Install <span className="text-[10px] text-gray-400 font-normal ml-1">/ sqft</span></label>
-                                      <input type="number" placeholder="0.00" value={laborInstallPerSqft} onChange={e => setLaborInstallPerSqft(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
-                                  </div>
-                                  <div className="flex items-center justify-between">
-                                      <label className="text-xs font-bold text-gray-700">Tear Out & Prep <span className="text-[10px] text-gray-400 font-normal ml-1">Lump Sum</span></label>
+                                      <label className="text-xs font-bold text-gray-700">Tear Out & Prep ($)</label>
                                       <input type="number" placeholder="0.00" value={laborPrep} onChange={e => setLaborPrep(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
                                   </div>
                                   <div className="flex items-center justify-between">
-                                      <label className="text-xs font-bold text-gray-700">Fuel & Delivery <span className="text-[10px] text-gray-400 font-normal ml-1">Lump Sum</span></label>
-                                      <input type="number" placeholder="0.00" value={laborDelivery} onChange={e => setLaborDelivery(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
+                                      <label className="text-xs font-bold text-gray-700">Installation Labor ($)</label>
+                                      <input type="number" placeholder="0.00" value={laborInstall} onChange={e => setLaborInstall(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
                                   </div>
-
-                                  <div className="pt-2 mt-2 border-t border-gray-100 space-y-2">
-                                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Additional Custom Labor</p>
-                                      <div className="flex gap-2">
-                                          <input type="text" placeholder="e.g. Stair Labor" value={customLabor1Name} onChange={e => setCustomLabor1Name(e.target.value)} className="flex-1 p-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-gold bg-white" />
-                                          <input type="number" placeholder="$ 0.00" value={customLabor1Cost} onChange={e => setCustomLabor1Cost(e.target.value)} className="w-20 p-2 border border-gray-200 rounded-lg text-xs text-right outline-none focus:border-gold bg-gray-50" />
-                                      </div>
-                                      <div className="flex gap-2">
-                                          <input type="text" placeholder="e.g. Moving Appliances" value={customLabor2Name} onChange={e => setCustomLabor2Name(e.target.value)} className="flex-1 p-2 border border-gray-200 rounded-lg text-xs outline-none focus:border-gold bg-white" />
-                                          <input type="number" placeholder="$ 0.00" value={customLabor2Cost} onChange={e => setCustomLabor2Cost(e.target.value)} className="w-20 p-2 border border-gray-200 rounded-lg text-xs text-right outline-none focus:border-gold bg-gray-50" />
-                                      </div>
+                                  <div className="flex items-center justify-between">
+                                      <label className="text-xs font-bold text-gray-700">Fuel & Delivery ($)</label>
+                                      <input type="number" placeholder="0.00" value={laborDelivery} onChange={e => setLaborDelivery(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg text-sm text-right outline-none focus:border-gold bg-gray-50" />
                                   </div>
                               </div>
                           </div>
@@ -723,7 +653,7 @@ function ProductViewerContent({ initialProduct }) {
                       <div className="bg-gray-900 text-white p-6 sticky bottom-0 z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.1)]">
                           <div className="flex justify-between items-end mb-4">
                               <div>
-                                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Your Base Cost</div>
+                                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Base Cost</div>
                                   <div className="text-lg font-mono text-gray-200">${totalWholesaleProjectCost.toFixed(2)}</div>
                               </div>
                               <div className="text-right">
@@ -742,7 +672,7 @@ function ProductViewerContent({ initialProduct }) {
                                   <select value={selectedBoardId} onChange={e => setSelectedBoardId(e.target.value)} className="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl text-sm font-bold text-white outline-none focus:border-gold">
                                       {proBoards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                                   </select>
-                                  <button onClick={handleSaveQuoteToBoard} disabled={isSavingToBoard || netSqftNum === 0} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50">
+                                  <button onClick={handleSaveQuoteToBoard} disabled={isSavingToBoard || calcNetSqft === 0} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50">
                                       {boardSaveMessage ? `✓ ${boardSaveMessage}` : (isSavingToBoard ? "Saving..." : "Save Turnkey Proposal")}
                                   </button>
                               </div>
