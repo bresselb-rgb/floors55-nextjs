@@ -146,7 +146,6 @@ export default function ClientBoardPage({ params }) {
                     <p className="text-gray-500 max-w-2xl mx-auto">We have hand-selected the following premium flooring options specifically for your project. Click on any product to view details, specifications, and room scenes.</p>
                 </div>
 
-                {}
                 {products.length === 0 ? (
                     <div className="text-center py-20 text-gray-400 text-sm italic bg-white border border-gray-200 rounded-2xl">No products have been added to this board yet.</div>
                 ) : (
@@ -168,11 +167,11 @@ export default function ClientBoardPage({ params }) {
                             const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
                             const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
-                            // UPDATED: Use proper query parameters instead of hash so the exact color loads
                             const productLink = `/product/${p.id}?color=${displaySku}&pro=${board.proId || ''}&cm=${cmToken}`;
 
                             const hasQuote = p.quote && p.quote.totals;
 
+                            // Format the trim text dynamically based on what they selected
                             let trimParts = [];
                             if (p.quote?.addons?.trims?.details) {
                                 if (p.quote.addons.trims.details.standard > 0) trimParts.push('Transitions');
@@ -199,7 +198,6 @@ export default function ClientBoardPage({ params }) {
                                                 <Link href={productLink} style={{ textDecoration: 'none', color: 'inherit' }}>{displayTitle}</Link>
                                             </h3>
 
-                                            {}
                                             {hasQuote ? (
                                                 <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 mb-6">
                                                     <h4 className="text-[10px] font-black uppercase tracking-widest text-gold mb-3">Proposal Inclusions</h4>
@@ -223,7 +221,6 @@ export default function ClientBoardPage({ params }) {
                                         </div>
 
                                         <div className="space-y-4 pt-6 border-t border-gray-100">
-                                            {}
                                             {hasQuote ? (
                                                 <div className="flex justify-between items-baseline">
                                                     <span className="text-sm text-gray-400 uppercase font-black tracking-wider">Turnkey Project Total</span>
