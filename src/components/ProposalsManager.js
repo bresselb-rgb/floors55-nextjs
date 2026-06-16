@@ -19,7 +19,6 @@ export default function ProposalsManager({ proId }) {
   const [viewingCostsQuote, setViewingCostsQuote] = useState(null);
   const [quoteToDelete, setQuoteToDelete] = useState(null);
 
-  // Edit Drawer States
   const [editClientName, setEditClientName] = useState('');
   const [editProjectName, setEditProjectName] = useState('');
   
@@ -81,8 +80,22 @@ export default function ProposalsManager({ proId }) {
   };
 
   const handleOrderRequest = (quote) => {
+      let addonsText = '';
+      if (quote.addons?.pad || (quote.addons?.trims?.details && (quote.addons.trims.details.standard > 0 || quote.addons.trims.details.stairnose > 0 || quote.addons.trims.details.quarterRound > 0))) {
+          addonsText += `\nRequired Add-Ons:\n`;
+          if (quote.addons?.pad) {
+              addonsText += `- Pad/Cushion: ${quote.addons.pad.name}\n`;
+          }
+          if (quote.addons?.trims?.details) {
+              const trims = quote.addons.trims.details;
+              if (trims.standard > 0) addonsText += `- Standard Transitions: ${trims.standard}\n`;
+              if (trims.stairnose > 0) addonsText += `- Stair Noses: ${trims.stairnose}\n`;
+              if (trims.quarterRound > 0) addonsText += `- Quarter Round: ${trims.quarterRound}\n`;
+          }
+      }
+
       const subject = encodeURIComponent(`PO / Quote Request: ${quote.clientName} - ${quote.projectName || 'Project'}`);
-      const body = encodeURIComponent(`Hello Floors 55 Team,
+      const bodyText = `Hello Floors 55 Team,
 
 I would like to request a formal wholesale quote / submit a PO for the following proposal:
 
@@ -91,12 +104,12 @@ Project Details:
 - Project: ${quote.projectName || 'N/A'}
 - Product: ${quote.productName} (${quote.colorSku ? quote.colorSku + ' - ' : ''}${quote.colorName})
 - Required Material: ${quote.material?.qty} ${quote.material?.unit} (${quote.measurements?.coverageSqft?.toFixed(1)} sqft)
-
+${addonsText}
 [If you are submitting a formal Purchase Order, please attach the PDF to this email.]
 
-Thank you!`);
+Thank you!`;
       
-      // Opens the user's default email client
+      const body = encodeURIComponent(bodyText);
       window.location.href = `mailto:admin@floors55pro.com?subject=${subject}&body=${body}`;
   };
 
@@ -184,6 +197,8 @@ Thank you!`);
 
   const totalWholesaleProjectCost = totalMaterialCost + totalPadCost + totalTrimCost + totalLaborCost;
   const turnkeyRetailPrice = totalWholesaleProjectCost * (1 + (builderMargin / 100));
+  
+  const currentMarginVal = builderMargin > 0 ? ((builderMargin / (100 + builderMargin)) * 100).toFixed(1) : 0;
 
   const handleSaveEdit = async () => {
       if (!editClientName.trim() || netSqftNum === 0) return;
@@ -245,7 +260,11 @@ Thank you!`);
           <p className="text-gray-400 text-sm italic text-center py-6 bg-gray-50 rounded-xl border border-gray-100">No proposals generated yet. Find a product in the catalog and click "Build Custom Proposal".</p>
       ) : (
           <div className="space-y-4">
-              {quotes.map(quote => (
+              {quotes.map(quote => {
+                  const markupVal = quote.totals?.margin || 20;
+                  const marginVal = markupVal > 0 ? ((markupVal / (100 + markupVal)) * 100).toFixed(1) : 0;
+                  
+                  return (
                   <div key={quote.id} className="flex flex-col md:flex-row md:items-center justify-between p-5 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md transition-all gap-4 group">
                       <div>
                           <div className="flex items-center gap-2 mb-1">
@@ -254,9 +273,9 @@ Thank you!`);
                           </div>
                           <div className="flex flex-col gap-1">
                               <p className="text-xs font-bold text-gray-500">{quote.projectName || 'Flooring Project'} &bull; {quote.productName} ({quote.colorName})</p>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                   <span className="text-sm font-black text-gray-900 font-mono">${quote.totals?.turnkeyRetail?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</span>
-                                  <span className="text-[10px] text-gold font-black uppercase tracking-widest border border-gold/30 bg-gold/10 px-1.5 py-0.5 rounded">{quote.totals?.margin || 20}% Margin</span>
+                                  <span className="text-[10px] text-gold font-black uppercase tracking-widest border border-gold/30 bg-gold/10 px-1.5 py-0.5 rounded">{markupVal}% Markup ({marginVal}% Margin)</span>
                               </div>
                           </div>
                       </div>
@@ -285,7 +304,7 @@ Thank you!`);
                         </button>
                       </div>
                   </div>
-              ))}
+              )})}
           </div>
       )}
 
@@ -373,10 +392,18 @@ Thank you!`);
                           <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Base Cost</span>
                           <span className="text-lg font-mono font-bold">${viewingCostsQuote.totals?.wholesale?.toFixed(2) || '0.00'}</span>
                       </div>
-                      <div className="flex justify-between items-center mb-4">
-                          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Retail Margin Applied</span>
-                          <span className="text-sm font-mono font-bold text-gold">{viewingCostsQuote.totals?.margin || '0'}%</span>
-                      </div>
+                      
+                      {(() => {
+                          const mkVal = viewingCostsQuote.totals?.margin || 0;
+                          const mgVal = mkVal > 0 ? ((mkVal / (100 + mkVal)) * 100).toFixed(1) : 0;
+                          return (
+                              <div className="flex justify-between items-center mb-4">
+                                  <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Markup & Margin</span>
+                                  <span className="text-sm font-mono font-bold text-gold">{mkVal}% Markup &bull; {mgVal}% Margin</span>
+                              </div>
+                          );
+                      })()}
+                      
                       <div className="pt-4 border-t border-gray-700 flex justify-between items-end">
                           <div>
                               <div className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Gross Profit</div>
@@ -503,7 +530,7 @@ Thank you!`);
 
                       {/* STEP 3: LABOR */}
                       <div>
-                          <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>3</span> Labor & Logistics</h4>
+                          <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>3</span> Labor & Logistics (Your Cost)</h4>
                           <div className="space-y-3">
                               <div className="flex items-center justify-between">
                                   <label className="text-xs font-bold text-gray-700">Basic Install <span className="text-[10px] text-gray-400 font-normal ml-1">/ sqft</span></label>
@@ -540,8 +567,11 @@ Thank you!`);
                               <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Your Base Cost</div>
                               <div className="text-lg font-mono text-gray-200">${totalWholesaleProjectCost.toFixed(2)}</div>
                           </div>
-                          <div className="text-right">
-                              <div className="text-[10px] text-gold font-bold uppercase tracking-widest flex items-center gap-2 justify-end">Margin: {builderMargin}%</div>
+                          <div className="text-right flex flex-col items-end">
+                              <div className="text-[10px] text-gold font-bold uppercase tracking-widest mb-1 flex flex-col items-end">
+                                  <span>Markup: {builderMargin}%</span>
+                                  <span className="text-[9px] text-gray-400 capitalize">Yields Margin: {currentMarginVal}%</span>
+                              </div>
                               <div className="text-2xl font-black text-white font-mono">${turnkeyRetailPrice.toFixed(2)}</div>
                               <div className="text-[9px] text-emerald-400 font-bold uppercase tracking-widest mt-1">Gross Profit: ${(turnkeyRetailPrice - totalWholesaleProjectCost).toFixed(2)}</div>
                           </div>
