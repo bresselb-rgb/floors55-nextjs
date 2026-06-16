@@ -51,6 +51,8 @@ const normalizeSpecKey = (rawKey) => {
     if (k === 'wearlayer' || k === 'wear layer') return 'Wear Layer';
     if (k === 'overall thickness' || k === 'total thickness' || k === 'thickness') return 'Thickness';
     if (k === 'waterproof' || k === 'water resistance') return 'Waterproof';
+    if (k === 'face weight' || k === 'ounce weight' || k === 'fiber weight' || k === 'weight' || k === 'oz weight') return 'Face Weight';
+    if (k === 'fiber' || k === 'fiber type' || k === 'yarn' || k === 'material') return 'Fiber Type';
     return rawKey.trim();
 };
 
@@ -112,11 +114,34 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
         return "100% Waterproof";
     }
 
+    // 7. Fiber Type Normalization
+    if (key.toLowerCase() === "fiber type") {
+        if (lowerVal.includes("nylon")) return "Nylon";
+        if (lowerVal.includes("triexta") || lowerVal.includes("smartstrand") || lowerVal.includes("sorona")) return "Triexta";
+        if (lowerVal.includes("wool")) return "Wool";
+        if (lowerVal.includes("poly") || lowerVal.includes("pet")) return "Polyester";
+        return val;
+    }
+
+    // 8. Face Weight Bucketing
+    if (key.toLowerCase() === "face weight") {
+        const match = val.match(/[\d.]+/);
+        if (match) {
+            const num = parseFloat(match[0]);
+            if (num < 30) return "< 30 oz";
+            if (num >= 30 && num < 40) return "30 - 40 oz";
+            if (num >= 40 && num < 50) return "40 - 50 oz";
+            if (num >= 50 && num < 60) return "50 - 60 oz";
+            if (num >= 60) return "60+ oz";
+        }
+    }
+
     return val;
 };
 
-// Hardcoded sort order so Thickness buckets don't sort alphabetically
+// Hardcoded sort order so custom buckets don't sort alphabetically
 const THICKNESS_ORDER = { "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4 };
+const FACE_WEIGHT_ORDER = { "< 30 oz": 1, "30 - 40 oz": 2, "40 - 50 oz": 3, "50 - 60 oz": 4, "60+ oz": 5 };
 // ---------------------------------
 
 function CategoryViewerContent({ initialCategory }) {
@@ -304,6 +329,14 @@ function CategoryViewerContent({ initialCategory }) {
                       existingSpecs.push('Construction / Core: Engineered');
                   }
               }
+          } else if (data.category === 'Carpet') {
+              // Ensure Fiber Type exists for Carpet
+              if (!hasSpec('Fiber Type')) {
+                  if (fullDesc.includes('nylon')) existingSpecs.push('Fiber Type: Nylon');
+                  else if (fullDesc.includes('triexta') || fullDesc.includes('smartstrand') || fullDesc.includes('sorona')) existingSpecs.push('Fiber Type: Triexta');
+                  else if (fullDesc.includes('wool')) existingSpecs.push('Fiber Type: Wool');
+                  else if (fullDesc.includes('polyester') || fullDesc.includes(' pet ')) existingSpecs.push('Fiber Type: Polyester');
+              }
           } else {
               // Non-LVP/Hardwood auto-tags just in case
               if (fullDesc.includes('cork') && !hasSpec('Attached Pad')) {
@@ -387,15 +420,27 @@ function CategoryViewerContent({ initialCategory }) {
   }, [liveProductsRaw, activeCategory]);
 
   const dynamicSpecs = useMemo(() => {
-      const TARGET_SPECS = [
+      let TARGET_SPECS = [
           "Waterproof",
           "Construction / Core",
           "Thickness",
           "Wear Layer",
           "Attached Pad",
           "Species",
-          "Style Type"
+          "Style Type",
+          "Fiber Type",
+          "Face Weight"
       ];
+
+      // Dynamically remove hard surface filters if the user is looking at Carpet
+      if (activeCategory === 'Carpet') {
+          TARGET_SPECS = TARGET_SPECS.filter(s => 
+              s !== "Construction / Core" && 
+              s !== "Thickness" && 
+              s !== "Waterproof" && 
+              s !== "Wear Layer"
+          );
+      }
       
       const specMap = {}; 
       
@@ -434,6 +479,9 @@ function CategoryViewerContent({ initialCategory }) {
               result[specName] = [...specMap[specName]].sort((a, b) => {
                   if (specName === "Thickness") {
                       return (THICKNESS_ORDER[a] || 99) - (THICKNESS_ORDER[b] || 99);
+                  }
+                  if (specName === "Face Weight") {
+                      return (FACE_WEIGHT_ORDER[a] || 99) - (FACE_WEIGHT_ORDER[b] || 99);
                   }
                   const numA = parseFloat(a);
                   const numB = parseFloat(b);
