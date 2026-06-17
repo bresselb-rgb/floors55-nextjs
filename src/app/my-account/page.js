@@ -28,6 +28,7 @@ export default function MyAccountPage() {
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
     const [isLogoInfoOpen, setIsLogoInfoOpen] = useState(false);
+    const [isGlobalInfoOpen, setIsGlobalInfoOpen] = useState(false);
 
     useEffect(() => {
         const unsub = onAuthStateChanged(auth, async (currentUser) => {
@@ -164,12 +165,17 @@ export default function MyAccountPage() {
         <main className="bg-gray-50 min-h-screen py-12 relative">
             <div className="max-w-4xl mx-auto px-4 space-y-6">
                 
-                <div className="flex justify-between items-end mb-2">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-4">
                     <div>
-                        <h1 className="text-3xl font-black tracking-tight mb-2">Pro Dashboard</h1>
-                        <p className="text-gray-500">Manage your business details, quotes, and client boards.</p>
+                        <div className="flex items-center gap-3 mb-2">
+                            <h1 className="text-3xl font-black tracking-tight m-0">Pro Dashboard</h1>
+                            <button onClick={() => setIsGlobalInfoOpen(true)} className="bg-black text-white hover:bg-gold hover:text-black px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm outline-none cursor-pointer flex items-center gap-1.5">
+                                <span>📘</span> Quick Start Guide
+                            </button>
+                        </div>
+                        <p className="text-gray-500 m-0">Manage your business details, quotes, and client boards.</p>
                     </div>
-                    <button onClick={() => signOut(auth)} className="text-red-500 font-bold uppercase tracking-widest text-xs hover:text-red-700 bg-transparent border-none cursor-pointer outline-none mb-2">Sign Out</button>
+                    <button onClick={() => signOut(auth)} className="text-red-500 font-bold uppercase tracking-widest text-[10px] hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md cursor-pointer outline-none transition-colors shrink-0">Sign Out</button>
                 </div>
 
                 <div className="bg-gray-900 text-white p-6 md:p-8 rounded-2xl shadow-xl border border-gray-800 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
@@ -375,6 +381,73 @@ export default function MyAccountPage() {
                                 className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors cursor-pointer outline-none"
                             >
                                 Got it!
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Global Quick Start Guide Modal */}
+            {isGlobalInfoOpen && (
+                <div className="fixed inset-0 bg-black/70 z-[150] flex items-center justify-center p-4 transition-opacity">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
+                        <button
+                            onClick={() => setIsGlobalInfoOpen(false)}
+                            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black transition-colors font-bold outline-none cursor-pointer"
+                        >
+                            ✕
+                        </button>
+                        <h3 className="text-2xl font-black mb-2 text-gray-900">Portal Quick Start Guide</h3>
+                        <p className="text-gray-500 text-sm mb-6 pb-4 border-b border-gray-100">
+                            Everything you need to know to manage your margins and close more bids.
+                        </p>
+                        
+                        <div className="space-y-6">
+                            <div className="flex gap-4">
+                                <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-black shrink-0">1</div>
+                                <div>
+                                    <h4 className="font-bold text-gray-900 text-sm">White-Label Branding (Optional)</h4>
+                                    <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                        Upload your company logo and pick your brand colors at the bottom of this dashboard. <br/>
+                                        <strong className="text-black bg-gray-100 px-1.5 py-0.5 rounded mt-1 inline-block">Note: This is entirely optional!</strong> If you leave your branding blank, your client links will automatically default to a beautifully clean, highly professional neutral design.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-black shrink-0">2</div>
+                                <div>
+                                    <h4 className="font-bold text-gray-900 text-sm">The Master Catalog Link</h4>
+                                    <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                        Set your default markup using the slider in the "Catalog Client Pricing" section above. Then, copy your Master Catalog Link. When your clients browse using this link, they will see the entire store with your retail pricing baked in.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-black shrink-0">3</div>
+                                <div>
+                                    <h4 className="font-bold text-gray-900 text-sm">Turnkey Proposals</h4>
+                                    <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                        Need to send an exact, itemized quote? Go to any product in the catalog and click "Build Custom Proposal". You can add pad, transitions, delivery, and your labor. The system will generate a secure link or a PDF for your client to review.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-black shrink-0">4</div>
+                                <div>
+                                    <h4 className="font-bold text-gray-900 text-sm">Client Presentation Boards</h4>
+                                    <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                        Don't want to overwhelm a client with the entire catalog? Create a specific Client Board (e.g., "The Smith Kitchen") and drop 3-4 curated products into it for them to choose from.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 pt-4 border-t border-gray-100 flex justify-end">
+                            <button
+                                onClick={() => setIsGlobalInfoOpen(false)}
+                                className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors cursor-pointer outline-none"
+                            >
+                                Let's Go!
                             </button>
                         </div>
                     </div>

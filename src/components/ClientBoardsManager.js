@@ -9,7 +9,6 @@ export default function ClientBoardsManager({ proId }) {
   const [boards, setBoards] = useState([]);
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const [isInfoOpen, setIsInfoOpen] = useState(false);
   
   const [showToast, setShowToast] = useState(false);
 
@@ -132,12 +131,6 @@ export default function ClientBoardsManager({ proId }) {
       
       <div className="flex items-center justify-between mb-1">
           <h2 className="text-xl font-black uppercase tracking-tight">Client Presentations</h2>
-          <button 
-              onClick={() => setIsInfoOpen(true)}
-              className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gold transition-colors flex items-center gap-1 bg-gray-50 hover:bg-gold/10 px-3 py-1.5 rounded-full border border-gray-200 outline-none cursor-pointer"
-          >
-              <span>❓</span> How to use
-          </button>
       </div>
       
       <p className="text-sm text-gray-500 mb-6">Create curated product boards to share with your clients.</p>
@@ -205,73 +198,6 @@ export default function ClientBoardsManager({ proId }) {
           <span className="font-black text-gold">✓</span>
           <p className="font-bold text-xs uppercase tracking-widest m-0">Link Copied</p>
       </div>
-
-      {/* Info Modal / Instructions */}
-      {isInfoOpen && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg relative">
-                <button 
-                    onClick={() => setIsInfoOpen(false)}
-                    className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black transition-colors font-bold outline-none"
-                >
-                    ✕
-                </button>
-                
-                <h3 className="text-2xl font-black mb-2 text-gray-900">How to Use Project Boards</h3>
-                <p className="text-gray-500 text-sm mb-6 pb-4 border-b border-gray-100">
-                    Create beautiful, white-labeled presentations curated specifically for your clients.
-                </p>
-
-                <div className="space-y-5">
-                    <div className="flex gap-4">
-                        <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-black shrink-0">1</div>
-                        <div>
-                            <h4 className="font-bold text-gray-900 text-sm">Customize Your Brand</h4>
-                            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                Upload your company logo and pick your brand colors in the profile section so your presentations look extremely professional.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex gap-4">
-                        <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-black shrink-0">2</div>
-                        <div>
-                            <h4 className="font-bold text-gray-900 text-sm">Lock Your Pricing</h4>
-                            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                Adjust your retail margin slider to the desired markup for this specific client. When you click "+ New Board", it permanently locks that price and your current branding into the board forever.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex gap-4">
-                        <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-black shrink-0">3</div>
-                        <div>
-                            <h4 className="font-bold text-gray-900 text-sm">Add Products from the Catalog</h4>
-                            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                Navigate to any product in the catalog. At the top of the product page, click the black &quot;Save&quot; button to drop that specific colorway right into your client&apos;s board.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex gap-4">
-                        <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center font-black shrink-0">4</div>
-                        <div>
-                            <h4 className="font-bold text-gray-900 text-sm">Share the Link</h4>
-                            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                Click &quot;Copy Link&quot; and text or email it to your client. They will see a beautifully branded, private showroom with your retail pricing!
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mt-8 pt-4 border-t border-gray-100 flex justify-end">
-                    <button 
-                        onClick={() => setIsInfoOpen(false)}
-                        className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors"
-                    >
-                        Got it!
-                    </button>
-                </div>
-            </div>
-        </div>
-      )}
 
     </div>
   );
