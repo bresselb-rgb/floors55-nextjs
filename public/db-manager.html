@@ -298,6 +298,7 @@
         let documentsCache = [];
         let activeDocId = null;
         let isJsonValid = true;
+        let terminalUnsub = null; // Memory leak fix
 
         // Custom Dialog helpers
         window.customAlert = (title, message) => {
@@ -332,7 +333,7 @@
             });
         };
 
-        window.customPrompt = (title, description, placeholder = '') => {
+        window.customPrompt = (title, description, placeholder = '', defaultValue = '') => {
             return new Promise((resolve) => {
                 const modal = document.getElementById('custom-prompt-modal');
                 const titleEl = document.getElementById('prompt-title');
@@ -342,7 +343,9 @@
                 titleEl.innerText = title;
                 descEl.innerText = description;
                 inputEl.placeholder = placeholder;
-                inputEl.value = '';
+                
+                // CRITICAL FIX: We pre-fill the value so if they hit submit, it actually submits!
+                inputEl.value = defaultValue; 
                 
                 modal.classList.remove('hidden');
                 inputEl.focus();
@@ -470,9 +473,15 @@
             const searchInput = document.getElementById('doc-search');
             if (searchInput) searchInput.value = '';
             
+            // Memory Leak Fix: Clear out old listeners when swapping collections
+            if (terminalUnsub) {
+                terminalUnsub();
+                terminalUnsub = null;
+            }
+            
             logEvent(`Watching stream: /artifacts/${appId}/public/data/${colName}`, "info");
 
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', colName), (snap) => {
+            terminalUnsub = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', colName), (snap) => {
                 documentsCache = [];
                 snap.forEach(d => {
                     documentsCache.push({ id: d.id, ...d.data() });
@@ -613,7 +622,8 @@
             const requestedId = await window.customPrompt(
                 "Create New Document",
                 "Enter a unique Firestore Document ID (e.g. coretec-oak-vv017):",
-                "coretec-oak-vv017"
+                "e.g. coretec-oak-vv017",
+                "new-document-id"
             );
             if (!requestedId) return;
 
@@ -841,7 +851,8 @@
             const requestedId = await window.customPrompt(
                 "Create New Document",
                 "Confirm the unique Firestore Document ID for this extracted product:",
-                suggestedId
+                "e.g. product-name-sku",
+                suggestedId // <--- This correctly pre-fills the input box now!
             );
             
             if (!requestedId) {
