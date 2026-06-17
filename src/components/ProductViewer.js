@@ -228,9 +228,9 @@ function ProductViewerContent({ initialProduct }) {
         if (isCarpetProd && !isClientModeActual) {
             const fetchPads = async () => {
                 try {
-                    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'), where("category", "==", "Carpet Cushion"), where("isVisible", "==", true));
+                    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'), where("category", "==", "Carpet Cushion"));
                     const snap = await getDocs(q);
-                    const pads = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    const pads = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.isVisible !== false);
                     setAvailablePads(pads);
                 } catch(e) { console.error("Error fetching pads", e); }
             };

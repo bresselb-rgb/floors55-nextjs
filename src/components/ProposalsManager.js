@@ -53,9 +53,9 @@ export default function ProposalsManager({ proId }) {
           setQuotes(quotesData);
           
           // Fetch live carpet pads for the edit module
-          const padQ = query(collection(db, "artifacts", appId, "public", "data", "pricing"), where("category", "==", "Carpet Cushion"), where("isVisible", "==", true));
+          const padQ = query(collection(db, "artifacts", appId, "public", "data", "pricing"), where("category", "==", "Carpet Cushion"));
           const padSnap = await getDocs(padQ);
-          const pads = padSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const pads = padSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.isVisible !== false);
           setAvailablePads(pads);
       } catch (e) {
           console.error("Error fetching quotes:", e);
