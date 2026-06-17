@@ -9,7 +9,7 @@ import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDo
 import { auth, db, appId } from "../lib/firebase";
 
 // Fallback wrapper for images
-const CatalogImage = ({ src, alt, className, priority, fill, sizes, style }) => {
+const CatalogImage = ({ src, alt, className, priority, fill, sizes, style, width, height }) => {
     const [imgSrc, setImgSrc] = useState(src);
     const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
     useEffect(() => { setImgSrc(src); }, [src]);
@@ -22,6 +22,8 @@ const CatalogImage = ({ src, alt, className, priority, fill, sizes, style }) => 
             fill={fill} 
             sizes={sizes} 
             style={style} 
+            width={fill ? undefined : (width || 200)}
+            height={fill ? undefined : (height || 200)}
             onError={() => setImgSrc(TBD_IMG)} 
         />
     );
@@ -547,6 +549,8 @@ function ProductViewerContent({ initialProduct }) {
                                 src={fbPath} 
                                 alt={c.name} 
                                 fill={false}
+                                width={150}
+                                height={150}
                                 sizes="85px"
                                 className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} 
                             />
@@ -632,7 +636,7 @@ function ProductViewerContent({ initialProduct }) {
                                     <span className="text-lg font-bold text-gray-400 ml-2">(${clientPriceSqyd.toFixed(2)} /sqyd)</span>
                                 </span>
                             ) : (
-                                <span className="text-[2.2rem] text-gray-900 font-black leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
+                                <span className="text-[2.2rem] text-gray-900 font-black leading-none">${clientPriceSqft.toFixed(2)} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
                             )}
                         </div>
                     </>
@@ -654,7 +658,7 @@ function ProductViewerContent({ initialProduct }) {
                                         <span className="text-lg text-gray-400 font-bold ml-2">(${wsPriceSqyd.toFixed(2)} /sqyd)</span>
                                     </span>
                                 ) : (
-                                    <span className="text-[2rem] text-red-700 font-bold leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
+                                    <span className="text-[2rem] text-red-700 font-bold leading-none">${wsPriceSqft.toFixed(2)} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
                                 )}
                             </div>
                         </div>

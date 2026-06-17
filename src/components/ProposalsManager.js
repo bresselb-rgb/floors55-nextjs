@@ -28,8 +28,9 @@ export default function ProposalsManager({ proId }) {
   const [padSelection, setPadSelection] = useState('none');
   const [padCost, setPadCost] = useState('0.00'); // Stored per SF
   
-  const [trimQty, setTrimQty] = useState({ standard: 0, stairnose: 0, quarterRound: 0 });
-  const [trimCost, setTrimCost] = useState({ standard: 25, stairnose: 45, quarterRound: 10 });
+  // NEW: Dynamic Addons State replaces hardcoded trims
+  const [globalAddons, setGlobalAddons] = useState(null);
+  const [selectedAddons, setSelectedAddons] = useState([]);
 
   const [laborPrep, setLaborPrep] = useState(''); 
   const [laborInstallPerSqft, setLaborInstallPerSqft] = useState(''); 
@@ -57,6 +58,12 @@ export default function ProposalsManager({ proId }) {
           const padSnap = await getDocs(padQ);
           const pads = padSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.isVisible !== false);
           setAvailablePads(pads);
+
+          // Fetch Addon Rules from Firebase
+          const addonSnap = await getDoc(doc(db, "artifacts", appId, "public", "data", "settings", "proposal-addons"));
+          if (addonSnap.exists()) {
+              setGlobalAddons(addonSnap.data());
+          }
       } catch (e) {
           console.error("Error fetching quotes:", e);
       } finally {
@@ -88,12 +95,17 @@ export default function ProposalsManager({ proId }) {
 
   const handleOrderRequest = (quote) => {
       let addonsText = '';
-      if (quote.addons?.pad || (quote.addons?.trims?.details && (quote.addons.trims.details.standard > 0 || quote.addons.trims.details.stairnose > 0 || quote.addons.trims.details.quarterRound > 0))) {
+      if (quote.addons?.pad || quote.addons?.customList?.items?.length > 0 || quote.addons?.trims?.details) {
           addonsText += `\nRequired Add-Ons:\n`;
           if (quote.addons?.pad) {
               addonsText += `- Pad/Cushion: ${quote.addons.pad.name} (${quote.addons.pad.rolls} rolls)\n`;
           }
-          if (quote.addons?.trims?.details) {
+          if (quote.addons?.customList?.items) {
+              quote.addons.customList.items.forEach(item => {
+                  addonsText += `- ${item.name}: ${item.qty}\n`;
+              });
+          } else if (quote.addons?.trims?.details) {
+              // Legacy support
               const trims = quote.addons.trims.details;
               if (trims.standard > 0) addonsText += `- Standard Transitions: ${trims.standard}\n`;
               if (trims.stairnose > 0) addonsText += `- Stair Noses: ${trims.stairnose}\n`;
@@ -170,11 +182,16 @@ Thank you!`;
           setPadCost('0.00');
       }
 
-      if(quote.addons?.trims?.details) {
-          setTrimQty(quote.addons.trims.details);
-      } else {
-          setTrimQty({ standard: 0, stairnose: 0, quarterRound: 0 });
+      // Convert legacy trims or load new custom list
+      let initialAddons = [];
+      if (quote.addons?.customList && quote.addons.customList.items) {
+          initialAddons = quote.addons.customList.items;
+      } else if (quote.addons?.trims && quote.addons.trims.details) {
+          if (quote.addons.trims.details.standard > 0) initialAddons.push({ name: 'Standard Transitions', qty: quote.addons.trims.details.standard, cost: 25.00 });
+          if (quote.addons.trims.details.stairnose > 0) initialAddons.push({ name: 'Stair Noses', qty: quote.addons.trims.details.stairnose, cost: 45.00 });
+          if (quote.addons.trims.details.quarterRound > 0) initialAddons.push({ name: 'Quarter Round', qty: quote.addons.trims.details.quarterRound, cost: 10.00 });
       }
+      setSelectedAddons(initialAddons);
 
       setLaborPrep(quote.services?.prep || '');
       setLaborInstallPerSqft((quote.services?.installTotal / (quote.measurements?.netSqft || 1)) || '');
@@ -223,11 +240,12 @@ Thank you!`;
       ? (requiredPadRolls * padRollSqft * (parseFloat(padCost) || 0)) 
       : 0;
 
-  const totalTrimCost = isCarpet ? 0 : (trimQty.standard * trimCost.standard) + (trimQty.stairnose * trimCost.stairnose) + (trimQty.quarterRound * trimCost.quarterRound);
+  // New Dynamic Addons Cost
+  const totalAddonsCost = selectedAddons.reduce((sum, item) => sum + ((parseFloat(item.cost) || 0) * (parseInt(item.qty) || 0)), 0);
 
   const totalLaborCost = (parseFloat(laborPrep) || 0) + (netSqftNum * (parseFloat(laborInstallPerSqft) || 0)) + (parseFloat(laborDelivery) || 0) + (parseFloat(customLabor1Cost) || 0) + (parseFloat(customLabor2Cost) || 0);
 
-  const totalWholesaleProjectCost = totalMaterialCost + totalPadCost + totalTrimCost + totalLaborCost;
+  const totalWholesaleProjectCost = totalMaterialCost + totalPadCost + totalAddonsCost + totalLaborCost;
   const turnkeyRetailPrice = totalWholesaleProjectCost * (1 + (builderMargin / 100));
   
   const currentMarginVal = builderMargin > 0 ? ((builderMargin / (100 + builderMargin)) * 100).toFixed(1) : 0;
@@ -261,10 +279,7 @@ Thank you!`;
                   rollSqft: padRollSqft,
                   costPerSqft: parseFloat(padCost) || 0 
               } : null,
-              trims: !isCarpet && (trimQty.standard > 0 || trimQty.stairnose > 0 || trimQty.quarterRound > 0) ? { 
-                  cost: totalTrimCost, 
-                  details: { standard: trimQty.standard, stairnose: trimQty.stairnose, quarterRound: trimQty.quarterRound } 
-              } : null
+              customList: selectedAddons.length > 0 ? { cost: totalAddonsCost, items: selectedAddons } : null
           },
           services: {
               prep: parseFloat(laborPrep) || 0,
@@ -289,6 +304,8 @@ Thank you!`;
           setIsSaving(false);
       }
   };
+
+  const categoryAddons = globalAddons && editingProduct?.category ? (globalAddons[editingProduct.category] || globalAddons['Default'] || []) : [];
 
   return (
     <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
@@ -381,6 +398,7 @@ Thank you!`;
                                   </span>
                                   <span className="font-mono font-bold">${viewingCostsQuote.material?.wholesaleTotal?.toFixed(2) || '0.00'}</span>
                               </div>
+                              
                               {viewingCostsQuote.addons?.pad && (
                                   <div className="flex justify-between items-start gap-4">
                                       <span>Pad: {viewingCostsQuote.addons.pad.name}
@@ -390,7 +408,16 @@ Thank you!`;
                                       <span className="font-mono font-bold">${viewingCostsQuote.addons.pad.cost?.toFixed(2) || '0.00'}</span>
                                   </div>
                               )}
-                              {viewingCostsQuote.addons?.trims && (
+                              
+                              {viewingCostsQuote.addons?.customList?.items?.map((item, idx) => (
+                                  <div key={idx} className="flex justify-between items-start gap-4">
+                                      <span>{item.name} <span className="text-[10px] text-gray-400 uppercase tracking-widest">({item.qty} qty)</span></span>
+                                      <span className="font-mono font-bold">${(item.cost * item.qty).toFixed(2)}</span>
+                                  </div>
+                              ))}
+                              
+                              {/* Legacy Support for old trims */}
+                              {!viewingCostsQuote.addons?.customList && viewingCostsQuote.addons?.trims && (
                                   <div className="flex justify-between items-start gap-4">
                                       <span>Transitions & Trims</span>
                                       <span className="font-mono font-bold">${viewingCostsQuote.addons.trims.cost?.toFixed(2) || '0.00'}</span>
@@ -537,8 +564,8 @@ Thank you!`;
                       {/* STEP 2: ACCESSORIES */}
                       <div>
                           <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>2</span> Add-Ons & Accessories</h4>
-                          {isCarpet ? (
-                              <div className="space-y-3">
+                          {isCarpet && (
+                              <div className="space-y-3 mb-4">
                                   <div>
                                       <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Select Carpet Cushion</label>
                                       <select value={padSelection} onChange={e => setPadSelection(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white cursor-pointer">
@@ -571,25 +598,56 @@ Thank you!`;
                                       </div>
                                   )}
                               </div>
-                          ) : (
-                              <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                  <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
-                                      <div className="flex flex-col"><span className="text-xs font-bold text-gray-700">Standard Transitions</span></div>
-                                      <input type="number" min="0" value={trimQty.standard || ''} onChange={e => setTrimQty({...trimQty, standard: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold" />
-                                      <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.standard} onChange={e=>setTrimCost({...trimCost, standard: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
-                                  </div>
-                                  <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
-                                      <span className="text-xs font-bold text-gray-700">Stair Nose</span>
-                                      <input type="number" min="0" value={trimQty.stairnose || ''} onChange={e => setTrimQty({...trimQty, stairnose: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold" />
-                                      <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.stairnose} onChange={e=>setTrimCost({...trimCost, stairnose: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
-                                  </div>
-                                  <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
-                                      <span className="text-xs font-bold text-gray-700">Quarter Round</span>
-                                      <input type="number" min="0" value={trimQty.quarterRound || ''} onChange={e => setTrimQty({...trimQty, quarterRound: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold" />
-                                      <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.quarterRound} onChange={e=>setTrimCost({...trimCost, quarterRound: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
-                                  </div>
-                              </div>
                           )}
+                          
+                          <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                              {selectedAddons.map((addon, index) => (
+                                  <div key={index} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center bg-white p-2 rounded border border-gray-200">
+                                      <input type="text" value={addon.name} onChange={e => {
+                                          const newAddons = [...selectedAddons];
+                                          newAddons[index].name = e.target.value;
+                                          setSelectedAddons(newAddons);
+                                      }} className="w-full p-1 text-xs outline-none focus:border-gold border border-transparent focus:border-gray-200 rounded" placeholder="Accessory Name" />
+                                      <input type="number" value={addon.qty} onChange={e => {
+                                          const newAddons = [...selectedAddons];
+                                          newAddons[index].qty = parseInt(e.target.value) || 0;
+                                          setSelectedAddons(newAddons);
+                                      }} className="w-12 p-1 text-xs border border-gray-200 rounded text-center outline-none focus:border-gold" min="1" placeholder="Qty" />
+                                      <div className="flex items-center gap-1 text-xs text-gray-400">
+                                          $<input type="number" value={addon.cost} onChange={e => {
+                                              const newAddons = [...selectedAddons];
+                                              newAddons[index].cost = parseFloat(e.target.value) || 0;
+                                              setSelectedAddons(newAddons);
+                                          }} className="w-14 p-1 text-xs border border-gray-200 rounded text-right outline-none focus:border-gold" step="0.01" />
+                                      </div>
+                                      <button onClick={() => {
+                                          setSelectedAddons(selectedAddons.filter((_, i) => i !== index));
+                                      }} className="text-red-400 hover:text-red-600 font-black px-2 outline-none cursor-pointer">✕</button>
+                                  </div>
+                              ))}
+
+                              <select onChange={(e) => {
+                                  if (e.target.value) {
+                                      if (e.target.value === 'custom') {
+                                          setSelectedAddons([...selectedAddons, { name: 'Custom Accessory', cost: 0.00, qty: 1 }]);
+                                      } else {
+                                          const selected = categoryAddons.find(a => a.name === e.target.value);
+                                          if (selected) {
+                                              const resolvedCost = selected.cost !== undefined ? selected.cost : (selected.defaultCost || 0);
+                                              setSelectedAddons([...selectedAddons, { ...selected, cost: resolvedCost, qty: 1 }]);
+                                          }
+                                      }
+                                      e.target.value = '';
+                                  }
+                              }} className="w-full p-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 outline-none focus:border-gold cursor-pointer bg-white">
+                                  <option value="">+ Add Accessory / Trim...</option>
+                                  {categoryAddons.map(a => {
+                                      const resolvedCost = a.cost !== undefined ? a.cost : (a.defaultCost || 0);
+                                      return <option key={a.name} value={a.name}>{a.name} (${parseFloat(resolvedCost).toFixed(2)})</option>
+                                  })}
+                                  <option value="custom">Create Custom Accessory...</option>
+                              </select>
+                          </div>
                       </div>
 
                       {/* STEP 3: LABOR */}
@@ -644,7 +702,7 @@ Thank you!`;
                       <input type="range" min="0" max="100" step="1" value={builderMargin} onChange={e => setBuilderMargin(Number(e.target.value))} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold mb-6" />
 
                       <div className="space-y-3">
-                          <button onClick={handleSaveEdit} disabled={isSaving || netSqftNum === 0 || !editClientName.trim()} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50 cursor-pointer">
+                          <button onClick={handleSaveEdit} disabled={isSaving || netSqftNum === 0 || !editClientName.trim()} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50 cursor-pointer outline-none">
                               {isSaving ? "Saving..." : "Update Turnkey Proposal"}
                           </button>
                           {(!editClientName.trim() || netSqftNum === 0) && (

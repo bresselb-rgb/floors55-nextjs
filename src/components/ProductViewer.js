@@ -2,32 +2,10 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc } from "firebase/firestore";
 import { auth, db, appId } from "../lib/firebase";
-
-// Fallback wrapper for images
-const CatalogImage = ({ src, alt, className, priority, fill, sizes, style, width, height }) => {
-    const [imgSrc, setImgSrc] = useState(src);
-    const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
-    useEffect(() => { setImgSrc(src); }, [src]);
-    return (
-        <Image 
-            src={imgSrc || TBD_IMG} 
-            alt={alt} 
-            className={className} 
-            priority={priority} 
-            fill={fill} 
-            sizes={sizes} 
-            style={style} 
-            width={fill ? undefined : (width || 200)}
-            height={fill ? undefined : (height || 200)}
-            onError={() => setImgSrc(TBD_IMG)} 
-        />
-    );
-};
 
 function ProductViewerContent({ initialProduct }) {
     const router = useRouter();
@@ -53,7 +31,6 @@ function ProductViewerContent({ initialProduct }) {
     });
 
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-    
     const [isBuilderOpen, setIsBuilderOpen] = useState(false);
     const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
 
@@ -64,10 +41,11 @@ function ProductViewerContent({ initialProduct }) {
     const [calcWaste, setCalcWaste] = useState('1.10');
     
     const [padSelection, setPadSelection] = useState('none');
-    const [padCost, setPadCost] = useState('0.00'); // Now stored per SF
+    const [padCost, setPadCost] = useState('0.00');
     
-    const [trimQty, setTrimQty] = useState({ standard: 0, stairnose: 0, quarterRound: 0 });
-    const [trimCost, setTrimCost] = useState({ standard: 25, stairnose: 45, quarterRound: 10 });
+    // Dynamic Addons State
+    const [globalAddons, setGlobalAddons] = useState(null);
+    const [selectedAddons, setSelectedAddons] = useState([]);
 
     const [laborPrep, setLaborPrep] = useState(''); 
     const [laborInstallPerSqft, setLaborInstallPerSqft] = useState(''); 
@@ -223,20 +201,30 @@ function ProductViewerContent({ initialProduct }) {
         }
     }, [user]);
 
+    // Fetch dynamic pads AND dynamic addons
     useEffect(() => {
         const isCarpetProd = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
         const isClientModeActual = clientMargin !== null;
         
-        if (isCarpetProd && !isClientModeActual) {
-            const fetchPads = async () => {
+        if (!isClientModeActual) {
+            const fetchConfig = async () => {
                 try {
-                    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'), where("category", "==", "Carpet Cushion"));
-                    const snap = await getDocs(q);
-                    const pads = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.isVisible !== false);
-                    setAvailablePads(pads);
-                } catch(e) { console.error("Error fetching pads", e); }
+                    if (isCarpetProd) {
+                        const padQ = query(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'), where("category", "==", "Carpet Cushion"));
+                        const padSnap = await getDocs(padQ);
+                        // Filter for visible pads directly in JavaScript to bypass Firebase Composite Index crash
+                        const pads = padSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.isVisible !== false);
+                        setAvailablePads(pads);
+                    }
+
+                    // Fetch Addon Rules from Firebase (Using hyphenated ID)
+                    const addonSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'proposal-addons'));
+                    if (addonSnap.exists()) {
+                        setGlobalAddons(addonSnap.data());
+                    }
+                } catch(e) { console.error("Error fetching config", e); }
             };
-            fetchPads();
+            fetchConfig();
         }
     }, [productData, clientMargin]);
 
@@ -246,11 +234,12 @@ function ProductViewerContent({ initialProduct }) {
         } else if (padSelection !== 'custom_legacy') {
             const pad = availablePads.find(p => p.id === padSelection);
             if (pad) {
-                // Ensure cost is extracted per sqft for builder UI
-                const pricePerSqft = pad.unit === 'sqyd' ? ((pad.price || 0) / 9) : (pad.price || 0);
-                setPadCost(pricePerSqft.toFixed(2));
-            } else {
-                setPadCost('0.00');
+                // Determine base price based on SF vs SY configurations
+                let basePadPrice = pad.price || 0;
+                if (pad.unit === 'sqyd' || pad.calcType === 'carpet') {
+                    basePadPrice = basePadPrice / 9; // Convert to per sqft for the UI input
+                }
+                setPadCost(basePadPrice.toFixed(2));
             }
         }
     }, [padSelection, availablePads]);
@@ -320,66 +309,72 @@ function ProductViewerContent({ initialProduct }) {
 
     const isClientMode = clientMargin !== null;
     const basePrice = productData?.price || 0;
-    
-    // Core Category Booleans
     const isCarpet = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
-    const isCushion = productData?.category === 'Carpet Cushion';
-    const isCarpetOrCushion = isCarpet || isCushion;
+    const isCarpetCushionOnly = productData?.category === 'Carpet Cushion';
     
-    // Formatting standardized pricing per SF and SY for carpet/cushion display
-    const wsPriceSqft = productData?.unit === 'sqyd' ? basePrice / 9 : basePrice;
-    const wsPriceSqyd = productData?.unit === 'sqyd' ? basePrice : basePrice * 9;
-    
-    const retailBase = productData?.retailPrice ? parseFloat(productData.retailPrice) : (basePrice * 2.2);
-    const retailPriceSqft = productData?.unit === 'sqyd' ? retailBase / 9 : retailBase;
-    const retailPriceSqyd = productData?.unit === 'sqyd' ? retailBase : retailBase * 9;
-    
-    const finalBase = isClientMode ? basePrice * (1 + clientMargin / 100) : basePrice;
-    const clientPriceSqft = productData?.unit === 'sqyd' ? finalBase / 9 : finalBase;
-    const clientPriceSqyd = productData?.unit === 'sqyd' ? finalBase : finalBase * 9;
-
-    let cartonSqft = parseFloat(productData?.cartonSize) || parseFloat(productData?.boxSqft);
+    let cartonSqft = parseFloat(productData?.cartonSize);
+    if (isNaN(cartonSqft) || cartonSqft <= 0) cartonSqft = parseFloat(productData?.boxSqft);
     if (!cartonSqft && productData?.specs && Array.isArray(productData.specs)) {
         const specText = productData.specs.join(' ').toLowerCase();
         const sqftMatch = specText.match(/([\d.]+)\s*(sq\.?ft\.?|sq\s*ft|sf)/);
         if (sqftMatch && parseFloat(sqftMatch[1]) > 0) cartonSqft = parseFloat(sqftMatch[1]);
     }
-    cartonSqft = cartonSqft || 20;
+    cartonSqft = cartonSqft || (isCarpetCushionOnly ? 360 : 20); // Default pad roll is often 40 sqyd (360 sqft)
 
     const netSqftNum = parseFloat(calcNetSqft) || 0;
     const totalSqftWithWaste = netSqftNum * parseFloat(calcWaste);
     
     const requiredSqYd = Math.ceil(totalSqftWithWaste / 9);
     const requiredCartons = Math.ceil(totalSqftWithWaste / cartonSqft);
-    const finalMaterialQty = isCarpet ? requiredSqYd : requiredCartons;
-    const finalMaterialUnit = isCarpet ? 'sqyd' : 'cartons';
-    const finalMaterialCoverageSqft = isCarpet ? (requiredSqYd * 9) : (requiredCartons * cartonSqft);
     
-    const totalMaterialCost = isCarpet 
-        ? (requiredSqYd * (basePrice * (productData?.unit === 'sqyd' ? 1 : 9))) 
-        : (requiredCartons * cartonSqft * basePrice);
+    let finalMaterialQty = requiredCartons;
+    let finalMaterialUnit = 'cartons';
+    let finalMaterialCoverageSqft = requiredCartons * cartonSqft;
 
-    let padRollSqft = 360; // Safe fallback (40 sqyd)
-    let padName = '';
-    if (padSelection !== 'none' && padSelection !== 'custom_legacy') {
-        const pad = availablePads.find(p => p.id === padSelection);
-        if (pad) {
-            const cSize = parseFloat(pad.cartonSize) || parseFloat(pad.boxSqft);
-            if (cSize > 0) padRollSqft = pad.unit === 'sqyd' ? cSize * 9 : cSize;
-            padName = pad.name;
-        }
+    if (isCarpet) {
+        finalMaterialQty = requiredSqYd;
+        finalMaterialUnit = 'sqyd';
+        finalMaterialCoverageSqft = requiredSqYd * 9;
+    } else if (isCarpetCushionOnly) {
+        finalMaterialQty = requiredCartons; 
+        finalMaterialUnit = 'rolls';
+        finalMaterialCoverageSqft = requiredCartons * cartonSqft;
     }
     
-    // Core Math: Pad rolls always round up based on coverage required
-    const requiredPadRolls = Math.ceil(totalSqftWithWaste / padRollSqft);
-    const totalPadCost = isCarpet && padSelection !== 'none' 
-        ? (requiredPadRolls * padRollSqft * (parseFloat(padCost) || 0)) 
-        : 0;
+    // Normalize DB Price depending on unit
+    let normalizedPerSqftPrice = basePrice;
+    if (productData?.unit === 'sqyd' || productData?.calcType === 'carpet') {
+        normalizedPerSqftPrice = basePrice / 9;
+    }
+    const totalMaterialCost = finalMaterialCoverageSqft * normalizedPerSqftPrice;
 
-    const totalTrimCost = isCarpet ? 0 : 
-        (trimQty.standard * trimCost.standard) + 
-        (trimQty.stairnose * trimCost.stairnose) + 
-        (trimQty.quarterRound * trimCost.quarterRound);
+    // Pad calculations with Roll Rounding
+    let totalPadCost = 0;
+    let requiredPadSqyd = 0;
+    let requiredPadRolls = 0;
+    
+    if (isCarpet && padSelection !== 'none') {
+        let padRollSqft = 360; // 40 sqyd default
+        if (padSelection !== 'custom_legacy') {
+            const padDoc = availablePads.find(p => p.id === padSelection);
+            if (padDoc && padDoc.cartonSize) {
+                padRollSqft = parseFloat(padDoc.cartonSize);
+                if (padDoc.unit === 'sqyd' || padDoc.calcType === 'carpet') {
+                    padRollSqft = parseFloat(padDoc.cartonSize) * 9;
+                }
+            }
+        }
+        
+        requiredPadRolls = Math.ceil(finalMaterialCoverageSqft / padRollSqft);
+        const actualPadSqftToPurchase = requiredPadRolls * padRollSqft;
+        requiredPadSqyd = actualPadSqftToPurchase / 9;
+        
+        // padCost input is in $ per sqft
+        totalPadCost = actualPadSqftToPurchase * (parseFloat(padCost) || 0);
+    }
+
+    // Dynamic Addons Cost
+    const totalAddonsCost = selectedAddons.reduce((sum, item) => sum + ((parseFloat(item.cost) || 0) * (parseInt(item.qty) || 0)), 0);
 
     const totalLaborCost = 
         (parseFloat(laborPrep) || 0) + 
@@ -388,7 +383,7 @@ function ProductViewerContent({ initialProduct }) {
         (parseFloat(customLabor1Cost) || 0) + 
         (parseFloat(customLabor2Cost) || 0);
 
-    const totalWholesaleProjectCost = totalMaterialCost + totalPadCost + totalTrimCost + totalLaborCost;
+    const totalWholesaleProjectCost = totalMaterialCost + totalPadCost + totalAddonsCost + totalLaborCost;
     const turnkeyRetailPrice = totalWholesaleProjectCost * (1 + (builderMargin / 100));
 
     const handleSaveToBoard = async () => {
@@ -430,7 +425,7 @@ function ProductViewerContent({ initialProduct }) {
             if (padSelection === 'custom_legacy') padNameToSave = "Legacy Pad / Custom";
             else if (padSelection !== 'none') {
                 const found = availablePads.find(p => p.id === padSelection);
-                if (found) padNameToSave = found.name;
+                if (found) padNameToSave = found.name || found.displayTitle;
             }
 
             const quoteDoc = {
@@ -446,17 +441,8 @@ function ProductViewerContent({ initialProduct }) {
                 measurements: { waste: parseFloat(calcWaste), netSqft: netSqftNum, coverageSqft: finalMaterialCoverageSqft },
                 material: { qty: finalMaterialQty, unit: finalMaterialUnit, wholesaleTotal: totalMaterialCost },
                 addons: {
-                    pad: padNameToSave ? { 
-                        name: padNameToSave, 
-                        cost: totalPadCost,
-                        rolls: requiredPadRolls,
-                        rollSqft: padRollSqft,
-                        costPerSqft: parseFloat(padCost) || 0
-                    } : null,
-                    trims: !isCarpet && (trimQty.standard > 0 || trimQty.stairnose > 0 || trimQty.quarterRound > 0) ? { 
-                        cost: totalTrimCost, 
-                        details: { standard: trimQty.standard, stairnose: trimQty.stairnose, quarterRound: trimQty.quarterRound } 
-                    } : null
+                    pad: padNameToSave ? { name: padNameToSave, cost: totalPadCost, sqyd: requiredPadSqyd, rolls: requiredPadRolls } : null,
+                    customList: selectedAddons.length > 0 ? { cost: totalAddonsCost, items: selectedAddons } : null
                 },
                 services: {
                     prep: parseFloat(laborPrep) || 0,
@@ -484,6 +470,34 @@ function ProductViewerContent({ initialProduct }) {
         } finally {
             setIsSavingToBoard(false);
         }
+    };
+
+    const finalPrice = isClientMode ? normalizedPerSqftPrice * (1 + clientMargin / 100) : normalizedPerSqftPrice;
+    const wsPrice = finalPrice.toFixed(2);
+    
+    // Render Pricing correctly whether it's carpet or hardsurface
+    const renderPriceBlock = () => {
+        if (isCarpet || isCarpetCushionOnly) {
+            const priceSy = (finalPrice * 9).toFixed(2);
+            return (
+                <span className="text-[2.2rem] text-gray-900 font-black leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/sqft</span> <span className="text-lg font-bold text-gray-400 ml-1">(${priceSy} /sqyd)</span></span>
+            );
+        }
+        return (
+            <span className="text-[2.2rem] text-gray-900 font-black leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
+        );
+    };
+
+    const renderWholesalePriceBlock = () => {
+        if (isCarpet || isCarpetCushionOnly) {
+            const priceSy = (normalizedPerSqftPrice * 9).toFixed(2);
+            return (
+                <span className="text-[2rem] text-red-700 font-bold leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/sqft</span> <span className="text-lg font-bold text-red-700/60 ml-1">(${priceSy} /sqyd)</span></span>
+            );
+        }
+        return (
+            <span className="text-[2rem] text-red-700 font-bold leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
+        );
     };
 
     const renderTitleBlock = (isDesktop) => (
@@ -545,15 +559,7 @@ function ProductViewerContent({ initialProduct }) {
                             router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
                             setActiveColor(c);
                         }}>
-                            <CatalogImage 
-                                src={fbPath} 
-                                alt={c.name} 
-                                fill={false}
-                                width={150}
-                                height={150}
-                                sizes="85px"
-                                className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} 
-                            />
+                            <img src={fbPath} onError={(e) => e.target.src = TBD_IMG} className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} alt={c.name} />
                             <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
                         </div>
                     );
@@ -561,6 +567,8 @@ function ProductViewerContent({ initialProduct }) {
             </div>
         </div>
     );
+
+    const categoryAddons = globalAddons && productData?.category ? (globalAddons[productData.category] || globalAddons['Default'] || []) : [];
 
     return (
         <div className="flex-1 max-w-[1400px] mx-auto px-4 py-10 w-full flex flex-col lg:flex-row gap-10 relative">
@@ -574,36 +582,14 @@ function ProductViewerContent({ initialProduct }) {
                 {activeView === 'VIDEO' ? (
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
-                    <CatalogImage 
-                        src={getMediaPath(activeView)} 
-                        alt="Product View" 
-                        priority={true} 
-                        fill={true} 
-                        sizes="(max-width: 1024px) 100vw, 50vw" 
-                        className="object-cover transition-opacity duration-200 group-hover:opacity-85" 
-                        style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} 
-                    />
+                    <img src={getMediaPath(activeView) || TBD_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => e.target.src = TBD_IMG} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
                 )}
             </div>
 
             {productData.views && (
                 <div className="mt-4 flex gap-3">
                     {productData.views.map(v => (
-                        <div key={v} className={`relative w-[75px] h-[75px] border-2 rounded cursor-pointer transition overflow-hidden ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} onClick={() => setActiveView(v)}>
-                            {v === 'VIDEO' ? (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#c5a059" width="36px" height="36px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
-                                </div>
-                            ) : (
-                                <CatalogImage 
-                                    src={getMediaPath(v)} 
-                                    alt={`View ${v}`} 
-                                    fill={true} 
-                                    sizes="75px" 
-                                    className="object-cover" 
-                                />
-                            )}
-                        </div>
+                         <img key={v} src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)} className={`w-[75px] h-[75px] object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} onClick={() => setActiveView(v)} onError={(e) => e.target.src = TBD_IMG} alt={`View ${v}`} />
                     ))}
                 </div>
             )}
@@ -630,14 +616,7 @@ function ProductViewerContent({ initialProduct }) {
                         <div className="absolute top-0 right-0 bg-gray-900 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-widest shadow-sm">Client Pricing</div>
                         <div className="mt-1">
                             <span className="text-[1.1rem] text-gray-900 font-bold mr-2">Price:</span>
-                            {isCarpetOrCushion ? (
-                                <span className="text-[2.2rem] text-gray-900 font-black leading-none">
-                                    ${clientPriceSqft.toFixed(2)} <span className="text-sm font-normal text-gray-500">/sqft</span>
-                                    <span className="text-lg font-bold text-gray-400 ml-2">(${clientPriceSqyd.toFixed(2)} /sqyd)</span>
-                                </span>
-                            ) : (
-                                <span className="text-[2.2rem] text-gray-900 font-black leading-none">${clientPriceSqft.toFixed(2)} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
-                            )}
+                            {renderPriceBlock()}
                         </div>
                     </>
                 ) : user && !user.isAnonymous ? (
@@ -645,30 +624,17 @@ function ProductViewerContent({ initialProduct }) {
                         <div className="absolute top-0 right-0 bg-gold text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-widest flex items-center gap-2 shadow-sm">
                             <span className="w-1.5 h-1.5 rounded-full bg-white inline-block animate-pulse"></span> Wholesale Live
                         </div>
-                        <span className="text-[0.9rem] text-gray-500 line-through mb-1 block">
-                            Retail: ${retailPriceSqft.toFixed(2)} <span className="text-sm">/sqft</span>
-                            {isCarpetOrCushion && <span className="ml-1 text-sm">(${retailPriceSqyd.toFixed(2)}/sqyd)</span>}
-                        </span>
+                        <span className="text-[0.9rem] text-gray-500 line-through mb-1 block">Retail: ${(productData?.retailPrice ? parseFloat(productData.retailPrice) : (basePrice * 2.2)).toFixed(2)} <span className="text-sm">/</span><span className="text-sm">{productData.unit || 'sqft'}</span></span>
                         <div className="mt-3 pt-3 border-t border-gray-200">
                             <div className="flex items-end gap-2">
                                 <span className="text-[1.1rem] text-gray-900 font-bold text-gold mb-1">Wholesale Price:</span>
-                                {isCarpetOrCushion ? (
-                                    <span className="text-[2rem] text-red-700 font-bold leading-none">
-                                        ${wsPriceSqft.toFixed(2)} <span className="text-sm font-normal text-gray-500">/sqft</span>
-                                        <span className="text-lg text-gray-400 font-bold ml-2">(${wsPriceSqyd.toFixed(2)} /sqyd)</span>
-                                    </span>
-                                ) : (
-                                    <span className="text-[2rem] text-red-700 font-bold leading-none">${wsPriceSqft.toFixed(2)} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
-                                )}
+                                {renderWholesalePriceBlock()}
                             </div>
                         </div>
                     </>
                 ) : (
                     <>
-                        <span className="text-[1.5rem] text-gray-900 font-bold mb-1 block">
-                            Retail: ${retailPriceSqft.toFixed(2)} <span className="text-sm">/sqft</span>
-                            {isCarpetOrCushion && <span className="ml-1 text-lg text-gray-400">(${retailPriceSqyd.toFixed(2)} /sqyd)</span>}
-                        </span>
+                        <span className="text-[1.5rem] text-gray-900 font-bold mb-1 block">Retail: ${(productData?.retailPrice ? parseFloat(productData.retailPrice) : (basePrice * 2.2)).toFixed(2)} <span className="text-sm">/</span><span className="text-sm">{productData.unit || 'sqft'}</span></span>
                         <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
                             <button onClick={() => window.dispatchEvent(new Event('open-login-modal'))} className="block w-full text-left text-[10px] font-bold uppercase tracking-widest text-gold hover:text-black transition-colors underline bg-transparent border-none cursor-pointer outline-none">Log in for wholesale pricing</button>
                         </div>
@@ -711,8 +677,8 @@ function ProductViewerContent({ initialProduct }) {
             )}
           </div>
 
-          {/* BUILDER TRIGGER (Disabled for Standalone Cushions) */}
-          {!isClientMode && user && !user.isAnonymous && !isCushion && (
+          {/* THE NEW PROPOSAL BUILDER TRIGGER BUTTON */}
+          {!isClientMode && user && !user.isAnonymous && !isCarpetCushionOnly && (
               <button 
                   className="fixed bottom-5 right-5 md:bottom-8 md:right-8 bg-black text-white px-6 py-4 rounded-full cursor-pointer font-bold shadow-2xl z-40 transition-all border-2 border-black hover:bg-gold hover:text-black hover:border-gold flex items-center gap-2 text-sm md:text-base hover:scale-105" 
                   onClick={() => setIsBuilderOpen(true)}
@@ -779,58 +745,73 @@ function ProductViewerContent({ initialProduct }) {
                           <div>
                               <h4 className="text-xs font-black uppercase tracking-widest text-gold mb-3 flex items-center gap-2"><span>2</span> Add-Ons & Accessories</h4>
                               
-                              {isCarpet ? (
-                                  <div className="space-y-3">
-                                      <div>
-                                          <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Select Carpet Cushion</label>
-                                          <select value={padSelection} onChange={e => setPadSelection(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white cursor-pointer">
-                                              <option value="none">No Pad Included</option>
-                                              {availablePads.map(pad => {
-                                                  const padP_sqft = pad.unit === 'sqyd' ? ((pad.price || 0) / 9) : (pad.price || 0);
-                                                  const rollSqft = pad.unit === 'sqyd' ? ((parseFloat(pad.cartonSize) || 40) * 9) : (parseFloat(pad.cartonSize) || 360);
-                                                  return (
-                                                      <option key={pad.id} value={pad.id}>
-                                                          {pad.name} (${padP_sqft.toFixed(2)}/sqft - Roll: {rollSqft} sqft)
-                                                      </option>
-                                                  );
-                                              })}
-                                              {padSelection === 'custom_legacy' && <option value="custom_legacy">Legacy Pad / Custom</option>}
-                                          </select>
-                                      </div>
+                              {isCarpet && (
+                                  <div className="mb-4">
+                                      <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Select Carpet Cushion</label>
+                                      <select value={padSelection} onChange={e => setPadSelection(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white cursor-pointer mb-2">
+                                          <option value="none">No Pad Included</option>
+                                          {availablePads.map(pad => (
+                                              <option key={pad.id} value={pad.id}>{pad.name || pad.displayTitle}</option>
+                                          ))}
+                                          <option value="custom_legacy">Legacy Pad / Custom</option>
+                                      </select>
                                       {padSelection !== 'none' && (
-                                          <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                              <div className="flex items-center gap-2">
-                                                  <label className="block text-[10px] font-bold uppercase text-gray-500 flex-1">Your Cost per sqft ($)</label>
-                                                  <input type="number" step="0.01" value={padCost} onChange={e => setPadCost(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm text-right bg-white" />
-                                              </div>
-                                              <div className="text-[10px] text-gray-500 text-right mt-2 pt-2 border-t border-gray-200">
-                                                  Requires <span className="font-bold text-gray-900">{requiredPadRolls} roll(s)</span> ({requiredPadRolls * padRollSqft} sqft) = <span className="text-gold font-bold">${totalPadCost.toFixed(2)}</span>
-                                              </div>
+                                          <div className="flex items-center justify-between bg-gray-50 p-2 rounded-lg border border-gray-100">
+                                              <label className="text-[10px] font-bold uppercase text-gray-500">Your Cost per sqft ($)</label>
+                                              <input type="number" step="0.01" value={padCost} onChange={e => setPadCost(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm text-right bg-white" />
                                           </div>
                                       )}
                                   </div>
-                              ) : (
-                                  <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                      <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
-                                          <div className="flex flex-col">
-                                            <span className="text-xs font-bold text-gray-700">Standard Transitions</span>
-                                            <span className="text-[9px] text-gray-400">T-Mold, Reducer, End Cap</span>
-                                          </div>
-                                          <input type="number" min="0" placeholder="Qty" value={trimQty.standard || ''} onChange={e => setTrimQty({...trimQty, standard: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold" />
-                                          <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.standard} onChange={e=>setTrimCost({...trimCost, standard: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
-                                      </div>
-                                      <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
-                                          <span className="text-xs font-bold text-gray-700">Stair Nose</span>
-                                          <input type="number" min="0" placeholder="Qty" value={trimQty.stairnose || ''} onChange={e => setTrimQty({...trimQty, stairnose: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold" />
-                                          <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.stairnose} onChange={e=>setTrimCost({...trimCost, stairnose: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
-                                      </div>
-                                      <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center">
-                                          <span className="text-xs font-bold text-gray-700">Quarter Round</span>
-                                          <input type="number" min="0" placeholder="Qty" value={trimQty.quarterRound || ''} onChange={e => setTrimQty({...trimQty, quarterRound: parseInt(e.target.value)||0})} className="w-16 p-2 border border-gray-200 rounded-lg text-xs text-center outline-none focus:border-gold" />
-                                          <div className="flex items-center gap-1 text-xs text-gray-400">$<input type="number" value={trimCost.quarterRound} onChange={e=>setTrimCost({...trimCost, quarterRound: parseFloat(e.target.value)||0})} className="w-12 p-1 border border-gray-200 rounded bg-white text-right outline-none focus:border-gold"/></div>
-                                      </div>
-                                  </div>
                               )}
+
+                              <div className="space-y-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                  {selectedAddons.map((addon, index) => (
+                                      <div key={index} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center bg-white p-2 rounded border border-gray-200">
+                                          <input type="text" value={addon.name} onChange={e => {
+                                              const newAddons = [...selectedAddons];
+                                              newAddons[index].name = e.target.value;
+                                              setSelectedAddons(newAddons);
+                                          }} className="w-full p-1 text-xs outline-none focus:border-gold border border-transparent focus:border-gray-200 rounded" placeholder="Accessory Name" />
+                                          <input type="number" value={addon.qty} onChange={e => {
+                                              const newAddons = [...selectedAddons];
+                                              newAddons[index].qty = parseInt(e.target.value) || 0;
+                                              setSelectedAddons(newAddons);
+                                          }} className="w-12 p-1 text-xs border border-gray-200 rounded text-center outline-none focus:border-gold" min="1" placeholder="Qty" />
+                                          <div className="flex items-center gap-1 text-xs text-gray-400">
+                                              $<input type="number" value={addon.cost} onChange={e => {
+                                                  const newAddons = [...selectedAddons];
+                                                  newAddons[index].cost = parseFloat(e.target.value) || 0;
+                                                  setSelectedAddons(newAddons);
+                                              }} className="w-14 p-1 text-xs border border-gray-200 rounded text-right outline-none focus:border-gold" step="0.01" />
+                                          </div>
+                                          <button onClick={() => {
+                                              setSelectedAddons(selectedAddons.filter((_, i) => i !== index));
+                                          }} className="text-red-400 hover:text-red-600 font-black px-2 outline-none cursor-pointer">✕</button>
+                                      </div>
+                                  ))}
+
+                                  <select onChange={(e) => {
+                                      if (e.target.value) {
+                                          if (e.target.value === 'custom') {
+                                              setSelectedAddons([...selectedAddons, { name: 'Custom Accessory', cost: 0.00, qty: 1 }]);
+                                          } else {
+                                              const selected = categoryAddons.find(a => a.name === e.target.value);
+                                              if (selected) {
+                                                  const resolvedCost = selected.cost !== undefined ? selected.cost : (selected.defaultCost || 0);
+                                                  setSelectedAddons([...selectedAddons, { ...selected, cost: resolvedCost, qty: 1 }]);
+                                              }
+                                          }
+                                          e.target.value = '';
+                                      }
+                                  }} className="w-full p-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 outline-none focus:border-gold cursor-pointer bg-white">
+                                      <option value="">+ Add Accessory / Trim...</option>
+                                      {categoryAddons.map(a => {
+                                          const resolvedCost = a.cost !== undefined ? a.cost : (a.defaultCost || 0);
+                                          return <option key={a.name} value={a.name}>{a.name} (${parseFloat(resolvedCost).toFixed(2)})</option>
+                                      })}
+                                      <option value="custom">Create Custom Accessory...</option>
+                                  </select>
+                              </div>
                           </div>
 
                           {/* STEP 3: LABOR */}
