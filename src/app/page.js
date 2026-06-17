@@ -58,7 +58,7 @@ export default function Home() {
 
       <section id="categories" className="py-10 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
                 <Link href="/category/luxury-vinyl" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
                     <Image src={getFbUrl('images/heros/lvp.jpg')} alt="Luxury Vinyl" fill sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
@@ -96,6 +96,17 @@ export default function Home() {
                         <h3 className="text-white text-3xl font-bold mb-1">Hardwood</h3>
                         <p className="text-gray-300 text-sm mb-6">Timeless Natural Beauty</p>
                         <span className="inline-block bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold uppercase px-6 py-3 rounded-full group-hover:bg-gold transition-all">Shop Hardwood</span>
+                    </div>
+                </Link>
+
+                {/* NEW TILE CATEGORY */}
+                <Link href="/category/tile" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
+                    <Image src={getFbUrl('images/heros/tile-hero.jpg')} alt="Premium Tile" fill sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw" className="object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                    <div className="absolute bottom-8 left-8 right-8">
+                        <h3 className="text-white text-3xl font-bold mb-1">Premium Tile</h3>
+                        <p className="text-gray-300 text-sm mb-6">Elegant & Waterproof</p>
+                        <span className="inline-block bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold uppercase px-6 py-3 rounded-full group-hover:bg-gold transition-all">Shop Tile</span>
                     </div>
                 </Link>
             </div>
