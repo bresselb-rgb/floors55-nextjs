@@ -8,6 +8,25 @@ import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "fi
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc } from "firebase/firestore";
 import { auth, db, appId } from "../lib/firebase";
 
+// Fallback wrapper for images
+const CatalogImage = ({ src, alt, className, priority, fill, sizes, style }) => {
+    const [imgSrc, setImgSrc] = useState(src);
+    const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
+    useEffect(() => { setImgSrc(src); }, [src]);
+    return (
+        <Image 
+            src={imgSrc || TBD_IMG} 
+            alt={alt} 
+            className={className} 
+            priority={priority} 
+            fill={fill} 
+            sizes={sizes} 
+            style={style} 
+            onError={() => setImgSrc(TBD_IMG)} 
+        />
+    );
+};
+
 function ProductViewerContent({ initialProduct }) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -43,7 +62,7 @@ function ProductViewerContent({ initialProduct }) {
     const [calcWaste, setCalcWaste] = useState('1.10');
     
     const [padSelection, setPadSelection] = useState('none');
-    const [padCost, setPadCost] = useState('0.00');
+    const [padCost, setPadCost] = useState('0.00'); // Now stored per SF
     
     const [trimQty, setTrimQty] = useState({ standard: 0, stairnose: 0, quarterRound: 0 });
     const [trimCost, setTrimCost] = useState({ standard: 25, stairnose: 45, quarterRound: 10 });
@@ -209,14 +228,9 @@ function ProductViewerContent({ initialProduct }) {
         if (isCarpetProd && !isClientModeActual) {
             const fetchPads = async () => {
                 try {
-                    // Fetch all Carpet Cushions and filter visibility locally to avoid index errors
-                    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'), where("category", "==", "Carpet Cushion"));
+                    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'), where("category", "==", "Carpet Cushion"), where("isVisible", "==", true));
                     const snap = await getDocs(q);
-                    const pads = [];
-                    snap.docs.forEach(d => {
-                        const data = d.data();
-                        if (data.isVisible !== false) pads.push({ id: d.id, ...data });
-                    });
+                    const pads = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                     setAvailablePads(pads);
                 } catch(e) { console.error("Error fetching pads", e); }
             };
@@ -230,7 +244,9 @@ function ProductViewerContent({ initialProduct }) {
         } else if (padSelection !== 'custom_legacy') {
             const pad = availablePads.find(p => p.id === padSelection);
             if (pad) {
-                setPadCost(pad.price ? pad.price.toFixed(2) : '0.00');
+                // Ensure cost is extracted per sqft for builder UI
+                const pricePerSqft = pad.unit === 'sqyd' ? ((pad.price || 0) / 9) : (pad.price || 0);
+                setPadCost(pricePerSqft.toFixed(2));
             } else {
                 setPadCost('0.00');
             }
@@ -302,10 +318,25 @@ function ProductViewerContent({ initialProduct }) {
 
     const isClientMode = clientMargin !== null;
     const basePrice = productData?.price || 0;
-    const isCarpet = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
     
-    let cartonSqft = parseFloat(productData?.cartonSize);
-    if (isNaN(cartonSqft) || cartonSqft <= 0) cartonSqft = parseFloat(productData?.boxSqft);
+    // Core Category Booleans
+    const isCarpet = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
+    const isCushion = productData?.category === 'Carpet Cushion';
+    const isCarpetOrCushion = isCarpet || isCushion;
+    
+    // Formatting standardized pricing per SF and SY for carpet/cushion display
+    const wsPriceSqft = productData?.unit === 'sqyd' ? basePrice / 9 : basePrice;
+    const wsPriceSqyd = productData?.unit === 'sqyd' ? basePrice : basePrice * 9;
+    
+    const retailBase = productData?.retailPrice ? parseFloat(productData.retailPrice) : (basePrice * 2.2);
+    const retailPriceSqft = productData?.unit === 'sqyd' ? retailBase / 9 : retailBase;
+    const retailPriceSqyd = productData?.unit === 'sqyd' ? retailBase : retailBase * 9;
+    
+    const finalBase = isClientMode ? basePrice * (1 + clientMargin / 100) : basePrice;
+    const clientPriceSqft = productData?.unit === 'sqyd' ? finalBase / 9 : finalBase;
+    const clientPriceSqyd = productData?.unit === 'sqyd' ? finalBase : finalBase * 9;
+
+    let cartonSqft = parseFloat(productData?.cartonSize) || parseFloat(productData?.boxSqft);
     if (!cartonSqft && productData?.specs && Array.isArray(productData.specs)) {
         const specText = productData.specs.join(' ').toLowerCase();
         const sqftMatch = specText.match(/([\d.]+)\s*(sq\.?ft\.?|sq\s*ft|sf)/);
@@ -323,11 +354,24 @@ function ProductViewerContent({ initialProduct }) {
     const finalMaterialCoverageSqft = isCarpet ? (requiredSqYd * 9) : (requiredCartons * cartonSqft);
     
     const totalMaterialCost = isCarpet 
-        ? (requiredSqYd * (basePrice * 9)) 
+        ? (requiredSqYd * (basePrice * (productData?.unit === 'sqyd' ? 1 : 9))) 
         : (requiredCartons * cartonSqft * basePrice);
 
+    let padRollSqft = 360; // Safe fallback (40 sqyd)
+    let padName = '';
+    if (padSelection !== 'none' && padSelection !== 'custom_legacy') {
+        const pad = availablePads.find(p => p.id === padSelection);
+        if (pad) {
+            const cSize = parseFloat(pad.cartonSize) || parseFloat(pad.boxSqft);
+            if (cSize > 0) padRollSqft = pad.unit === 'sqyd' ? cSize * 9 : cSize;
+            padName = pad.name;
+        }
+    }
+    
+    // Core Math: Pad rolls always round up based on coverage required
+    const requiredPadRolls = Math.ceil(totalSqftWithWaste / padRollSqft);
     const totalPadCost = isCarpet && padSelection !== 'none' 
-        ? (requiredSqYd * (parseFloat(padCost) || 0)) 
+        ? (requiredPadRolls * padRollSqft * (parseFloat(padCost) || 0)) 
         : 0;
 
     const totalTrimCost = isCarpet ? 0 : 
@@ -400,7 +444,13 @@ function ProductViewerContent({ initialProduct }) {
                 measurements: { waste: parseFloat(calcWaste), netSqft: netSqftNum, coverageSqft: finalMaterialCoverageSqft },
                 material: { qty: finalMaterialQty, unit: finalMaterialUnit, wholesaleTotal: totalMaterialCost },
                 addons: {
-                    pad: padNameToSave ? { name: padNameToSave, cost: totalPadCost } : null,
+                    pad: padNameToSave ? { 
+                        name: padNameToSave, 
+                        cost: totalPadCost,
+                        rolls: requiredPadRolls,
+                        rollSqft: padRollSqft,
+                        costPerSqft: parseFloat(padCost) || 0
+                    } : null,
                     trims: !isCarpet && (trimQty.standard > 0 || trimQty.stairnose > 0 || trimQty.quarterRound > 0) ? { 
                         cost: totalTrimCost, 
                         details: { standard: trimQty.standard, stairnose: trimQty.stairnose, quarterRound: trimQty.quarterRound } 
@@ -433,10 +483,6 @@ function ProductViewerContent({ initialProduct }) {
             setIsSavingToBoard(false);
         }
     };
-
-    const finalPrice = isClientMode ? basePrice * (1 + clientMargin / 100) : basePrice;
-    const wsPrice = finalPrice.toFixed(2);
-    const retailPrice = productData?.retailPrice ? parseFloat(productData.retailPrice).toFixed(2) : (basePrice * 2.2).toFixed(2);
 
     const renderTitleBlock = (isDesktop) => (
         <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 lg:mb-2 gap-4 ${isDesktop ? 'hidden lg:flex' : 'flex lg:hidden'}`}>
@@ -497,10 +543,11 @@ function ProductViewerContent({ initialProduct }) {
                             router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
                             setActiveColor(c);
                         }}>
-                            <Image 
+                            <CatalogImage 
                                 src={fbPath} 
                                 alt={c.name} 
-                                width={85} height={85}
+                                fill={false}
+                                sizes="85px"
                                 className={`w-full aspect-square object-cover border-2 rounded-md transition duration-200 bg-gray-100 ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`} 
                             />
                             <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
@@ -523,7 +570,15 @@ function ProductViewerContent({ initialProduct }) {
                 {activeView === 'VIDEO' ? (
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
-                    <Image src={getMediaPath(activeView) || TBD_IMG} alt="Product View" priority={true} fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover transition-opacity duration-200 group-hover:opacity-85" style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
+                    <CatalogImage 
+                        src={getMediaPath(activeView)} 
+                        alt="Product View" 
+                        priority={true} 
+                        fill={true} 
+                        sizes="(max-width: 1024px) 100vw, 50vw" 
+                        className="object-cover transition-opacity duration-200 group-hover:opacity-85" 
+                        style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} 
+                    />
                 )}
             </div>
 
@@ -536,7 +591,13 @@ function ProductViewerContent({ initialProduct }) {
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#c5a059" width="36px" height="36px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
                                 </div>
                             ) : (
-                                <Image src={getMediaPath(v) || TBD_IMG} alt={`View ${v}`} fill sizes="75px" className="object-cover" />
+                                <CatalogImage 
+                                    src={getMediaPath(v)} 
+                                    alt={`View ${v}`} 
+                                    fill={true} 
+                                    sizes="75px" 
+                                    className="object-cover" 
+                                />
                             )}
                         </div>
                     ))}
@@ -565,7 +626,14 @@ function ProductViewerContent({ initialProduct }) {
                         <div className="absolute top-0 right-0 bg-gray-900 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-widest shadow-sm">Client Pricing</div>
                         <div className="mt-1">
                             <span className="text-[1.1rem] text-gray-900 font-bold mr-2">Price:</span>
-                            <span className="text-[2.2rem] text-gray-900 font-black leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
+                            {isCarpetOrCushion ? (
+                                <span className="text-[2.2rem] text-gray-900 font-black leading-none">
+                                    ${clientPriceSqft.toFixed(2)} <span className="text-sm font-normal text-gray-500">/sqft</span>
+                                    <span className="text-lg font-bold text-gray-400 ml-2">(${clientPriceSqyd.toFixed(2)} /sqyd)</span>
+                                </span>
+                            ) : (
+                                <span className="text-[2.2rem] text-gray-900 font-black leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
+                            )}
                         </div>
                     </>
                 ) : user && !user.isAnonymous ? (
@@ -573,17 +641,30 @@ function ProductViewerContent({ initialProduct }) {
                         <div className="absolute top-0 right-0 bg-gold text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-widest flex items-center gap-2 shadow-sm">
                             <span className="w-1.5 h-1.5 rounded-full bg-white inline-block animate-pulse"></span> Wholesale Live
                         </div>
-                        <span className="text-[0.9rem] text-gray-500 line-through mb-1 block">Retail: ${retailPrice} <span className="text-sm">/</span><span className="text-sm">{productData.unit || 'sqft'}</span></span>
+                        <span className="text-[0.9rem] text-gray-500 line-through mb-1 block">
+                            Retail: ${retailPriceSqft.toFixed(2)} <span className="text-sm">/sqft</span>
+                            {isCarpetOrCushion && <span className="ml-1 text-sm">(${retailPriceSqyd.toFixed(2)}/sqyd)</span>}
+                        </span>
                         <div className="mt-3 pt-3 border-t border-gray-200">
                             <div className="flex items-end gap-2">
                                 <span className="text-[1.1rem] text-gray-900 font-bold text-gold mb-1">Wholesale Price:</span>
-                                <span className="text-[2rem] text-red-700 font-bold leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/</span><span className="text-sm font-normal text-gray-500">{productData.unit || 'sqft'}</span></span>
+                                {isCarpetOrCushion ? (
+                                    <span className="text-[2rem] text-red-700 font-bold leading-none">
+                                        ${wsPriceSqft.toFixed(2)} <span className="text-sm font-normal text-gray-500">/sqft</span>
+                                        <span className="text-lg text-gray-400 font-bold ml-2">(${wsPriceSqyd.toFixed(2)} /sqyd)</span>
+                                    </span>
+                                ) : (
+                                    <span className="text-[2rem] text-red-700 font-bold leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
+                                )}
                             </div>
                         </div>
                     </>
                 ) : (
                     <>
-                        <span className="text-[1.5rem] text-gray-900 font-bold mb-1 block">Retail: ${retailPrice} <span className="text-sm">/</span><span className="text-sm">{productData.unit || 'sqft'}</span></span>
+                        <span className="text-[1.5rem] text-gray-900 font-bold mb-1 block">
+                            Retail: ${retailPriceSqft.toFixed(2)} <span className="text-sm">/sqft</span>
+                            {isCarpetOrCushion && <span className="ml-1 text-lg text-gray-400">(${retailPriceSqyd.toFixed(2)} /sqyd)</span>}
+                        </span>
                         <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
                             <button onClick={() => window.dispatchEvent(new Event('open-login-modal'))} className="block w-full text-left text-[10px] font-bold uppercase tracking-widest text-gold hover:text-black transition-colors underline bg-transparent border-none cursor-pointer outline-none">Log in for wholesale pricing</button>
                         </div>
@@ -626,8 +707,8 @@ function ProductViewerContent({ initialProduct }) {
             )}
           </div>
 
-          {}
-          {!isClientMode && user && !user.isAnonymous && productData?.category !== 'Carpet Cushion' && (
+          {/* BUILDER TRIGGER (Disabled for Standalone Cushions) */}
+          {!isClientMode && user && !user.isAnonymous && !isCushion && (
               <button 
                   className="fixed bottom-5 right-5 md:bottom-8 md:right-8 bg-black text-white px-6 py-4 rounded-full cursor-pointer font-bold shadow-2xl z-40 transition-all border-2 border-black hover:bg-gold hover:text-black hover:border-gold flex items-center gap-2 text-sm md:text-base hover:scale-105" 
                   onClick={() => setIsBuilderOpen(true)}
@@ -636,12 +717,11 @@ function ProductViewerContent({ initialProduct }) {
               </button>
           )}
 
+          {/* SLIDE OUT PROPOSAL BUILDER DRAWER */}
           {isBuilderOpen && (
               <div className="fixed inset-0 z-50 flex justify-end">
-                  {/* Dark Backdrop */}
                   <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={() => setIsBuilderOpen(false)}></div>
                   
-                  {/* The Drawer */}
                   <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl relative z-10 animate-in slide-in-from-right flex flex-col">
                       
                       <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center sticky top-0 z-20">
@@ -701,16 +781,27 @@ function ProductViewerContent({ initialProduct }) {
                                           <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1">Select Carpet Cushion</label>
                                           <select value={padSelection} onChange={e => setPadSelection(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white cursor-pointer">
                                               <option value="none">No Pad Included</option>
-                                              {availablePads.map(pad => (
-                                                  <option key={pad.id} value={pad.id}>{pad.name} (${parseFloat(pad.price || 0).toFixed(2)}/sqyd)</option>
-                                              ))}
+                                              {availablePads.map(pad => {
+                                                  const padP_sqft = pad.unit === 'sqyd' ? ((pad.price || 0) / 9) : (pad.price || 0);
+                                                  const rollSqft = pad.unit === 'sqyd' ? ((parseFloat(pad.cartonSize) || 40) * 9) : (parseFloat(pad.cartonSize) || 360);
+                                                  return (
+                                                      <option key={pad.id} value={pad.id}>
+                                                          {pad.name} (${padP_sqft.toFixed(2)}/sqft - Roll: {rollSqft} sqft)
+                                                      </option>
+                                                  );
+                                              })}
                                               {padSelection === 'custom_legacy' && <option value="custom_legacy">Legacy Pad / Custom</option>}
                                           </select>
                                       </div>
                                       {padSelection !== 'none' && (
-                                          <div className="flex items-center gap-2 mt-2">
-                                              <label className="block text-[10px] font-bold uppercase text-gray-500 flex-1">Your Cost per sqyd ($)</label>
-                                              <input type="number" step="0.01" value={padCost} onChange={e => setPadCost(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm text-right bg-white" />
+                                          <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                              <div className="flex items-center gap-2">
+                                                  <label className="block text-[10px] font-bold uppercase text-gray-500 flex-1">Your Cost per sqft ($)</label>
+                                                  <input type="number" step="0.01" value={padCost} onChange={e => setPadCost(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm text-right bg-white" />
+                                              </div>
+                                              <div className="text-[10px] text-gray-500 text-right mt-2 pt-2 border-t border-gray-200">
+                                                  Requires <span className="font-bold text-gray-900">{requiredPadRolls} roll(s)</span> ({requiredPadRolls * padRollSqft} sqft) = <span className="text-gold font-bold">${totalPadCost.toFixed(2)}</span>
+                                              </div>
                                           </div>
                                       )}
                                   </div>
