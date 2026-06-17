@@ -680,6 +680,7 @@ function CategoryViewerContent({ initialCategory }) {
   else if (activeCategory === 'Carpet' || activeCategory === 'Carpet Cushion') heroImage = 'images/heros/carpet.jpg';
   else if (activeCategory === 'Laminate') heroImage = 'images/heros/laminate.jpg';
   else if (activeCategory === 'Hardwood') heroImage = 'images/heros/hardwood.jpg';
+  else if (activeCategory === 'Tile') heroImage = 'images/heros/tile.jpg';
 
   const heroFbUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(heroImage)}?alt=media`;
   const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
@@ -736,7 +737,7 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
-                        {['All Products', 'Hot Buys', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Carpet Cushion'].map(cat => {
+                        {['All Products', 'Hot Buys', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Tile', 'Carpet Cushion'].map(cat => {
                             if (cat === 'Hot Buys' && (!isWholesale || isClientMode)) return null;
                             return (
                                 <button key={cat} onClick={() => handleCategorySwitch(cat)} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === cat ? 'bg-gold text-black font-black' : (cat === 'Hot Buys' ? 'text-red-600 hover:bg-red-50' : 'text-gray-500 hover:bg-gray-100')}`}>

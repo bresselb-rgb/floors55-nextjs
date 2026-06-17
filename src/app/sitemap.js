@@ -15,6 +15,7 @@ export default async function sitemap() {
     '/category/carpet',
     '/category/laminate',
     '/category/hardwood',
+    '/category/tile',
     '/choosing-your-floor',
     '/floor-care',
     '/installation-prep',
