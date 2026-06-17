@@ -236,7 +236,7 @@ function ProductViewerContent({ initialProduct }) {
             if (pad) {
                 // Determine base price based on SF vs SY configurations
                 let basePadPrice = pad.price || 0;
-                if (pad.unit === 'sqyd') {
+                if (pad.unit === 'sqyd' || pad.calcType === 'carpet') {
                     basePadPrice = basePadPrice / 9; // Convert to per sqft for the UI input
                 }
                 setPadCost(basePadPrice.toFixed(2));
@@ -343,7 +343,7 @@ function ProductViewerContent({ initialProduct }) {
     
     // Normalize DB Price depending on unit
     let normalizedPerSqftPrice = basePrice;
-    if (productData?.unit === 'sqyd') {
+    if (productData?.unit === 'sqyd' || productData?.calcType === 'carpet') {
         normalizedPerSqftPrice = basePrice / 9;
     }
     const totalMaterialCost = finalMaterialCoverageSqft * normalizedPerSqftPrice;
@@ -359,7 +359,7 @@ function ProductViewerContent({ initialProduct }) {
             const padDoc = availablePads.find(p => p.id === padSelection);
             if (padDoc && padDoc.cartonSize) {
                 padRollSqft = parseFloat(padDoc.cartonSize);
-                if (padDoc.unit === 'sqyd') {
+                if (padDoc.unit === 'sqyd' || padDoc.calcType === 'carpet') {
                     padRollSqft = parseFloat(padDoc.cartonSize) * 9;
                 }
             }
