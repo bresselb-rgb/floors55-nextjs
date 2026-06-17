@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, serverTimestamp } from "firebase/firestore";
-// Correct path to the firebase lib from components directory
 import { db, appId } from "../lib/firebase";
 
 export default function ClientBoardsManager({ proId }) {
@@ -127,8 +126,8 @@ export default function ClientBoardsManager({ proId }) {
   };
 
   return (
-    <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-1.5 h-full bg-black"></div>
+    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-full h-1.5 bg-black"></div>
       
       <div className="flex items-center justify-between mb-1">
           <h2 className="text-xl font-black uppercase tracking-tight">Client Presentations</h2>
@@ -161,7 +160,7 @@ export default function ClientBoardsManager({ proId }) {
         </button>
       </form>
 
-      {/* Boards List */}
+      {}
       <div className="space-y-4">
         {boards.length === 0 ? (
           <p className="text-gray-400 text-sm italic text-center py-6 bg-gray-50 rounded-xl border border-gray-100">No client boards created yet.</p>
@@ -200,7 +199,7 @@ export default function ClientBoardsManager({ proId }) {
         )}
       </div>
 
-      {/* Toast Notification */}
+      {}
       <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
           <span className="font-black text-gold">✓</span>
           <p className="font-bold text-xs uppercase tracking-widest m-0">Link Copied</p>

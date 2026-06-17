@@ -6,6 +6,7 @@ import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, db, storage, appId } from "../../lib/firebase";
 import ClientBoardsManager from "../../components/ClientBoardsManager";
+import ProposalsManager from "../../components/ProposalsManager";
 
 export default function MyAccountPage() {
     const [user, setUser] = useState(null);
@@ -50,9 +51,7 @@ export default function MyAccountPage() {
     const triggerToast = (msg = "Link Copied") => {
         setToastMessage(msg);
         setShowToast(true);
-        setTimeout(() => {
-            setShowToast(false);
-        }, 3000);
+        setTimeout(() => setShowToast(false), 3000);
     };
 
     const handleSave = async () => {
@@ -74,7 +73,6 @@ export default function MyAccountPage() {
         setIsSaving(false);
     };
 
-    // Auto-save just the margin when the slider is released
     const handleMarginChangeSave = async () => {
         if (!user) return;
         try {
@@ -136,17 +134,13 @@ export default function MyAccountPage() {
         window.location.href = '/category';
     };
 
-    // Dynamically calculate the magic link so it always respects the current slider!
     const encodedMargin = btoa((profile.clientMargin !== undefined ? profile.clientMargin : 20).toString());
     const portalLink = user ? `${typeof window !== 'undefined' ? window.location.origin : ''}/category?pro=${user.uid}&cm=${encodedMargin}` : '';
 
     const copyMagicLink = () => {
         if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(portalLink).then(() => triggerToast("Link Copied")).catch(err => {
-                console.error('Failed to copy: ', err);
-            });
+            navigator.clipboard.writeText(portalLink).then(() => triggerToast("Link Copied")).catch(console.error);
         } else {
-            // Fallback
             const textArea = document.createElement("textarea");
             textArea.value = portalLink;
             textArea.style.position = "fixed";
@@ -155,12 +149,7 @@ export default function MyAccountPage() {
             document.body.appendChild(textArea);
             textArea.focus();
             textArea.select();
-            try {
-                document.execCommand('copy');
-                triggerToast("Link Copied");
-            } catch (err) {
-                console.error('Fallback copy failed', err);
-            }
+            try { document.execCommand('copy'); triggerToast("Link Copied"); } catch (err) { console.error(err); }
             document.body.removeChild(textArea);
         }
     };
@@ -178,12 +167,11 @@ export default function MyAccountPage() {
                 <div className="flex justify-between items-end">
                     <div>
                         <h1 className="text-3xl font-black tracking-tight mb-2">Pro Dashboard</h1>
-                        <p className="text-gray-500">Manage your business details, pricing, and client boards.</p>
+                        <p className="text-gray-500">Manage your business details, quotes, and client boards.</p>
                     </div>
-                    <button onClick={() => signOut(auth)} className="text-red-500 font-bold uppercase tracking-widest text-xs hover:text-red-700">Sign Out</button>
+                    <button onClick={() => signOut(auth)} className="text-red-500 font-bold uppercase tracking-widest text-xs hover:text-red-700 bg-transparent border-none cursor-pointer outline-none">Sign Out</button>
                 </div>
 
-                {/* Dedicated Account Manager Card */}
                 <div className="bg-gray-900 text-white p-8 rounded-2xl shadow-xl border border-gray-800 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="absolute top-0 right-0 p-8 opacity-5 text-8xl pointer-events-none">🤝</div>
                     <div className="relative z-10 flex items-center gap-6 w-full md:w-auto">
@@ -205,7 +193,12 @@ export default function MyAccountPage() {
                     </div>
                 </div>
 
-                {/* Business Profile Settings */}
+                {/* THE NEW PROPOSALS MANAGER */}
+                <ProposalsManager proId={user.uid} />
+
+                {/* Client Boards */}
+                <ClientBoardsManager proId={user.uid} />
+
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-black"></div>
                     <h2 className="text-xl font-black mb-6 uppercase tracking-tight">Business Profile</h2>
@@ -233,12 +226,11 @@ export default function MyAccountPage() {
                         </div>
                     </div>
 
-                    <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50">
+                    <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50 cursor-pointer outline-none">
                         {isSaving ? "Saving..." : "Save Profile"}
                     </button>
                 </div>
 
-                {/* White-Label Branding */}
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-gold"></div>
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
@@ -247,8 +239,8 @@ export default function MyAccountPage() {
                             <p className="text-sm text-gray-500">Customize the portal to look like your own website when sharing links with clients.</p>
                         </div>
                         {(profile.logoUrl || profile.brandBgColor !== '#ffffff' || profile.brandTextColor !== '#000000') && (
-                            <button onClick={handlePurgeAndReset} className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest outline-none transition-colors shrink-0">
-                                ✕ Purge Logo & Reset Colors
+                            <button onClick={handlePurgeAndReset} className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest outline-none transition-colors shrink-0 cursor-pointer">
+                                ✕ Purge Logo & Reset
                             </button>
                         )}
                     </div>
@@ -294,17 +286,16 @@ export default function MyAccountPage() {
                             </div>
                         </div>
                     </div>
-                    <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50">
+                    <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50 cursor-pointer outline-none">
                         {isSaving ? "Saving..." : "Save Brand Settings"}
                     </button>
                 </div>
 
-                {/* Client Pricing Command Center */}
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-100 pb-6 gap-4">
                         <div>
-                            <h2 className="text-xl font-black uppercase tracking-tight">Client Pricing</h2>
-                            <p className="text-sm text-gray-500 mt-1 max-w-md">Set the markup percentage applied to wholesale prices when presenting catalog items to your clients.</p>
+                            <h2 className="text-xl font-black uppercase tracking-tight">Catalog Client Pricing</h2>
+                            <p className="text-sm text-gray-500 mt-1 max-w-md">Set the default markup percentage applied to wholesale prices when your clients browse the general catalog.</p>
                         </div>
                         <div className="text-left md:text-right shrink-0 bg-gray-50 p-4 rounded-xl border border-gray-200 min-w-[200px]">
                             <div className="text-3xl font-black text-gold leading-none">{markupVal}% <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Markup</span></div>
@@ -324,27 +315,23 @@ export default function MyAccountPage() {
                     />
                     
                     <div className="flex gap-4 mb-8">
-                        <button onClick={enableClientMode} className="w-full bg-gray-100 text-black px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors border border-gray-200">
-                            Preview Portal
+                        <button onClick={enableClientMode} className="w-full bg-gray-100 text-black px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors border border-gray-200 cursor-pointer outline-none">
+                            Preview General Catalog Portal
                         </button>
                     </div>
 
-                    {/* The Portal Link Box */}
                     <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
-                        <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Your Custom Portal Link</h3>
-                        <p className="text-xs text-gray-500 mb-4">Share this link directly with your clients. It will automatically load the entire catalog securely masked with your logo, colors, and your custom client pricing margin.</p>
+                        <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Your Master Catalog Link</h3>
+                        <p className="text-xs text-gray-500 mb-4">Share this link to let clients browse the entire catalog with your pricing and branding applied. (Note: Proposals and Boards have their own unique links).</p>
                         
                         <div className="flex flex-col md:flex-row gap-3">
                             <input type="text" readOnly value={portalLink} className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-mono text-gray-600 outline-none" />
-                            <button onClick={copyMagicLink} className="bg-gold hover:bg-black text-black hover:text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap">
+                            <button onClick={copyMagicLink} className="bg-gold hover:bg-black text-black hover:text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap cursor-pointer outline-none">
                                 Copy Link
                             </button>
                         </div>
                     </div>
                 </div>
-
-                {/* Client Boards */}
-                <ClientBoardsManager proId={user.uid} />
 
             </div>
 
@@ -354,7 +341,7 @@ export default function MyAccountPage() {
                     <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-lg relative">
                         <button
                             onClick={() => setIsLogoInfoOpen(false)}
-                            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black transition-colors font-bold outline-none"
+                            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black transition-colors font-bold outline-none cursor-pointer"
                         >
                             ✕
                         </button>
@@ -374,7 +361,7 @@ export default function MyAccountPage() {
                             <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 mt-4">
                                 <strong className="text-gray-900 text-xs uppercase tracking-widest">Free Design Tools</strong>
                                 <ul className="mt-2 space-y-2 text-xs">
-                                    <li>Need to remove a white background? Try <a href="https://www.erase.bg/" target="_blank" rel="noopener noreferrer" className="text-gold font-bold hover:underline">Erase.bg</a> or <a href="https://www.pixelcut.ai/background-remover" target="_blank" rel="noopener noreferrer" className="text-gold font-bold hover:underline">Pixelcut.ai</a> (Both free, no sign-up).</li>
+                                    <li>Need to remove a white background? Try <a href="https://www.erase.bg/" target="_blank" rel="noopener noreferrer" className="text-gold font-bold hover:underline">Erase.bg</a> or <a href="https://www.pixelcut.ai/background-remover" target="_blank" rel="noopener noreferrer" className="text-gold font-bold hover:underline">Pixelcut.ai</a> (Both free).</li>
                                     <li>Need to create a logo from scratch? Check out <a href="https://www.canva.com/create/logos/" target="_blank" rel="noopener noreferrer" className="text-gold font-bold hover:underline">Canva's Free Logo Maker</a>.</li>
                                 </ul>
                             </div>
@@ -382,7 +369,7 @@ export default function MyAccountPage() {
                         <div className="mt-8 pt-4 border-t border-gray-100 flex justify-end">
                             <button
                                 onClick={() => setIsLogoInfoOpen(false)}
-                                className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors"
+                                className="bg-black text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors cursor-pointer outline-none"
                             >
                                 Got it!
                             </button>
@@ -391,7 +378,6 @@ export default function MyAccountPage() {
                 </div>
             )}
 
-            {/* Toast Notification */}
             <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
                 <span className="font-black text-gold">✓</span>
                 <p className="font-bold text-xs uppercase tracking-widest m-0">{toastMessage || "Link Copied"}</p>

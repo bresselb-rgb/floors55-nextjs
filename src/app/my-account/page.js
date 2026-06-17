@@ -162,17 +162,17 @@ export default function MyAccountPage() {
 
     return (
         <main className="bg-gray-50 min-h-screen py-12 relative">
-            <div className="max-w-4xl mx-auto px-4 space-y-8">
+            <div className="max-w-4xl mx-auto px-4 space-y-6">
                 
-                <div className="flex justify-between items-end">
+                <div className="flex justify-between items-end mb-2">
                     <div>
                         <h1 className="text-3xl font-black tracking-tight mb-2">Pro Dashboard</h1>
                         <p className="text-gray-500">Manage your business details, quotes, and client boards.</p>
                     </div>
-                    <button onClick={() => signOut(auth)} className="text-red-500 font-bold uppercase tracking-widest text-xs hover:text-red-700 bg-transparent border-none cursor-pointer outline-none">Sign Out</button>
+                    <button onClick={() => signOut(auth)} className="text-red-500 font-bold uppercase tracking-widest text-xs hover:text-red-700 bg-transparent border-none cursor-pointer outline-none mb-2">Sign Out</button>
                 </div>
 
-                <div className="bg-gray-900 text-white p-8 rounded-2xl shadow-xl border border-gray-800 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="bg-gray-900 text-white p-6 md:p-8 rounded-2xl shadow-xl border border-gray-800 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="absolute top-0 right-0 p-8 opacity-5 text-8xl pointer-events-none">🤝</div>
                     <div className="relative z-10 flex items-center gap-6 w-full md:w-auto">
                         <div className="w-16 h-16 bg-gold text-black rounded-full flex items-center justify-center font-black text-2xl uppercase shadow-lg shrink-0">
@@ -193,14 +193,59 @@ export default function MyAccountPage() {
                     </div>
                 </div>
 
+                {/* MOVED: Catalog Client Pricing */}
+                <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1.5 h-full bg-gold"></div>
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-100 pb-6 gap-4">
+                        <div>
+                            <h2 className="text-xl font-black uppercase tracking-tight">Catalog Client Pricing</h2>
+                            <p className="text-sm text-gray-500 mt-1 max-w-md">Set the default markup percentage applied to wholesale prices when your clients browse the general catalog.</p>
+                        </div>
+                        <div className="text-left md:text-right shrink-0 bg-gray-50 p-4 rounded-xl border border-gray-200 min-w-[200px]">
+                            <div className="text-3xl font-black text-gold leading-none">{markupVal}% <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Markup</span></div>
+                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2 border-t border-gray-200 pt-2">Yields <span className="text-black font-black text-sm">{marginVal}%</span> Gross Margin</div>
+                        </div>
+                    </div>
+                    
+                    <input 
+                        type="range" 
+                        min="0" max="100" step="5" 
+                        value={profile.clientMargin} 
+                        onChange={e => setProfile({...profile, clientMargin: e.target.value})} 
+                        onMouseUp={handleMarginChangeSave}
+                        onTouchEnd={handleMarginChangeSave}
+                        onKeyUp={handleMarginChangeSave}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black mb-8" 
+                    />
+                    
+                    <div className="flex gap-4 mb-8">
+                        <button onClick={enableClientMode} className="w-full bg-gray-100 text-black px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors border border-gray-200 cursor-pointer outline-none">
+                            Preview General Catalog Portal
+                        </button>
+                    </div>
+
+                    <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
+                        <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Your Master Catalog Link</h3>
+                        <p className="text-xs text-gray-500 mb-4">Share this link to let clients browse the entire catalog with your pricing and branding applied. (Note: Proposals and Boards have their own unique links).</p>
+                        
+                        <div className="flex flex-col md:flex-row gap-3">
+                            <input type="text" readOnly value={portalLink} className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-mono text-gray-600 outline-none" />
+                            <button onClick={copyMagicLink} className="bg-black hover:bg-gold text-white hover:text-black px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap cursor-pointer outline-none">
+                                Copy Link
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 {/* THE NEW PROPOSALS MANAGER */}
                 <ProposalsManager proId={user.uid} />
 
                 {/* Client Boards */}
                 <ClientBoardsManager proId={user.uid} />
 
-                <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1.5 bg-black"></div>
+                {/* Business Profile */}
+                <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1.5 h-full bg-black"></div>
                     <h2 className="text-xl font-black mb-6 uppercase tracking-tight">Business Profile</h2>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -231,8 +276,8 @@ export default function MyAccountPage() {
                     </button>
                 </div>
 
-                <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gold"></div>
+                {/* White-Label Branding */}
+                <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
                         <div>
                             <h2 className="text-xl font-black mb-1 uppercase tracking-tight">White-Label Branding</h2>
@@ -289,48 +334,6 @@ export default function MyAccountPage() {
                     <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50 cursor-pointer outline-none">
                         {isSaving ? "Saving..." : "Save Brand Settings"}
                     </button>
-                </div>
-
-                <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-100 pb-6 gap-4">
-                        <div>
-                            <h2 className="text-xl font-black uppercase tracking-tight">Catalog Client Pricing</h2>
-                            <p className="text-sm text-gray-500 mt-1 max-w-md">Set the default markup percentage applied to wholesale prices when your clients browse the general catalog.</p>
-                        </div>
-                        <div className="text-left md:text-right shrink-0 bg-gray-50 p-4 rounded-xl border border-gray-200 min-w-[200px]">
-                            <div className="text-3xl font-black text-gold leading-none">{markupVal}% <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Markup</span></div>
-                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2 border-t border-gray-200 pt-2">Yields <span className="text-black font-black text-sm">{marginVal}%</span> Gross Margin</div>
-                        </div>
-                    </div>
-                    
-                    <input 
-                        type="range" 
-                        min="0" max="100" step="5" 
-                        value={profile.clientMargin} 
-                        onChange={e => setProfile({...profile, clientMargin: e.target.value})} 
-                        onMouseUp={handleMarginChangeSave}
-                        onTouchEnd={handleMarginChangeSave}
-                        onKeyUp={handleMarginChangeSave}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black mb-8" 
-                    />
-                    
-                    <div className="flex gap-4 mb-8">
-                        <button onClick={enableClientMode} className="w-full bg-gray-100 text-black px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors border border-gray-200 cursor-pointer outline-none">
-                            Preview General Catalog Portal
-                        </button>
-                    </div>
-
-                    <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
-                        <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Your Master Catalog Link</h3>
-                        <p className="text-xs text-gray-500 mb-4">Share this link to let clients browse the entire catalog with your pricing and branding applied. (Note: Proposals and Boards have their own unique links).</p>
-                        
-                        <div className="flex flex-col md:flex-row gap-3">
-                            <input type="text" readOnly value={portalLink} className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-mono text-gray-600 outline-none" />
-                            <button onClick={copyMagicLink} className="bg-gold hover:bg-black text-black hover:text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap cursor-pointer outline-none">
-                                Copy Link
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
             </div>

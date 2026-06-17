@@ -26,7 +26,7 @@ export default function ProposalsManager({ proId }) {
   const [calcWaste, setCalcWaste] = useState('1.10');
   
   const [padSelection, setPadSelection] = useState('none');
-  const [padCost, setPadCost] = useState('0.00'); // Now stored per SF
+  const [padCost, setPadCost] = useState('0.00'); // Stored per SF
   
   const [trimQty, setTrimQty] = useState({ standard: 0, stairnose: 0, quarterRound: 0 });
   const [trimCost, setTrimCost] = useState({ standard: 25, stairnose: 45, quarterRound: 10 });
@@ -52,7 +52,7 @@ export default function ProposalsManager({ proId }) {
           quotesData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           setQuotes(quotesData);
           
-          // Fetch live carpet pads for the edit module
+          // Fetch live carpet pads
           const padQ = query(collection(db, "artifacts", appId, "public", "data", "pricing"), where("category", "==", "Carpet Cushion"));
           const padSnap = await getDocs(padQ);
           const pads = padSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.isVisible !== false);
@@ -149,7 +149,6 @@ Thank you!`;
       setCalcNetSqft(quote.measurements?.netSqft || '');
       setCalcWaste(quote.measurements?.waste || '1.10');
       
-      // Load Pad Information
       if(quote.addons?.pad) {
           const matchingPad = availablePads.find(p => p.name === quote.addons.pad.name);
           if (matchingPad) {
@@ -158,13 +157,11 @@ Thank you!`;
               setPadSelection('custom_legacy');
           }
           
-          // Re-establish cost per sqft for the UI input
           if (quote.addons.pad.costPerSqft !== undefined) {
               setPadCost(quote.addons.pad.costPerSqft.toFixed(2));
           } else if (quote.addons.pad.rolls && quote.addons.pad.rollSqft) {
               setPadCost((quote.addons.pad.cost / (quote.addons.pad.rolls * quote.addons.pad.rollSqft)).toFixed(2));
           } else if (quote.material?.qty > 0) {
-              // Extremely old legacy quote fallback (per yard converted to sf)
               const perYdCost = quote.addons.pad.cost / quote.material.qty;
               setPadCost((perYdCost / 9).toFixed(2));
           }
@@ -294,8 +291,8 @@ Thank you!`;
   };
 
   return (
-    <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden mb-8">
-      <div className="absolute top-0 left-0 w-full h-1.5 bg-black"></div>
+    <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-1.5 h-full bg-black"></div>
       
       <div className="flex items-center justify-between mb-1">
           <h2 className="text-xl font-black uppercase tracking-tight">Active Proposals</h2>
@@ -548,11 +545,12 @@ Thank you!`;
                                           <option value="none">No Pad Included</option>
                                           {availablePads.map(pad => {
                                               const padP_sqft = pad.unit === 'sqyd' ? ((pad.price || 0) / 9) : (pad.price || 0);
+                                              const padP_sqyd = pad.unit === 'sqyd' ? (pad.price || 0) : ((pad.price || 0) * 9);
                                               const rollSqft = pad.unit === 'sqyd' ? ((parseFloat(pad.cartonSize) || 40) * 9) : (parseFloat(pad.cartonSize) || 360);
                                               return (
                                                   <option key={pad.id} value={pad.id}>
-                                                      {pad.name} (${padP_sqft.toFixed(2)}/sqft - Roll: {rollSqft} sqft)
-                                                      </option>
+                                                      {pad.name} (${padP_sqft.toFixed(2)}/sf or ${padP_sqyd.toFixed(2)}/sy) - Roll: {rollSqft} sf
+                                                  </option>
                                               );
                                           })}
                                           {padSelection === 'custom_legacy' && <option value="custom_legacy">{editingQuote?.addons?.pad?.name || 'Legacy Pad'}</option>}
@@ -560,9 +558,12 @@ Thank you!`;
                                   </div>
                                   {padSelection !== 'none' && (
                                       <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                          <div className="flex items-center gap-2">
+                                          <div className="flex items-center gap-2 mb-1">
                                               <label className="block text-[10px] font-bold uppercase text-gray-500 flex-1">Your Cost per sqft ($)</label>
                                               <input type="number" step="0.01" value={padCost} onChange={e => setPadCost(e.target.value)} className="w-24 p-2 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm text-right bg-white" />
+                                          </div>
+                                          <div className="text-[9px] text-gray-400 font-bold uppercase tracking-wider text-right mb-2">
+                                              (${(parseFloat(padCost || 0) * 9).toFixed(2)} / sqyd)
                                           </div>
                                           <div className="text-[10px] text-gray-500 text-right mt-2 pt-2 border-t border-gray-200">
                                               Requires <span className="font-bold text-gray-900">{requiredPadRolls} roll(s)</span> ({requiredPadRolls * padRollSqft} sqft) = <span className="text-gold font-bold">${totalPadCost.toFixed(2)}</span>
