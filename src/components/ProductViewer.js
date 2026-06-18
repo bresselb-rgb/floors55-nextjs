@@ -591,7 +591,7 @@ function ProductViewerContent({ initialProduct }) {
             {productData.views && (
                 <div className="mt-4 flex gap-3">
                     {productData.views.map(v => (
-                         <Image key={v} src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)} width={75} height={75} className={`object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} onClick={() => setActiveView(v)} onError={(e) => { e.currentTarget.srcset = ''; e.currentTarget.src = TBD_IMG; }} alt={`View ${v}`} />
+                         <Image key={v} src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)} width={75} height={75} className={`w-[75px] h-[75px] min-w-[75px] shrink-0 object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} onClick={() => setActiveView(v)} onError={(e) => { e.currentTarget.srcset = ''; e.currentTarget.src = TBD_IMG; }} alt={`View ${v}`} />
                     ))}
                 </div>
             )}
