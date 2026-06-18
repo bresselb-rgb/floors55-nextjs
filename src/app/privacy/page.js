@@ -21,16 +21,10 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">2. How We Use Your Information</h2>
             <p>We use the information we collect to provide, maintain, and improve our services, including processing your quotes, fulfilling sample orders, and communicating with you about your account or our products.</p>
 
-            <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">3. SMS & Mobile Information Sharing</h2>
-            <p className="font-bold text-black bg-gray-100 p-4 rounded-lg border-l-4 border-gold">
-                No mobile information will be shared with third parties/affiliates for marketing/promotional purposes. All other categories exclude text messaging originator opt-in data and consent; this information will not be shared with any third parties.
-            </p>
-            <p>If you receive text messages from us (such as internal system alerts or notifications), you may opt-out at any time by replying "STOP", "QUIT", "END", "CANCEL", or "UNSUBSCRIBE".</p>
-
-            <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">4. Data Security</h2>
+            <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">3. Data Security</h2>
             <p>We implement reasonable security measures to protect the confidentiality of your personal information. However, no security system is impenetrable, and we cannot guarantee the absolute security of our database.</p>
 
-            <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">5. Contact Us</h2>
+            <h2 className="text-xl font-bold text-gray-900 mt-8 mb-4">4. Contact Us</h2>
             <p>If you have any questions about this Privacy Policy, please contact us via our website's contact form.</p>
           </div>
         </div>
