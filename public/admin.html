@@ -127,7 +127,7 @@
             </button>
         </div>
 
-        <!-- NEW: DASHBOARD OVERVIEW TAB -->
+        <!-- DASHBOARD OVERVIEW TAB -->
         <div id="tab-dashboard" class="flex-1 flex flex-col overflow-hidden bg-gray-50">
             <header class="bg-white h-16 border-b border-gray-200 flex items-center px-6 shrink-0 shadow-sm">
                 <h2 class="text-lg font-bold text-gray-800">Platform Overview</h2>
@@ -601,7 +601,7 @@
         </div>
     </div>
 
-    <div id="custom-alert-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 transition-all">
+    <div id="custom-alert-modal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 transition-all">
         <div class="bg-white rounded-xl p-6 w-full max-w-sm text-center shadow-2xl animate-in zoom-in-95">
             <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">⚠️</div>
             <h3 id="custom-alert-title" class="text-lg font-bold text-gray-950">Alert</h3>
@@ -610,7 +610,7 @@
         </div>
     </div>
 
-    <div id="custom-confirm-modal" class="hidden fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 transition-all">
+    <div id="custom-confirm-modal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 transition-all">
         <div class="bg-white rounded-xl p-6 w-full max-w-sm text-center shadow-2xl animate-in zoom-in-95">
             <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">?</div>
             <h3 id="confirm-title" class="text-lg font-bold text-gray-950">Are you sure?</h3>
@@ -618,6 +618,20 @@
             <div class="flex gap-3 mt-6">
                 <button id="confirm-no" class="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-gray-200">Cancel</button>
                 <button id="confirm-yes" class="flex-1 bg-red-600 text-white py-2.5 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-red-700">Confirm Action</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUSTOM PROMPT MODAL -->
+    <div id="custom-prompt-modal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl p-6 w-full max-w-sm text-center shadow-2xl">
+            <div class="w-12 h-12 bg-gold/10 text-gold rounded-full flex items-center justify-center mx-auto mb-4 text-xl">✍️</div>
+            <h3 id="prompt-title" class="text-lg font-bold text-gray-900">Input Required</h3>
+            <p id="prompt-desc" class="text-xs text-gray-500 mt-1 mb-4 leading-relaxed"></p>
+            <input type="text" id="prompt-input" class="w-full bg-gray-50 border border-gray-200 text-sm text-gray-900 rounded-lg px-3 py-2 outline-none focus:border-gold mb-4 font-bold" placeholder="">
+            <div class="flex gap-3">
+                <button id="prompt-cancel" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-gray-200">Cancel</button>
+                <button id="prompt-submit" class="flex-1 bg-black text-white py-2 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-all">Submit</button>
             </div>
         </div>
     </div>
@@ -895,6 +909,59 @@
                 };
                 document.getElementById('confirm-yes').addEventListener('click', onYes);
                 document.getElementById('confirm-no').addEventListener('click', onNo);
+            });
+        };
+
+        window.customPrompt = (title, description, placeholder = '', defaultValue = '') => {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('custom-prompt-modal');
+                const titleEl = document.getElementById('prompt-title');
+                const descEl = document.getElementById('prompt-desc');
+                const inputEl = document.getElementById('prompt-input');
+                
+                titleEl.innerText = title;
+                descEl.innerText = description;
+                inputEl.placeholder = placeholder;
+                
+                // Pre-fill the value
+                inputEl.value = defaultValue; 
+                
+                modal.classList.remove('hidden');
+                inputEl.focus();
+                
+                const submitBtn = document.getElementById('prompt-submit');
+                const cancelBtn = document.getElementById('prompt-cancel');
+                
+                const onSubmit = () => {
+                    const val = inputEl.value.trim();
+                    modal.classList.add('hidden');
+                    cleanup();
+                    resolve(val);
+                };
+                
+                const onCancel = () => {
+                    modal.classList.add('hidden');
+                    cleanup();
+                    resolve(null);
+                };
+                
+                const onKeyDown = (e) => {
+                    if (e.key === 'Enter') {
+                        onSubmit();
+                    } else if (e.key === 'Escape') {
+                        onCancel();
+                    }
+                };
+                
+                const cleanup = () => {
+                    submitBtn.removeEventListener('click', onSubmit);
+                    cancelBtn.removeEventListener('click', onCancel);
+                    inputEl.removeEventListener('keydown', onKeyDown);
+                };
+                
+                submitBtn.addEventListener('click', onSubmit);
+                cancelBtn.addEventListener('click', onCancel);
+                inputEl.addEventListener('keydown', onKeyDown);
             });
         };
 
@@ -1250,7 +1317,7 @@
                             </div>
                         </td>
                         <td class="px-4 py-1.5 align-middle text-center"></td>
-                        <td class="px-4 py-1.5 align-middle text-right">
+                        <td class="px-4 py-1.5 align-middle text-right flex items-center justify-end gap-1 h-full pt-4">
                             <button onclick="window.saveEdit(event, '${p.id}')" class="text-white bg-black hover:bg-gold hover:text-black px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors mr-1">Save</button>
                             <button onclick="window.cancelEdit()" class="text-gray-400 hover:text-black text-[10px] font-bold uppercase tracking-wider">Cancel</button>
                         </td>`;
@@ -1308,6 +1375,7 @@
                         </td>
                         <td class="px-4 py-1.5 align-middle text-right flex items-center justify-end gap-3 h-full pt-4">
                             <button onclick="window.shareProduct('${p.id}')" class="text-gold hover:text-black text-[10px] font-bold uppercase tracking-wider transition-colors">Share</button>
+                            <button onclick="window.duplicateProduct('${p.id}')" class="text-blue-500 hover:text-blue-700 text-[10px] font-bold uppercase tracking-wider transition-colors">Copy</button>
                             <button onclick="window.startEdit('${p.id}')" class="text-gray-400 hover:text-black text-[10px] font-bold uppercase tracking-wider transition-colors">Edit</button>
                             <button onclick="window.deleteProduct('${p.id}', '${(p.name || 'Product').replace(/'/g, "\\'")}')" class="text-gray-300 hover:text-red-500 transition-colors text-xs">🗑</button>
                         </td>`;
@@ -1368,6 +1436,53 @@
                 window.customAlert("Error", "Could not save your changes. Please try again.");
                 btn.innerText = originalText;
                 btn.disabled = false;
+            }
+        };
+
+        // --- NEW: DUPLICATE PRODUCT ---
+        window.duplicateProduct = async (id) => {
+            const prodToCopy = productsMaster.find(p => p.id === id);
+            if (!prodToCopy) return;
+
+            const newName = await window.customPrompt(
+                "Duplicate Product",
+                "Enter the Display Name for the copied product:",
+                "e.g. New Product Name",
+                `${prodToCopy.name || 'Product'} (Copy)`
+            );
+
+            if (!newName) return; 
+
+            // Find the highest product ID to generate the next one
+            let max = 0; 
+            productsMaster.forEach(p => { 
+                if (p.id && p.id.startsWith('prod_')) {
+                    const n = parseInt(p.id.split('_')[1]); 
+                    if (!isNaN(n) && n > max) max = n; 
+                }
+            });
+            const nextId = `prod_${max + 1}`;
+
+            // Create a clean copy without the old ID
+            const newProd = { ...prodToCopy };
+            delete newProd.id;
+            
+            // Assign the new name and slightly modify SKUs to prevent absolute collisions
+            newProd.name = newName;
+            if(newProd.sku) newProd.sku = newProd.sku + "-COPY";
+            if(newProd.privateSku) newProd.privateSku = newProd.privateSku + "-COPY";
+            
+            // Refresh the added timestamp so it shows up at the top if sorting by "Added"
+            newProd.addedAt = new Date().toISOString();
+
+            try {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', nextId), newProd);
+                showToast("Product duplicated successfully!");
+                // Instantly open the new row in Edit Mode so they can fix the SKU/Price
+                window.startEdit(nextId);
+            } catch (err) {
+                console.error(err);
+                window.customAlert("Error", "Could not duplicate the product on Firestore.");
             }
         };
 
