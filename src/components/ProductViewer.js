@@ -300,18 +300,22 @@ function ProductViewerContent({ initialProduct }) {
       }
 
       const title = productData.displayTitle;
+      const plainText = `${title}\n${url}`;
+      const htmlText = `<a href="${url}">${title}</a>`;
+      
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-      if (navigator.share) {
-          navigator.share({ title: title, url: url }).catch(console.error);
+      if (navigator.share && isMobile) {
+          navigator.share({ title: title, text: title, url: url }).catch(console.error);
       } else {
           const copyRichLink = async () => {
               if (navigator.clipboard && window.ClipboardItem) {
                   try {
-                      const textPlain = new Blob([url], { type: "text/plain" });
-                      const textHtml = new Blob([`<a href="${url}">${title}</a>`], { type: "text/html" });
+                      const textPlainBlob = new Blob([plainText], { type: "text/plain" });
+                      const textHtmlBlob = new Blob([htmlText], { type: "text/html" });
                       const clipboardItem = new ClipboardItem({
-                          "text/plain": textPlain,
-                          "text/html": textHtml
+                          "text/plain": textPlainBlob,
+                          "text/html": textHtmlBlob
                       });
                       await navigator.clipboard.write([clipboardItem]);
                       setCopied(true);
@@ -322,10 +326,10 @@ function ProductViewerContent({ initialProduct }) {
                   }
               }
               try {
-                  await navigator.clipboard.writeText(url);
+                  await navigator.clipboard.writeText(plainText);
               } catch (e) {
                   const textArea = document.createElement("textarea");
-                  textArea.value = url;
+                  textArea.value = plainText;
                   document.body.appendChild(textArea);
                   textArea.select();
                   document.execCommand('copy');
