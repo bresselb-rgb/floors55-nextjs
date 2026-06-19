@@ -680,7 +680,6 @@ function CategoryViewerContent({ initialCategory }) {
   else if (activeCategory === 'Carpet' || activeCategory === 'Carpet Cushion') heroImage = 'images/heros/carpet.jpg';
   else if (activeCategory === 'Laminate') heroImage = 'images/heros/laminate.jpg';
   else if (activeCategory === 'Hardwood') heroImage = 'images/heros/hardwood.jpg';
-  else if (activeCategory === 'Tile') heroImage = 'images/heros/tile.jpg';
 
   const heroFbUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(heroImage)}?alt=media`;
   const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
@@ -737,7 +736,7 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
-                        {['All Products', 'Hot Buys', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Tile', 'Carpet Cushion'].map(cat => {
+                        {['All Products', 'Hot Buys', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Carpet Cushion'].map(cat => {
                             if (cat === 'Hot Buys' && (!isWholesale || isClientMode)) return null;
                             return (
                                 <button key={cat} onClick={() => handleCategorySwitch(cat)} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === cat ? 'bg-gold text-black font-black' : (cat === 'Hot Buys' ? 'text-red-600 hover:bg-red-50' : 'text-gray-500 hover:bg-gray-100')}`}>
@@ -784,15 +783,29 @@ function CategoryViewerContent({ initialCategory }) {
             </aside>
 
             <div className="flex-1 flex flex-col">
-                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap items-center justify-between gap-4 mb-6">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setIsMobileDrawerOpen(true)} className="lg:hidden bg-black text-white hover:bg-gold hover:text-black transition-colors px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 outline-none cursor-pointer">
+                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+                        <button onClick={() => setIsMobileDrawerOpen(true)} className="lg:hidden bg-black text-white hover:bg-gold hover:text-black transition-colors px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 outline-none cursor-pointer shrink-0">
                             <span>⚙️</span> Filters
                         </button>
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{isDataLoaded ? `Showing ${filteredProducts.length} of ${liveProductsRaw.length}` : 'Loading...'}</span>
+                        
+                        {/* NEW: Mobile-only inline search bar */}
+                        <div className="relative flex-1 lg:hidden">
+                            <input 
+                                type="text" 
+                                value={searchQuery} 
+                                onChange={(e) => setSearchQuery(e.target.value)} 
+                                placeholder="Search products..." 
+                                className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" 
+                            />
+                            <span className="absolute right-3 top-2.5 text-gray-400 text-xs">🔍</span>
+                        </div>
+
+                        <span className="hidden sm:inline-block text-xs font-bold text-gray-400 uppercase tracking-widest shrink-0">{isDataLoaded ? `Showing ${filteredProducts.length} of ${liveProductsRaw.length}` : 'Loading...'}</span>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
+                        <span className="sm:hidden text-xs font-bold text-gray-400 uppercase tracking-widest">{isDataLoaded ? `${filteredProducts.length} Results` : '...'}</span>
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Sort:</span>
                             <select value={sortMode} onChange={e => setSortMode(e.target.value)} className="bg-gray-50 border border-gray-200 text-xs rounded-xl px-3 py-2 outline-none focus:border-gold font-bold text-gray-700 cursor-pointer">
