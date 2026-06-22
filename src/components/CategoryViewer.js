@@ -445,7 +445,7 @@ function CategoryViewerContent({ initialCategory }) {
     let min = 0; let max = 15;
     
     const categoryProducts = liveProductsRaw.filter(p => {
-        if (activeCategory === "All Products") return true;
+        if (activeCategory === "All Products") return p.category !== 'Carpet Cushion';
         if (activeCategory === "Hot Buys") return p.isSale === true;
         return p.category === activeCategory;
     });
@@ -471,7 +471,7 @@ function CategoryViewerContent({ initialCategory }) {
   const dynamicBrands = useMemo(() => {
       const brands = new Set();
       const relevantProducts = liveProductsRaw.filter(p => 
-          activeCategory === "All Products" || 
+          (activeCategory === "All Products" && p.category !== 'Carpet Cushion') || 
           (activeCategory === "Hot Buys" && p.isSale) || 
           p.category === activeCategory
       );
@@ -511,7 +511,7 @@ function CategoryViewerContent({ initialCategory }) {
       const specMap = {}; 
       
       const relevantProducts = liveProductsRaw.filter(p => 
-          activeCategory === "All Products" || 
+          (activeCategory === "All Products" && p.category !== 'Carpet Cushion') || 
           (activeCategory === "Hot Buys" && p.isSale) || 
           p.category === activeCategory
       );
@@ -602,7 +602,7 @@ function CategoryViewerContent({ initialCategory }) {
                               descLower.includes(searchVal) || 
                               specTextCombined.includes(searchVal);
 
-        const matchesCategory = (activeCategory === "All Products") || 
+        const matchesCategory = (activeCategory === "All Products" && (searchVal !== '' || p.category !== 'Carpet Cushion')) || 
                                 (activeCategory === "Hot Buys" && p.isSale === true) || 
                                 (p.category === activeCategory);
 
