@@ -26,13 +26,34 @@ export async function generateMetadata({ params }) {
   const data = docSnap.data();
   const title = (data.usePrivateName && data.privateName) ? data.privateName : (data.name || 'Unnamed Product');
 
+  // Format image URL so it renders in text message previews when shared directly
+  const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const safeSku = (data.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  let folderName = 'images'; 
+  if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+  else if (safeName) folderName = safeName;
+  folderName = folderName.replace(/-+$/, '');
+
+  const displaySku = data.colors?.[0]?.sku || '01';
+  const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
+  const imageUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+
   return {
     title: `${title} | Floors 55`,
     description: data.desc || `View the ${title} premium flooring collection at Floors 55.`,
-    
-    // ✅ Canonical URLs
-    // This tells Google to ignore any tracking/margin parameters in the URL
-    // and ONLY index this specific master version of the page.
+    openGraph: {
+        title: `${title} | Floors 55`,
+        description: data.desc || `View the ${title} premium flooring collection at Floors 55.`,
+        images: [{ url: imageUrl, width: 1200, height: 630 }],
+        type: 'website'
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: `${title} | Floors 55`,
+        description: data.desc || `View the ${title} premium flooring collection at Floors 55.`,
+        images: [imageUrl]
+    },
+    // ✅ Canonical URLs tell Google to ignore any tracking parameters in the URL
     alternates: {
       canonical: `https://www.floors55pro.com/product/${id}`,
     }
