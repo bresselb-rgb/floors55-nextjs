@@ -1,11 +1,21 @@
 import { doc, getDoc } from "firebase/firestore";
+import { signInAnonymously } from "firebase/auth";
 import { redirect } from "next/navigation";
-import { db, appId } from "../../../lib/firebase";
+import { db, auth, appId } from "../../../lib/firebase";
+
+// Helper to ensure the server is authenticated before asking Firebase for data
+const authenticateServer = async () => {
+    if (!auth.currentUser) {
+        await signInAnonymously(auth).catch(() => {});
+    }
+};
 
 // 1. THIS BUILDS THE PREVIEW CARD FOR iMESSAGE / FACEBOOK / SLACK
 export async function generateMetadata({ params }) {
   const unwrappedParams = await params;
   const code = unwrappedParams.code;
+  
+  await authenticateServer();
   
   try {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'short_links', code);
@@ -69,6 +79,10 @@ export default async function ShortLinkRedirect({ params }) {
   const unwrappedParams = await params;
   const code = unwrappedParams.code;
   
+  await authenticateServer();
+  
+  let targetUrl = null;
+
   try {
       const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'short_links', code);
       const docSnap = await getDoc(docRef);
@@ -76,12 +90,19 @@ export default async function ShortLinkRedirect({ params }) {
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.target) {
-          redirect(data.target);
+          targetUrl = data.target;
         }
       }
   } catch (e) {
       console.error("Error resolving short link:", e);
   }
   
+  // CRITICAL FIX: Next.js redirect() throws an error to function!
+  // It MUST be called OUTSIDE of the try/catch block, or the catch block swallows it.
+  if (targetUrl) {
+      redirect(targetUrl);
+  }
+  
+  // Only hits this if the code wasn't found in the database
   redirect('/category');
 }
