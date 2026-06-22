@@ -58,6 +58,7 @@ function ProductViewerContent({ initialProduct }) {
     
     const [clientMargin, setClientMargin] = useState(null);
     const [builderMargin, setBuilderMargin] = useState(20);
+    const [useCustomBranding, setUseCustomBranding] = useState(true);
     const [copied, setCopied] = useState(false);
     const [isMagicLink, setIsMagicLink] = useState(false);
 
@@ -269,45 +270,79 @@ function ProductViewerContent({ initialProduct }) {
     };
 
     const handleZoomPan = (e) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        let clientX = e.clientX;
-        let clientY = e.clientY;
+    const rect = e.currentTarget.getBoundingClientRect();
+    let clientX = e.clientX;
+    let clientY = e.clientY;
+    
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    }
 
-        if (e.touches && e.touches.length > 0) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-        }
+    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+    setZoomPos({ x, y });
+  };
 
-        const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-        const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
-        setZoomPos({ x, y });
-    };
+  const shareProduct = () => {
+      let url = `${window.location.origin}/product/${productData.id}?color=${activeColor?.sku || ''}`;
+      
+      if (clientMargin !== null) {
+          const encodedMargin = btoa(clientMargin.toString());
+          url += `&cm=${encodedMargin}`;
+          
+          if (user && !user.isAnonymous) {
+              url += `&pro=${user.uid}`;
+          } else {
+              const storedBrand = sessionStorage.getItem('client_brand');
+              if (storedBrand) url += `&cb=${btoa(storedBrand)}`;
+          }
+      }
 
-    const shareProduct = () => {
-        let url = `${window.location.origin}/product/${productData.id}?color=${activeColor?.sku || ''}`;
-        
-        if (clientMargin !== null) {
-            const encodedMargin = btoa(clientMargin.toString());
-            url += `&cm=${encodedMargin}`;
-            
-            if (user && !user.isAnonymous) {
-                url += `&pro=${user.uid}`;
-            } else {
-                const storedBrand = sessionStorage.getItem('client_brand');
-                if (storedBrand) url += `&cb=${btoa(storedBrand)}`;
-            }
-        }
+      const title = productData.displayTitle;
+      const plainText = `${title}\n${url}`;
+      const htmlText = `<a href="${url}">${title}</a>`;
+      
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-        if (navigator.share) {
-            navigator.share({ title: `${productData.displayTitle}`, url }).catch(console.error);
-        } else {
-            navigator.clipboard.writeText(url);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }
-    };
+      if (navigator.share && isMobile) {
+          navigator.share({ title: title, text: title, url: url }).catch(console.error);
+      } else {
+          const copyRichLink = async () => {
+              if (navigator.clipboard && window.ClipboardItem) {
+                  try {
+                      const textPlainBlob = new Blob([plainText], { type: "text/plain" });
+                      const textHtmlBlob = new Blob([htmlText], { type: "text/html" });
+                      const clipboardItem = new ClipboardItem({
+                          "text/plain": textPlainBlob,
+                          "text/html": textHtmlBlob
+                      });
+                      await navigator.clipboard.write([clipboardItem]);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                      return;
+                  } catch (e) {
+                      console.warn("Rich text copy failed, falling back to standard copy", e);
+                  }
+              }
+              try {
+                  await navigator.clipboard.writeText(plainText);
+              } catch (e) {
+                  const textArea = document.createElement("textarea");
+                  textArea.value = plainText;
+                  document.body.appendChild(textArea);
+                  textArea.select();
+                  document.execCommand('copy');
+                  document.body.removeChild(textArea);
+              }
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+          };
+          copyRichLink();
+      }
+  };
 
-    const isClientMode = clientMargin !== null;
+  const isClientMode = clientMargin !== null;
     const basePrice = productData?.price || 0;
     const isCarpet = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
     const isCarpetCushionOnly = productData?.category === 'Carpet Cushion';
@@ -432,6 +467,7 @@ function ProductViewerContent({ initialProduct }) {
                 proId: user.uid,
                 clientName: quoteClientName,
                 projectName: quoteProjectName || 'Flooring Project',
+                useCustomBranding: useCustomBranding,
                 productId: productData.id,
                 productName: productData.displayTitle,
                 colorSku: activeColor?.sku || '',
@@ -866,6 +902,11 @@ function ProductViewerContent({ initialProduct }) {
                           </div>
                           
                           <input type="range" min="0" max="100" step="1" value={builderMargin} onChange={e => setBuilderMargin(Number(e.target.value))} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold mb-6" />
+
+                          <label className="flex items-center gap-2 mb-4 text-xs font-bold text-gray-400 cursor-pointer">
+                              <input type="checkbox" checked={useCustomBranding} onChange={e => setUseCustomBranding(e.target.checked)} className="accent-gold w-4 h-4" />
+                              Apply my White-Label Branding
+                          </label>
 
                           <div className="space-y-3">
                               <button onClick={handleSaveStandaloneQuote} disabled={isSavingToBoard || netSqftNum === 0 || !quoteClientName.trim()} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50 cursor-pointer outline-none">

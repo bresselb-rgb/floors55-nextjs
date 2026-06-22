@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
-import { collection, onSnapshot, doc, getDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
 
 let Link;
 let usePathname = () => '';
@@ -173,51 +173,51 @@ function CategoryViewerContent({ initialCategory }) {
       setTimeout(() => setToastMessage(''), 3000);
   };
 
-  const handleShare = (e, p) => {
+  const handleShare = async (e, p) => {
       e.preventDefault();
       const displaySku = activePreviews[p.id] || (p.colors?.[0]?.sku || '01');
-      let url = `${window.location.origin}/product/${p.id}?color=${displaySku}`;
+      
+      // Calculate the internal path (without the domain)
+      let targetPath = `/product/${p.id}?color=${displaySku}`;
+      
       if (clientMargin !== null) {
           const encodedMargin = btoa(clientMargin.toString());
-          url += `&cm=${encodedMargin}`;
+          targetPath += `&cm=${encodedMargin}`;
           
           if (user && !user.isAnonymous) {
-              url += `&pro=${user.uid}`;
+              targetPath += `&pro=${user.uid}`;
           } else {
               const storedBrand = sessionStorage.getItem('client_brand');
-              if (storedBrand) url += `&cb=${btoa(storedBrand)}`;
+              if (storedBrand) targetPath += `&cb=${btoa(storedBrand)}`;
           }
       }
 
+      // Generate Native Short Link
+      const shortCode = Math.random().toString(36).substring(2, 8);
+      let finalUrl = `${window.location.origin}/s/${shortCode}`;
+      
+      try {
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'short_links', shortCode), {
+              target: targetPath,
+              createdAt: new Date().toISOString()
+          });
+      } catch(err) {
+          console.warn("Short link generation failed, using long URL.", err);
+          finalUrl = `${window.location.origin}${targetPath}`;
+      }
+
       const title = p.displayTitle;
-      const plainText = `${title}\n${url}`;
-      const htmlText = `<a href="${url}">${title}</a>`;
+      const plainText = `${title}\n${finalUrl}`;
+      const htmlText = `<a href="${finalUrl}">${title}</a>`;
       
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const isDesktop = !isMobile;
 
       if (navigator.share && isMobile) {
-          navigator.share({ title: title, text: title, url: url }).catch(console.error);
+          navigator.share({ title: title, text: title, url: finalUrl }).catch(console.error);
       } else {
           const copyRichLink = async () => {
-              if (navigator.clipboard && window.ClipboardItem) {
-                  try {
-                      const textPlain = new Blob([plainText], { type: "text/plain" });
-                      const textHtml = new Blob([htmlText], { type: "text/html" });
-                      const clipboardItem = new ClipboardItem({
-                          "text/plain": textPlain,
-                          "text/html": textHtml
-                      });
-                      await navigator.clipboard.write([clipboardItem]);
-                      showToast("Product link copied!");
-                      return;
-                  } catch (err) {
-                      console.warn(err);
-                  }
-              }
-              try {
-                  await navigator.clipboard.writeText(plainText);
-              } catch (err) {
-                  const textArea = document.createElement("textarea");
+              if (navigator.clipboard && window.ClipboardItem && isDesktop) {
                   textArea.value = plainText;
                   document.body.appendChild(textArea);
                   textArea.select();

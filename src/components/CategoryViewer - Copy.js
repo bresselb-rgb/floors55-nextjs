@@ -166,6 +166,69 @@ function CategoryViewerContent({ initialCategory }) {
   const [isListView, setIsListView] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [activePreviews, setActivePreviews] = useState({});
+  const [toastMessage, setToastMessage] = useState('');
+
+  const showToast = (msg) => {
+      setToastMessage(msg);
+      setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  const handleShare = (e, p) => {
+      e.preventDefault();
+      const displaySku = activePreviews[p.id] || (p.colors?.[0]?.sku || '01');
+      let url = `${window.location.origin}/product/${p.id}?color=${displaySku}`;
+      if (clientMargin !== null) {
+          const encodedMargin = btoa(clientMargin.toString());
+          url += `&cm=${encodedMargin}`;
+          
+          if (user && !user.isAnonymous) {
+              url += `&pro=${user.uid}`;
+          } else {
+              const storedBrand = sessionStorage.getItem('client_brand');
+              if (storedBrand) url += `&cb=${btoa(storedBrand)}`;
+          }
+      }
+
+      const title = p.displayTitle;
+      const plainText = `${title}\n${url}`;
+      const htmlText = `<a href="${url}">${title}</a>`;
+      
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+      if (navigator.share && isMobile) {
+          navigator.share({ title: title, text: title, url: url }).catch(console.error);
+      } else {
+          const copyRichLink = async () => {
+              if (navigator.clipboard && window.ClipboardItem) {
+                  try {
+                      const textPlain = new Blob([plainText], { type: "text/plain" });
+                      const textHtml = new Blob([htmlText], { type: "text/html" });
+                      const clipboardItem = new ClipboardItem({
+                          "text/plain": textPlain,
+                          "text/html": textHtml
+                      });
+                      await navigator.clipboard.write([clipboardItem]);
+                      showToast("Product link copied!");
+                      return;
+                  } catch (err) {
+                      console.warn(err);
+                  }
+              }
+              try {
+                  await navigator.clipboard.writeText(plainText);
+              } catch (err) {
+                  const textArea = document.createElement("textarea");
+                  textArea.value = plainText;
+                  document.body.appendChild(textArea);
+                  textArea.select();
+                  document.execCommand('copy');
+                  document.body.removeChild(textArea);
+              }
+              showToast("Product link copied!");
+          };
+          copyRichLink();
+      }
+  };
 
   useEffect(() => {
       if (typeof window !== 'undefined') {
@@ -964,7 +1027,12 @@ function CategoryViewerContent({ initialCategory }) {
                                                 )
                                             )}
 
-                                            <Link href={`/product/${p.id}`} className={isListView ? "w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-2 rounded-lg transition text-[10px] tracking-widest" : "w-full block text-center border border-black hover:bg-black text-black hover:text-white font-black uppercase py-2.5 rounded-xl transition text-[10px] tracking-widest"} style={{ textDecoration: 'none' }}>View Details</Link>
+                                            <div className={`flex gap-2 w-full ${isListView ? 'mt-2' : ''}`}>
+                                                <Link href={`/product/${p.id}`} className={isListView ? "flex-1 w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-2 rounded-lg transition text-[10px] tracking-widest" : "flex-1 w-full block text-center border border-black hover:bg-black text-black hover:text-white font-black uppercase py-2.5 rounded-xl transition text-[10px] tracking-widest"} style={{ textDecoration: 'none' }}>View Details</Link>
+                                                <button onClick={(e) => handleShare(e, p)} className={`shrink-0 flex items-center justify-center border border-gray-200 text-gray-500 hover:text-gold hover:border-gold transition-colors cursor-pointer outline-none ${isListView ? 'w-9 rounded-lg' : 'w-10 rounded-xl'}`} title="Share Product">
+                                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316M15 12a3 3 0 100 6 3 3 0 000-6zm0-6a3 3 0 100 6 3 3 0 000-6z"></path></svg>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1039,6 +1107,13 @@ function CategoryViewerContent({ initialCategory }) {
                     <button onClick={() => setIsMobileDrawerOpen(false)} className="flex-1 bg-black hover:bg-gold text-white font-black text-xs uppercase py-3 rounded-xl transition text-center outline-none cursor-pointer">View Results</button>
                 </div>
             </div>
+          </div>
+      )}
+
+      {toastMessage && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] animate-in slide-in-from-bottom-5">
+              <span className="font-black text-gold">✓</span>
+              <p className="font-bold text-xs uppercase tracking-widest m-0">{toastMessage}</p>
           </div>
       )}
     </main>

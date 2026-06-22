@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
-import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc, setDoc } from "firebase/firestore";
 import { auth, db, appId } from "../lib/firebase";
 
 function ProductViewerContent({ initialProduct }) {
@@ -284,47 +284,47 @@ function ProductViewerContent({ initialProduct }) {
     setZoomPos({ x, y });
   };
 
-  const shareProduct = () => {
-      let url = `${window.location.origin}/product/${productData.id}?color=${activeColor?.sku || ''}`;
+  const shareProduct = async () => {
+      let targetPath = `/product/${productData.id}?color=${activeColor?.sku || ''}`;
       
       if (clientMargin !== null) {
           const encodedMargin = btoa(clientMargin.toString());
-          url += `&cm=${encodedMargin}`;
+          targetPath += `&cm=${encodedMargin}`;
           
           if (user && !user.isAnonymous) {
-              url += `&pro=${user.uid}`;
+              targetPath += `&pro=${user.uid}`;
           } else {
               const storedBrand = sessionStorage.getItem('client_brand');
-              if (storedBrand) url += `&cb=${btoa(storedBrand)}`;
+              if (storedBrand) targetPath += `&cb=${btoa(storedBrand)}`;
           }
       }
 
+      // Generate Native Short Link
+      const shortCode = Math.random().toString(36).substring(2, 8);
+      let finalUrl = `${window.location.origin}/s/${shortCode}`;
+      
+      try {
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'short_links', shortCode), {
+              target: targetPath,
+              createdAt: new Date().toISOString()
+          });
+      } catch(err) {
+          console.warn("Short link generation failed, using long URL.", err);
+          finalUrl = `${window.location.origin}${targetPath}`;
+      }
+
       const title = productData.displayTitle;
-      const plainText = `${title}\n${url}`;
-      const htmlText = `<a href="${url}">${title}</a>`;
+      const plainText = `${title}\n${finalUrl}`;
+      const htmlText = `<a href="${finalUrl}">${title}</a>`;
       
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const isDesktop = !isMobile;
 
       if (navigator.share && isMobile) {
-          navigator.share({ title: title, text: title, url: url }).catch(console.error);
+          navigator.share({ title: title, text: title, url: finalUrl }).catch(console.error);
       } else {
           const copyRichLink = async () => {
-              if (navigator.clipboard && window.ClipboardItem) {
-                  try {
-                      const textPlainBlob = new Blob([plainText], { type: "text/plain" });
-                      const textHtmlBlob = new Blob([htmlText], { type: "text/html" });
-                      const clipboardItem = new ClipboardItem({
-                          "text/plain": textPlainBlob,
-                          "text/html": textHtmlBlob
-                      });
-                      await navigator.clipboard.write([clipboardItem]);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
-                      return;
-                  } catch (e) {
-                      console.warn("Rich text copy failed, falling back to standard copy", e);
-                  }
-              }
+              if (navigator.clipboard && window.ClipboardItem && isDesktop) {
               try {
                   await navigator.clipboard.writeText(plainText);
               } catch (e) {
