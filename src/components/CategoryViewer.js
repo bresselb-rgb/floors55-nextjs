@@ -217,7 +217,10 @@ function CategoryViewerContent({ initialCategory }) {
           navigator.share({ title: title, text: title, url: finalUrl }).catch(console.error);
       } else {
           const copyRichLink = async () => {
-              if (navigator.clipboard && window.ClipboardItem && isDesktop) {
+              try {
+                  await navigator.clipboard.writeText(plainText);
+              } catch (e) {
+                  const textArea = document.createElement("textarea");
                   textArea.value = plainText;
                   document.body.appendChild(textArea);
                   textArea.select();
