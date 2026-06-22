@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, serverTimestamp } from "firebase/firestore";
 // Correct path to the firebase lib from components directory
 import { db, appId } from "../lib/firebase";
 
@@ -104,33 +104,15 @@ export default function ClientBoardsManager({ proId }) {
       }, 3000);
   };
 
-  const copyToClipboard = async (board) => {
-      const targetPath = `/client/${board.slug}`;
-      const shortCode = Math.random().toString(36).substring(2, 8);
-      let finalUrl = `${window.location.origin}/s/${shortCode}`;
-      
-      try {
-          // Save the short link to the database
-          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'short_links', shortCode), {
-              target: targetPath,
-              createdAt: new Date().toISOString()
-          });
-      } catch(err) {
-          console.warn("Short link generation failed, using long URL.", err);
-          finalUrl = `${window.location.origin}${targetPath}`;
-      }
-
-      // Format it perfectly for text messages with the title on top and the link below
-      const plainText = `Project Presentation: ${board.name}\n${finalUrl}`;
-
-      // Cross-browser clipboard logic
+  const copyToClipboard = (slug) => {
+      const url = `${window.location.origin}/client/${slug}`;
       if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(plainText).then(triggerToast).catch(err => {
+          navigator.clipboard.writeText(url).then(triggerToast).catch(err => {
               console.error('Failed to copy', err);
           });
       } else {
-          const tempInput = document.createElement("textarea");
-          tempInput.value = plainText;
+          const tempInput = document.createElement("input");
+          tempInput.value = url;
           document.body.appendChild(tempInput);
           tempInput.select();
           try {
@@ -198,7 +180,7 @@ export default function ClientBoardsManager({ proId }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => copyToClipboard(board)} className="flex-1 md:flex-none bg-white border border-gray-200 hover:border-gold hover:text-gold text-black px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors text-center cursor-pointer outline-none">
+                  <button onClick={() => copyToClipboard(board.slug)} className="flex-1 md:flex-none bg-white border border-gray-200 hover:border-gold hover:text-gold text-black px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors text-center cursor-pointer outline-none">
                       Copy Link
                   </button>
                   <button onClick={() => handleDelete(board.id, board.name)} className="bg-white border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-600 px-3 py-2.5 rounded-lg transition-colors cursor-pointer outline-none" title="Delete Board">

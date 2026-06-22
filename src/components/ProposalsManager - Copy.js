@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from 'next/link';
-import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, getDoc, setDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, getDoc } from "firebase/firestore";
 import { db, appId } from "../lib/firebase";
 
 export default function ProposalsManager({ proId }) {
@@ -79,31 +79,13 @@ export default function ProposalsManager({ proId }) {
       setTimeout(() => setShowToast(false), 3000);
   };
 
-  const copyToClipboard = async (quote) => {
-      const targetPath = `/proposal/${quote.id}`;
-      const shortCode = Math.random().toString(36).substring(2, 8);
-      let finalUrl = `${window.location.origin}/s/${shortCode}`;
-
-      try {
-          // Save the short link to the database
-          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'short_links', shortCode), {
-              target: targetPath,
-              createdAt: new Date().toISOString()
-          });
-      } catch(err) {
-          console.warn("Short link generation failed, using long URL.", err);
-          finalUrl = `${window.location.origin}${targetPath}`;
-      }
-
-      // Format it perfectly for text messages with the title on top and the link below
-      const plainText = `Project Proposal: ${quote.clientName}\n${finalUrl}`;
-
-      // Cross-browser clipboard logic
+  const copyToClipboard = (id) => {
+      const url = `${window.location.origin}/proposal/${id}`;
       if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(plainText).then(() => triggerToast("Link Copied")).catch(console.error);
+          navigator.clipboard.writeText(url).then(() => triggerToast("Link Copied")).catch(console.error);
       } else {
-          const tempInput = document.createElement("textarea");
-          tempInput.value = plainText;
+          const tempInput = document.createElement("input");
+          tempInput.value = url;
           document.body.appendChild(tempInput);
           tempInput.select();
           try { document.execCommand("copy"); triggerToast("Link Copied"); } catch (err) { console.error('Fallback copy failed', err); }
@@ -364,7 +346,7 @@ Thank you!`;
                         <Link href={`/proposal/${quote.id}`} target="_blank" className="flex-1 md:flex-none bg-white border border-gray-200 hover:border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors text-center shadow-sm" style={{ textDecoration: 'none' }}>
                             Preview
                         </Link>
-                        <button onClick={() => copyToClipboard(quote)} className="flex-1 md:flex-none bg-black hover:bg-gold hover:text-black text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors text-center outline-none cursor-pointer shadow-md">
+                        <button onClick={() => copyToClipboard(quote.id)} className="flex-1 md:flex-none bg-black hover:bg-gold hover:text-black text-white px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors text-center outline-none cursor-pointer shadow-md">
                             Copy Link
                         </button>
                         
