@@ -270,79 +270,79 @@ function ProductViewerContent({ initialProduct }) {
     };
 
     const handleZoomPan = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    let clientX = e.clientX;
-    let clientY = e.clientY;
-    
-    if (e.touches && e.touches.length > 0) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-    }
+        const rect = e.currentTarget.getBoundingClientRect();
+        let clientX = e.clientX;
+        let clientY = e.clientY;
+        
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        }
 
-    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
-    setZoomPos({ x, y });
-  };
+        const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+        const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+        setZoomPos({ x, y });
+    };
 
-  const shareProduct = async () => {
-      let targetPath = `/product/${productData.id}?color=${activeColor?.sku || ''}`;
-      
-      if (clientMargin !== null) {
-          const encodedMargin = btoa(clientMargin.toString());
-          targetPath += `&cm=${encodedMargin}`;
-          
-          if (user && !user.isAnonymous) {
-              targetPath += `&pro=${user.uid}`;
-          } else {
-              const storedBrand = sessionStorage.getItem('client_brand');
-              if (storedBrand) targetPath += `&cb=${btoa(storedBrand)}`;
-          }
-      }
+    const shareProduct = async () => {
+        let targetPath = `/product/${productData.id}?color=${activeColor?.sku || ''}`;
+        
+        if (clientMargin !== null) {
+            const encodedMargin = btoa(clientMargin.toString());
+            targetPath += `&cm=${encodedMargin}`;
+            
+            if (user && !user.isAnonymous) {
+                targetPath += `&pro=${user.uid}`;
+            } else {
+                const storedBrand = sessionStorage.getItem('client_brand');
+                if (storedBrand) targetPath += `&cb=${btoa(storedBrand)}`;
+            }
+        }
 
-      // Generate Native Short Link
-      const shortCode = Math.random().toString(36).substring(2, 8);
-      let finalUrl = `${window.location.origin}/s/${shortCode}`;
-      
-      try {
-          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'short_links', shortCode), {
-              target: targetPath,
-              createdAt: new Date().toISOString()
-          });
-      } catch(err) {
-          console.warn("Short link generation failed, using long URL.", err);
-          finalUrl = `${window.location.origin}${targetPath}`;
-      }
+        // Generate Native Short Link
+        const shortCode = Math.random().toString(36).substring(2, 8);
+        let finalUrl = `${window.location.origin}/s/${shortCode}`;
+        
+        try {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'short_links', shortCode), {
+                target: targetPath,
+                createdAt: new Date().toISOString()
+            });
+        } catch(err) {
+            console.warn("Short link generation failed, using long URL.", err);
+            finalUrl = `${window.location.origin}${targetPath}`;
+        }
 
-      const title = productData.displayTitle;
-      const plainText = `${title}\n${finalUrl}`;
-      const htmlText = `<a href="${finalUrl}">${title}</a>`;
-      
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const isDesktop = !isMobile;
+        const title = productData.displayTitle;
+        const plainText = `${title}\n${finalUrl}`;
+        
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const isDesktop = !isMobile;
 
-      if (navigator.share && isMobile) {
-          navigator.share({ title: title, text: title, url: finalUrl }).catch(console.error);
-      } else {
-          const copyRichLink = async () => {
-              if (navigator.clipboard && window.ClipboardItem && isDesktop) {
-              try {
-                  await navigator.clipboard.writeText(plainText);
-              } catch (e) {
-                  const textArea = document.createElement("textarea");
-                  textArea.value = plainText;
-                  document.body.appendChild(textArea);
-                  textArea.select();
-                  document.execCommand('copy');
-                  document.body.removeChild(textArea);
-              }
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-          };
-          copyRichLink();
-      }
-  };
+        if (navigator.share && isMobile) {
+            navigator.share({ title: title, text: title, url: finalUrl }).catch(console.error);
+        } else {
+            const copyRichLink = async () => {
+                if (navigator.clipboard && window.ClipboardItem && isDesktop) {
+                    try {
+                        await navigator.clipboard.writeText(plainText);
+                    } catch (e) {
+                        const textArea = document.createElement("textarea");
+                        textArea.value = plainText;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                    }
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                }
+            };
+            copyRichLink();
+        }
+    };
 
-  const isClientMode = clientMargin !== null;
+    const isClientMode = clientMargin !== null;
     const basePrice = productData?.price || 0;
     const isCarpet = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
     const isCarpetCushionOnly = productData?.category === 'Carpet Cushion';
