@@ -35,6 +35,12 @@ try {
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  
+  // New Search States
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [headerSearchQuery, setHeaderSearchQuery] = useState('');
+  const [allProducts, setAllProducts] = useState([]);
+
   const [user, setUser] = useState(null);
   const [categories, setCategories] = useState([]);
   const [hasSaleItems, setHasSaleItems] = useState(false);
@@ -48,7 +54,6 @@ export default function Header() {
   const [brandBg, setBrandBg] = useState('#ffffff');
   const [brandText, setBrandText] = useState('#000000');
   
-  // FIX: Supress default header rendering instantly if the URL is a magic link
   const [isProcessingMagicLink, setIsProcessingMagicLink] = useState(true);
 
   const pathname = usePathname();
@@ -80,8 +85,42 @@ export default function Header() {
     return () => window.removeEventListener('open-login-modal', handleOpenLogin);
   }, []);
 
+  // Lock background scrolling when Search is open
+  useEffect(() => {
+    if (isSearchOpen) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = 'unset';
+    
+    const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+            setIsSearchOpen(false);
+            setHeaderSearchQuery('');
+        }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => { 
+        document.body.style.overflow = 'unset'; 
+        window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSearchOpen]);
+
   const getFbUrl = (path) => {
     return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path)}?alt=media`;
+  };
+
+  const getSearchImgUrl = (p) => {
+    const safeName = (p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const safeSku = (p.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    let folderName = 'images'; 
+    if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+    else if (safeName) folderName = safeName;
+    folderName = folderName.replace(/-+$/, '');
+
+    const displaySku = p.colors?.[0]?.sku || '01';
+    const mainType = p.category === 'Carpet' ? 'main' : 'main';
+    const rawPath = `images/${folderName}/${p.imgPrefix || ''}${displaySku}_${mainType}.jpg`.toLowerCase();
+    
+    return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
   };
 
   const getCategorySlug = (catName) => {
@@ -105,9 +144,13 @@ export default function Header() {
     const unsubDb = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'), (snap) => {
       let sale = false;
       const cats = new Set();
+      const productList = [];
+      
       snap.forEach(d => {
         const data = d.data();
         if (data.isVisible !== false) {
+          productList.push({ id: d.id, ...data });
+          
           if (data.isSale) sale = true;
           let cat = (data.category || '').trim();
           if (cat.toUpperCase() === 'LVP' || cat.toLowerCase() === 'luxury vinyl' || cat.toLowerCase() === 'luxury vinyl plank') {
@@ -120,6 +163,7 @@ export default function Header() {
       });
       setCategories([...cats].sort());
       setHasSaleItems(sale);
+      setAllProducts(productList);
     }, (error) => {
       if (error.code !== 'permission-denied') console.error("Header DB Error:", error);
     });
@@ -168,9 +212,17 @@ export default function Header() {
 
   const closeMenu = () => setIsMobileMenuOpen(false);
 
+  // Live Filter Logic for the Search Overlay
+  const filteredSearchProducts = headerSearchQuery.trim() === '' ? [] : allProducts.filter(p => {
+      const query = headerSearchQuery.toLowerCase();
+      return (p.name || '').toLowerCase().includes(query) ||
+             (p.privateName || '').toLowerCase().includes(query) ||
+             (p.sku || '').toLowerCase().includes(query) ||
+             (p.category || '').toLowerCase().includes(query) ||
+             (p.manufacturer || '').toLowerCase().includes(query);
+  });
+
   if (pathname && (pathname.startsWith('/client/') || pathname.startsWith('/proposal/'))) return null;
-  
-  // FIX: Intercept rendering entirely to prevent the brief branding flash
   if (isProcessingMagicLink) return null; 
 
   return (
@@ -253,15 +305,32 @@ export default function Header() {
             </div>
 
             <div className="hidden md:flex items-center gap-6">
+              
+              {/* DESKTOP SEARCH ICON */}
+              <button 
+                onClick={() => setIsSearchOpen(true)} 
+                className={`transition-colors outline-none cursor-pointer p-2 ${clientBrand ? 'hover:opacity-70' : 'text-gray-500 hover:text-gold'}`} 
+                style={{ color: clientBrand ? brandText : undefined }} 
+                title="Search Catalog"
+              >
+                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              </button>
+
               {!clientBrand && (
-                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 border-l border-gray-200 pl-6">
                   {user && !user.isAnonymous ? (
                     <div className="flex items-center gap-4">
-                       <Link href="/my-account" className="hover:text-gold transition uppercase tracking-widest outline-none text-gray-900 font-bold cursor-pointer" style={{ textDecoration: 'none' }}>My Account</Link>
+                       <Link href="/my-account" className="hover:text-gold transition uppercase tracking-widest outline-none text-gray-900 font-bold cursor-pointer flex items-center gap-1.5" style={{ textDecoration: 'none' }}>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                          My Account
+                       </Link>
                        <button onClick={handleLogout} className="hover:text-gold transition uppercase tracking-widest outline-none text-[#c5a059] bg-transparent border-none font-bold cursor-pointer">Sign Out</button>
                     </div>
                   ) : (
-                    <button onClick={() => setIsLoginModalOpen(true)} className="hover:text-gold transition uppercase tracking-widest outline-none bg-transparent border-none font-bold cursor-pointer text-gray-500">Sign In</button>
+                    <button onClick={() => setIsLoginModalOpen(true)} className="hover:text-gold transition uppercase tracking-widest outline-none bg-transparent border-none font-bold cursor-pointer text-gray-500 flex items-center gap-1.5">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Sign In
+                    </button>
                   )}
                 </div>
               )}
@@ -273,17 +342,30 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Mobile Auth & Menu Toggle */}
+            {/* MOBILE ICONS */}
             <div className="md:hidden flex items-center gap-2">
+              
+              {/* MOBILE SEARCH ICON */}
+              <button 
+                onClick={() => setIsSearchOpen(true)} 
+                className={`p-2 focus:outline-none bg-transparent border-none cursor-pointer transition-colors ${clientBrand ? 'hover:opacity-70' : 'text-gray-500 hover:text-gold'}`} 
+                style={{ color: clientBrand ? brandText : undefined }} 
+                title="Search Catalog"
+              >
+                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              </button>
+
               {!clientBrand && (
                 <button 
                   onClick={() => user && !user.isAnonymous ? router.push('/my-account') : setIsLoginModalOpen(true)} 
                   className={`p-2 focus:outline-none bg-transparent border-none cursor-pointer transition-colors ${user && !user.isAnonymous ? 'text-gold' : 'text-gray-500 hover:text-gold'}`}
                   title={user && !user.isAnonymous ? "My Account" : "Sign In"}
                 >
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 </button>
               )}
+
+              {/* HAMBURGER MENU */}
               <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 focus:outline-none bg-transparent border-none cursor-pointer hover:opacity-70" style={{ color: clientBrand ? brandText : '#111827' }}>
                 <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} /></svg>
               </button>
@@ -291,7 +373,6 @@ export default function Header() {
           </div>
         </div>
 
-        {}
         {isMobileMenuOpen && (
           <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-2xl h-screen overflow-y-auto pb-32 z-50">
             <div className="px-6 pt-4 pb-6 space-y-1">
@@ -340,24 +421,83 @@ export default function Header() {
         )}
       </nav>
 
-      {}
+      {isSearchOpen && (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex flex-col items-center pt-8 md:pt-24 px-4 transition-opacity duration-300">
+          <div className="w-full max-w-3xl relative animate-in slide-in-from-top-4 duration-300">
+            <button onClick={() => { setIsSearchOpen(false); setHeaderSearchQuery(''); }} className="absolute -top-8 right-0 text-gray-300 hover:text-white text-[10px] font-bold tracking-widest uppercase outline-none cursor-pointer bg-transparent border-none">
+                Close ✕
+            </button>
+            <div className="relative">
+              <input 
+                autoFocus
+                type="text" 
+                placeholder="Search products, SKUs, or categories..." 
+                value={headerSearchQuery} 
+                onChange={e => setHeaderSearchQuery(e.target.value)}
+                className="w-full bg-white text-gray-900 text-lg md:text-xl rounded-2xl px-6 py-5 outline-none focus:ring-4 focus:ring-gold shadow-2xl"
+              />
+              <span className="absolute right-6 top-5 text-2xl opacity-50 pointer-events-none">🔍</span>
+            </div>
+
+            {headerSearchQuery.trim() && (
+               <div className="mt-4 bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[60vh] overflow-y-auto border border-gray-200">
+                 {filteredSearchProducts.length > 0 ? (
+                   <div className="divide-y divide-gray-100">
+                      {filteredSearchProducts.slice(0, 6).map(p => {
+                          const displayTitle = (p.usePrivateName && p.privateName) ? p.privateName : (p.name || 'Unnamed Product');
+                          return (
+                              <Link key={p.id} href={`/product/${p.id}`} onClick={() => { setIsSearchOpen(false); setHeaderSearchQuery(''); }} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors" style={{ textDecoration: 'none' }}>
+                                 <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200">
+                                    <img src={getSearchImgUrl(p)} className="w-full h-full object-cover" onError={e => e.target.src = getFbUrl('images/tbd.jpg')} alt={displayTitle} />
+                                 </div>
+                                 <div>
+                                    <div className="text-base font-bold text-gray-900 mb-0.5">{displayTitle}</div>
+                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{p.category} &bull; <span className="font-mono">{p.sku}</span></div>
+                                 </div>
+                              </Link>
+                          );
+                      })}
+                      {filteredSearchProducts.length > 6 && (
+                         <div className="p-4 text-center border-t border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors">
+                            <Link href="/category" onClick={() => { setIsSearchOpen(false); setHeaderSearchQuery(''); }} className="text-xs font-black text-black uppercase tracking-widest hover:text-gold transition-colors block w-full" style={{ textDecoration: 'none' }}>
+                               View all {filteredSearchProducts.length} results &rarr;
+                            </Link>
+                         </div>
+                      )}
+                   </div>
+                 ) : (
+                   <div className="p-8 text-center">
+                       <span className="text-4xl mb-4 block opacity-20">🤷</span>
+                       <div className="text-gray-400 text-sm font-bold italic">No products found matching "{headerSearchQuery}"</div>
+                   </div>
+                 )}
+               </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {isLoginModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center px-4 transition-opacity">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4 text-gray-900">Partner Login</h3>
+        <div className="fixed inset-0 bg-black/75 z-[200] flex items-center justify-center px-4 transition-opacity">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-in zoom-in-95">
+            <h3 className="text-2xl font-black mb-1 text-gray-900 tracking-tight">Partner Login</h3>
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-6">Access Your Dashboard</p>
+            
             <form onSubmit={handleLogin} className="space-y-4">
-              <input type="email" required placeholder="Email Address" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 text-gray-900 rounded focus:outline-none focus:border-gold" />
+              <input type="email" required placeholder="Email Address" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} className="w-full px-4 py-3 border border-gray-200 text-gray-900 rounded-xl focus:outline-none focus:border-gold text-sm transition-colors" />
               <div>
-                  <input type="password" required placeholder="Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className="w-full px-3 py-2 border border-gray-300 text-gray-900 rounded focus:outline-none focus:border-gold" />
-                  <div className="flex justify-end mt-1">
+                  <input type="password" required placeholder="Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className="w-full px-4 py-3 border border-gray-200 text-gray-900 rounded-xl focus:outline-none focus:border-gold text-sm transition-colors" />
+                  <div className="flex justify-end mt-2">
                       <button type="button" onClick={handleForgotPassword} className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gold transition-colors bg-transparent border-none cursor-pointer outline-none">Forgot Password?</button>
                   </div>
               </div>
-              {loginError && <p className="text-red-500 text-xs font-bold">{loginError}</p>}
-              {resetMessage && <p className="text-emerald-600 text-xs font-bold">{resetMessage}</p>}
-              <div className="flex justify-end gap-2 mt-6">
-                <button type="button" onClick={() => { setIsLoginModalOpen(false); setLoginError(''); setResetMessage(''); }} className="px-4 py-2 bg-gray-200 text-gray-700 font-bold rounded text-xs uppercase cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-black text-white font-bold rounded hover:bg-gold hover:text-black transition-colors text-xs uppercase cursor-pointer">Log In</button>
+              
+              {loginError && <div className="bg-red-50 text-red-600 border border-red-100 p-3 rounded-lg text-xs font-bold flex items-center gap-2"><span>⚠️</span> {loginError}</div>}
+              {resetMessage && <div className="bg-emerald-50 text-emerald-600 border border-emerald-100 p-3 rounded-lg text-xs font-bold flex items-center gap-2"><span>✓</span> {resetMessage}</div>}
+              
+              <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-100">
+                <button type="button" onClick={() => { setIsLoginModalOpen(false); setLoginError(''); setResetMessage(''); }} className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl text-xs uppercase tracking-widest cursor-pointer transition-colors outline-none">Cancel</button>
+                <button type="submit" className="px-6 py-2.5 bg-black text-white font-bold rounded-xl hover:bg-gold hover:text-black transition-colors text-xs uppercase tracking-widest cursor-pointer outline-none">Log In</button>
               </div>
             </form>
           </div>
