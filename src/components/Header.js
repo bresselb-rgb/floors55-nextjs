@@ -32,11 +32,21 @@ try {
     console.warn("Firebase lib not found in current environment context.");
 }
 
+const RESOURCE_PAGES = [
+    { title: 'Choosing Your Floor', path: '/choosing-your-floor', keywords: ['guide', 'buying', 'compare', 'lvp vs laminate', 'hardwood vs', 'pets', 'kids', 'waterproof', 'best'] },
+    { title: 'Floor Care Guide', path: '/floor-care', keywords: ['cleaning', 'maintenance', 'mop', 'scratch', 'pad', 'protect', 'care', 'washing', 'steam'] },
+    { title: 'Installation Prep', path: '/installation-prep', keywords: ['prepare', 'install', 'acclimate', 'furniture', 'subfloor', 'day of', 'process'] },
+    { title: 'Hard Surface Transitions', path: '/hard-surface-transitions', keywords: ['molding', 't-molding', 'reducer', 'quarter round', 'stair nose', 'end cap', 'threshold', 'gap'] },
+    { title: 'Flooring Glossary', path: '/flooring-glossary', keywords: ['terms', 'definition', 'spc', 'wpc', 'wear layer', 'mil', 'ac rating', 'core', 'meaning'] },
+    { title: 'Understanding Warranties', path: '/warranties', keywords: ['warranty', 'guarantee', 'wear', 'structural', 'void', 'defect', 'claim'] },
+    { title: 'FAQ', path: '/faq', keywords: ['frequently asked questions', 'help', 'support', 'pad attached', 'questions', 'can i'] },
+];
+
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   
-  // New Search States
+  // Search States
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [headerSearchQuery, setHeaderSearchQuery] = useState('');
   const [allProducts, setAllProducts] = useState([]);
@@ -212,7 +222,6 @@ export default function Header() {
 
   const closeMenu = () => setIsMobileMenuOpen(false);
 
-  // Live Filter Logic for the Search Overlay
   const filteredSearchProducts = headerSearchQuery.trim() === '' ? [] : allProducts.filter(p => {
       const query = headerSearchQuery.toLowerCase();
       return (p.name || '').toLowerCase().includes(query) ||
@@ -220,6 +229,12 @@ export default function Header() {
              (p.sku || '').toLowerCase().includes(query) ||
              (p.category || '').toLowerCase().includes(query) ||
              (p.manufacturer || '').toLowerCase().includes(query);
+  });
+
+  const filteredSearchResources = headerSearchQuery.trim() === '' ? [] : RESOURCE_PAGES.filter(r => {
+      const query = headerSearchQuery.toLowerCase();
+      return r.title.toLowerCase().includes(query) || 
+             r.keywords.some(k => k.toLowerCase().includes(query));
   });
 
   if (pathname && (pathname.startsWith('/client/') || pathname.startsWith('/proposal/'))) return null;
@@ -431,7 +446,7 @@ export default function Header() {
               <input 
                 autoFocus
                 type="text" 
-                placeholder="Search products, SKUs, or categories..." 
+                placeholder="Search products, SKUs, or resources..." 
                 value={headerSearchQuery} 
                 onChange={e => setHeaderSearchQuery(e.target.value)}
                 className="w-full bg-white text-gray-900 text-lg md:text-xl rounded-2xl px-6 py-5 outline-none focus:ring-4 focus:ring-gold shadow-2xl"
@@ -440,35 +455,59 @@ export default function Header() {
             </div>
 
             {headerSearchQuery.trim() && (
-               <div className="mt-4 bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[60vh] overflow-y-auto border border-gray-200">
-                 {filteredSearchProducts.length > 0 ? (
-                   <div className="divide-y divide-gray-100">
-                      {filteredSearchProducts.slice(0, 6).map(p => {
-                          const displayTitle = (p.usePrivateName && p.privateName) ? p.privateName : (p.name || 'Unnamed Product');
-                          return (
-                              <Link key={p.id} href={`/product/${p.id}`} onClick={() => { setIsSearchOpen(false); setHeaderSearchQuery(''); }} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors" style={{ textDecoration: 'none' }}>
-                                 <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200">
-                                    <img src={getSearchImgUrl(p)} className="w-full h-full object-cover" onError={e => e.target.src = getFbUrl('images/tbd.jpg')} alt={displayTitle} />
-                                 </div>
-                                 <div>
-                                    <div className="text-base font-bold text-gray-900 mb-0.5">{displayTitle}</div>
-                                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{p.category} &bull; <span className="font-mono">{p.sku}</span></div>
-                                 </div>
-                              </Link>
-                          );
-                      })}
-                      {filteredSearchProducts.length > 6 && (
-                         <div className="p-4 text-center border-t border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors">
+               <div className="mt-4 bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[60vh] overflow-y-auto border border-gray-200 flex flex-col">
+                 {(filteredSearchProducts.length > 0 || filteredSearchResources.length > 0) ? (
+                   <div className="divide-y divide-gray-100 flex-1">
+                      
+                      {/* Products Results */}
+                      {filteredSearchProducts.length > 0 && (
+                          <div>
+                              <div className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-50 border-b border-gray-100">Products</div>
+                              {filteredSearchProducts.slice(0, 4).map(p => {
+                                  const displayTitle = (p.usePrivateName && p.privateName) ? p.privateName : (p.name || 'Unnamed Product');
+                                  return (
+                                      <Link key={p.id} href={`/product/${p.id}`} onClick={() => { setIsSearchOpen(false); setHeaderSearchQuery(''); }} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100" style={{ textDecoration: 'none' }}>
+                                         <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200">
+                                            <img src={getSearchImgUrl(p)} className="w-full h-full object-cover" onError={e => e.target.src = getFbUrl('images/tbd.jpg')} alt={displayTitle} />
+                                         </div>
+                                         <div>
+                                            <div className="text-base font-bold text-gray-900 mb-0.5">{displayTitle}</div>
+                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{p.category} &bull; <span className="font-mono">{p.sku}</span></div>
+                                         </div>
+                                      </Link>
+                                  );
+                              })}
+                          </div>
+                      )}
+
+                      {/* Resource Results */}
+                      {filteredSearchResources.length > 0 && (
+                          <div className="bg-white">
+                              <div className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-50 border-b border-gray-100">Help & Resources</div>
+                              {filteredSearchResources.map(r => (
+                                  <Link key={r.path} href={r.path} onClick={() => { setIsSearchOpen(false); setHeaderSearchQuery(''); }} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100" style={{ textDecoration: 'none' }}>
+                                     <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-lg shadow-sm shrink-0">📘</div>
+                                     <div>
+                                        <div className="text-sm font-bold text-gray-900">{r.title}</div>
+                                        <div className="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">Resource Guide</div>
+                                     </div>
+                                  </Link>
+                              ))}
+                          </div>
+                      )}
+
+                      {filteredSearchProducts.length > 4 && (
+                         <div className="p-4 text-center bg-gray-50 hover:bg-gray-100 transition-colors">
                             <Link href="/category" onClick={() => { setIsSearchOpen(false); setHeaderSearchQuery(''); }} className="text-xs font-black text-black uppercase tracking-widest hover:text-gold transition-colors block w-full" style={{ textDecoration: 'none' }}>
-                               View all {filteredSearchProducts.length} results &rarr;
+                               View all {filteredSearchProducts.length} product results &rarr;
                             </Link>
                          </div>
                       )}
                    </div>
                  ) : (
-                   <div className="p-8 text-center">
+                   <div className="p-8 text-center bg-gray-50">
                        <span className="text-4xl mb-4 block opacity-20">🤷</span>
-                       <div className="text-gray-400 text-sm font-bold italic">No products found matching "{headerSearchQuery}"</div>
+                       <div className="text-gray-400 text-sm font-bold italic">No results found matching "{headerSearchQuery}"</div>
                    </div>
                  )}
                </div>
