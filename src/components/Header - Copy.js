@@ -273,17 +273,8 @@ export default function Header() {
               </div>
             </div>
 
-            {/* Mobile Auth & Menu Toggle */}
-            <div className="md:hidden flex items-center gap-2">
-              {!clientBrand && (
-                <button 
-                  onClick={() => user && !user.isAnonymous ? router.push('/my-account') : setIsLoginModalOpen(true)} 
-                  className={`p-2 focus:outline-none bg-transparent border-none cursor-pointer transition-colors ${user && !user.isAnonymous ? 'text-gold' : 'text-gray-500 hover:text-gold'}`}
-                  title={user && !user.isAnonymous ? "My Account" : "Sign In"}
-                >
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </button>
-              )}
+            {}
+            <div className="md:hidden flex items-center">
               <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 focus:outline-none bg-transparent border-none cursor-pointer hover:opacity-70" style={{ color: clientBrand ? brandText : '#111827' }}>
                 <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} /></svg>
               </button>
