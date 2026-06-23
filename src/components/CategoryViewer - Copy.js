@@ -41,6 +41,7 @@ try {
     console.warn("Firebase lib not found in current environment context.");
 }
 
+// --- SPEC NORMALIZATION ENGINE ---
 // Standardizes the labels on the left side of the colon
 const normalizeSpecKey = (rawKey) => {
     const k = rawKey.toLowerCase().trim();
@@ -141,6 +142,7 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
 // Hardcoded sort order so custom buckets don't sort alphabetically
 const THICKNESS_ORDER = { "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4 };
 const FACE_WEIGHT_ORDER = { "< 30 oz": 1, "30 - 40 oz": 2, "40 - 50 oz": 3, "50 - 60 oz": 4, "60+ oz": 5 };
+// ---------------------------------
 
 function CategoryViewerContent({ initialCategory }) {
   const router = useRouter();
@@ -592,19 +594,13 @@ function CategoryViewerContent({ initialCategory }) {
         const mfgLower = (p.manufacturer || '').toLowerCase();
         const descLower = (p.desc || '').toLowerCase();
         const specTextCombined = (p.specs || []).join(' ').toLowerCase();
-        const catLower = (p.category || '').toLowerCase();
-
-        // Inject hidden keywords so people searching "pad" find cushions
-        const hiddenKeywords = catLower === 'carpet cushion' ? 'pad pads underlayment' : '';
 
         const matchesSearch = !searchVal || 
                               nameLower.includes(searchVal) || 
                               skuLower.includes(searchVal) || 
                               mfgLower.includes(searchVal) || 
                               descLower.includes(searchVal) || 
-                              specTextCombined.includes(searchVal) ||
-                              catLower.includes(searchVal) ||
-                              hiddenKeywords.includes(searchVal);
+                              specTextCombined.includes(searchVal);
 
         const matchesCategory = (activeCategory === "All Products" && (searchVal !== '' || p.category !== 'Carpet Cushion')) || 
                                 (activeCategory === "Hot Buys" && p.isSale === true) || 
@@ -871,7 +867,7 @@ function CategoryViewerContent({ initialCategory }) {
                             <span className="absolute right-3 top-2.5 text-gray-400 text-xs">🔍</span>
                         </div>
 
-                        <span className="hidden sm:inline-block text-xs font-bold text-gray-400 uppercase tracking-widest shrink-0">{isDataLoaded ? `Showing ${filteredProducts.length} Results` : 'Loading...'}</span>
+                        <span className="hidden sm:inline-block text-xs font-bold text-gray-400 uppercase tracking-widest shrink-0">{isDataLoaded ? `Showing ${filteredProducts.length} of ${liveProductsRaw.length}` : 'Loading...'}</span>
                     </div>
 
                     <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">

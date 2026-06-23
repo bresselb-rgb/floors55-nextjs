@@ -64,6 +64,7 @@ export default function Header() {
   const [brandBg, setBrandBg] = useState('#ffffff');
   const [brandText, setBrandText] = useState('#000000');
   
+  // FIX: Supress default header rendering instantly if the URL is a magic link
   const [isProcessingMagicLink, setIsProcessingMagicLink] = useState(true);
 
   const pathname = usePathname();
@@ -224,11 +225,17 @@ export default function Header() {
 
   const filteredSearchProducts = headerSearchQuery.trim() === '' ? [] : allProducts.filter(p => {
       const query = headerSearchQuery.toLowerCase();
+      const catLower = (p.category || '').toLowerCase();
+      
+      // Inject hidden keywords so people searching "pad" find cushions
+      const hiddenKeywords = catLower === 'carpet cushion' ? 'pad pads underlayment' : '';
+      
       return (p.name || '').toLowerCase().includes(query) ||
              (p.privateName || '').toLowerCase().includes(query) ||
              (p.sku || '').toLowerCase().includes(query) ||
-             (p.category || '').toLowerCase().includes(query) ||
-             (p.manufacturer || '').toLowerCase().includes(query);
+             catLower.includes(query) ||
+             (p.manufacturer || '').toLowerCase().includes(query) ||
+             hiddenKeywords.includes(query);
   });
 
   const filteredSearchResources = headerSearchQuery.trim() === '' ? [] : RESOURCE_PAGES.filter(r => {
@@ -436,6 +443,7 @@ export default function Header() {
         )}
       </nav>
 
+      {}
       {isSearchOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex flex-col items-center pt-8 md:pt-24 px-4 transition-opacity duration-300">
           <div className="w-full max-w-3xl relative animate-in slide-in-from-top-4 duration-300">
@@ -516,8 +524,9 @@ export default function Header() {
         </div>
       )}
 
+      {}
       {isLoginModalOpen && (
-        <div className="fixed inset-0 bg-black/75 z-[200] flex items-center justify-center px-4 transition-opacity">
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-[200] flex items-center justify-center px-4 transition-opacity">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-in zoom-in-95">
             <h3 className="text-2xl font-black mb-1 text-gray-900 tracking-tight">Partner Login</h3>
             <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-6">Access Your Dashboard</p>
