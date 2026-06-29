@@ -25,10 +25,19 @@ export default function MyAccountPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     
+    // TAB STATE
+    const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'proposals', 'boards', 'branding'
+    
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
     const [isLogoInfoOpen, setIsLogoInfoOpen] = useState(false);
     const [isGlobalInfoOpen, setIsGlobalInfoOpen] = useState(false);
+    
+    const [linkBranding, setLinkBranding] = useState('custom');
+
+    // Derived state to check if they have custom branding active
+    const hasCustomBranding = profile.logoUrl || profile.brandBgColor !== '#ffffff' || profile.brandTextColor !== '#000000';
+    const [isWhiteLabelActive, setIsWhiteLabelActive] = useState(false);
 
     useEffect(() => {
         const unsub = onAuthStateChanged(auth, async (currentUser) => {
@@ -37,7 +46,12 @@ export default function MyAccountPage() {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
-                    setProfile({ ...profile, ...docSnap.data() });
+                    const data = docSnap.data();
+                    setProfile({ ...profile, ...data });
+                    // If they have any custom colors or logo saved, flip the toggle ON automatically
+                    if (data.logoUrl || (data.brandBgColor && data.brandBgColor !== '#ffffff') || (data.brandTextColor && data.brandTextColor !== '#000000')) {
+                        setIsWhiteLabelActive(true);
+                    }
                 } else {
                     await setDoc(docRef, { business: 'Flooring Pro', clientMargin: 20 });
                 }
@@ -108,7 +122,6 @@ export default function MyAccountPage() {
     };
 
     const handlePurgeAndReset = async () => {
-        if (!window.confirm("Are you sure you want to remove your custom logo and reset to default colors?")) return;
         try {
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
                 logoUrl: "",
@@ -119,24 +132,50 @@ export default function MyAccountPage() {
             sessionStorage.removeItem('client_logo');
             sessionStorage.removeItem('client_bg');
             sessionStorage.removeItem('client_text');
-            triggerToast("Branding reset to defaults.");
+            setLinkBranding('f55'); // Auto-switch link generator back to F55
+            triggerToast("Branding successfully removed.");
         } catch(err) {
             triggerToast("Failed to reset branding");
         }
     };
 
+    const handleToggleWhiteLabel = async (checked) => {
+        if (!checked) {
+            const confirm = window.confirm("Are you sure? This will permanently delete your custom logo and reset all your presentation links back to the Floors 55 brand.");
+            if (confirm) {
+                await handlePurgeAndReset();
+                setIsWhiteLabelActive(false);
+            }
+        } else {
+            setIsWhiteLabelActive(true);
+        }
+    };
+
     const enableClientMode = () => {
         sessionStorage.setItem('client_margin', profile.clientMargin);
-        sessionStorage.setItem('client_brand', profile.business);
-        if (profile.logoUrl) sessionStorage.setItem('client_logo', profile.logoUrl);
-        else sessionStorage.removeItem('client_logo');
-        sessionStorage.setItem('client_bg', profile.brandBgColor || '#ffffff');
-        sessionStorage.setItem('client_text', profile.brandTextColor || '#000000');
+        if (isWhiteLabelActive && linkBranding === 'custom') {
+            sessionStorage.setItem('client_brand', profile.business);
+            if (profile.logoUrl) sessionStorage.setItem('client_logo', profile.logoUrl);
+            else sessionStorage.removeItem('client_logo');
+            sessionStorage.setItem('client_bg', profile.brandBgColor || '#ffffff');
+            sessionStorage.setItem('client_text', profile.brandTextColor || '#000000');
+        } else {
+            sessionStorage.removeItem('client_brand');
+            sessionStorage.removeItem('client_logo');
+            sessionStorage.removeItem('client_bg');
+            sessionStorage.removeItem('client_text');
+        }
         window.location.href = '/category';
     };
 
     const encodedMargin = btoa((profile.clientMargin !== undefined ? profile.clientMargin : 20).toString());
-    const portalLink = user ? `${typeof window !== 'undefined' ? window.location.origin : ''}/category?pro=${user.uid}&cm=${encodedMargin}` : '';
+    
+    // Generate link dynamically based on the toggle
+    const portalLink = user 
+        ? (isWhiteLabelActive && linkBranding === 'custom')
+            ? `${typeof window !== 'undefined' ? window.location.origin : ''}/category?pro=${user.uid}&cm=${encodedMargin}` 
+            : `${typeof window !== 'undefined' ? window.location.origin : ''}/category?cm=${encodedMargin}`
+        : '';
 
     const copyMagicLink = () => {
         if (navigator.clipboard && window.isSecureContext) {
@@ -163,9 +202,10 @@ export default function MyAccountPage() {
 
     return (
         <main className="bg-gray-50 min-h-screen py-12 relative">
-            <div className="max-w-4xl mx-auto px-4 space-y-6">
+            <div className="max-w-5xl mx-auto px-4 space-y-6">
                 
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-4">
+                {/* PAGE HEADER */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <h1 className="text-3xl font-black tracking-tight m-0">Pro Dashboard</h1>
@@ -178,168 +218,236 @@ export default function MyAccountPage() {
                     <button onClick={() => signOut(auth)} className="text-red-500 font-bold uppercase tracking-widest text-[10px] hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md cursor-pointer outline-none transition-colors shrink-0">Sign Out</button>
                 </div>
 
-                <div className="bg-gray-900 text-white p-6 md:p-8 rounded-2xl shadow-xl border border-gray-800 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="absolute top-0 right-0 p-8 opacity-5 text-8xl pointer-events-none">🤝</div>
-                    <div className="relative z-10 flex items-center gap-6 w-full md:w-auto">
-                        <div className="w-16 h-16 bg-gold text-black rounded-full flex items-center justify-center font-black text-2xl uppercase shadow-lg shrink-0">
-                            {am.name !== "Pending Assignment" ? am.name.charAt(0) : "F55"}
-                        </div>
-                        <div>
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-gold mb-1">Your Dedicated Account Manager</h3>
-                            <p className="text-2xl font-bold">{am.name}</p>
-                        </div>
-                    </div>
-                    <div className="relative z-10 flex flex-col md:items-end w-full md:w-auto gap-2">
-                        <a href={`tel:${am.phone}`} className="bg-white/10 hover:bg-white/20 border border-white/20 px-5 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-colors flex items-center gap-3 w-full md:w-auto justify-center md:justify-start" style={{ textDecoration: 'none', color: 'white' }}>
-                            <span>📞</span> {am.phone}
-                        </a>
-                        <a href={`mailto:${am.email}`} className="text-gray-400 hover:text-white text-xs font-bold transition-colors text-center md:text-right w-full" style={{ textDecoration: 'none' }}>
-                            {am.email}
-                        </a>
-                    </div>
+                {/* THE APP NAVIGATION TABS */}
+                <div className="flex overflow-x-auto border-b border-gray-200 mb-8 hide-scrollbar gap-2 md:gap-8">
+                    <button 
+                        onClick={() => setActiveTab('overview')} 
+                        className={`py-3 px-2 md:px-4 font-black text-[10px] md:text-xs uppercase tracking-widest whitespace-nowrap border-b-2 transition-all outline-none cursor-pointer ${activeTab === 'overview' ? 'border-gold text-black' : 'border-transparent text-gray-400 hover:text-gray-800'}`}
+                    >
+                        Overview & Pricing
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('proposals')} 
+                        className={`py-3 px-2 md:px-4 font-black text-[10px] md:text-xs uppercase tracking-widest whitespace-nowrap border-b-2 transition-all outline-none cursor-pointer flex items-center gap-2 ${activeTab === 'proposals' ? 'border-gold text-black' : 'border-transparent text-gray-400 hover:text-gray-800'}`}
+                    >
+                        Proposals <span className="hidden md:inline-block bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full text-[9px]">Beta</span>
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('boards')} 
+                        className={`py-3 px-2 md:px-4 font-black text-[10px] md:text-xs uppercase tracking-widest whitespace-nowrap border-b-2 transition-all outline-none cursor-pointer ${activeTab === 'boards' ? 'border-gold text-black' : 'border-transparent text-gray-400 hover:text-gray-800'}`}
+                    >
+                        Client Boards
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('branding')} 
+                        className={`py-3 px-2 md:px-4 font-black text-[10px] md:text-xs uppercase tracking-widest whitespace-nowrap border-b-2 transition-all outline-none cursor-pointer ${activeTab === 'branding' ? 'border-gold text-black' : 'border-transparent text-gray-400 hover:text-gray-800'}`}
+                    >
+                        White-Label Setup
+                    </button>
                 </div>
 
-                {/* MOVED: Catalog Client Pricing */}
-                <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-1.5 h-full bg-gold"></div>
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-100 pb-6 gap-4">
-                        <div>
-                            <h2 className="text-xl font-black uppercase tracking-tight">Catalog Client Pricing</h2>
-                            <p className="text-sm text-gray-500 mt-1 max-w-md">Set the default markup percentage applied to wholesale prices when your clients browse the general catalog.</p>
+                {/* TAB 1: OVERVIEW & PRICING */}
+                <div className={activeTab === 'overview' ? 'block space-y-6 animate-in fade-in duration-300' : 'hidden'}>
+                    
+                    {/* Account Manager Banner */}
+                    <div className="bg-gray-900 text-white p-6 md:p-8 rounded-2xl shadow-xl border border-gray-800 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="absolute top-0 right-0 p-8 opacity-5 text-8xl pointer-events-none">🤝</div>
+                        <div className="relative z-10 flex items-center gap-6 w-full md:w-auto">
+                            <div className="w-16 h-16 bg-gold text-black rounded-full flex items-center justify-center font-black text-2xl uppercase shadow-lg shrink-0">
+                                {am.name !== "Pending Assignment" ? am.name.charAt(0) : "F55"}
+                            </div>
+                            <div>
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-gold mb-1">Your Dedicated Account Manager</h3>
+                                <p className="text-2xl font-bold">{am.name}</p>
+                            </div>
                         </div>
-                        <div className="text-left md:text-right shrink-0 bg-gray-50 p-4 rounded-xl border border-gray-200 min-w-[200px]">
-                            <div className="text-3xl font-black text-gold leading-none">{markupVal}% <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Markup</span></div>
-                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2 border-t border-gray-200 pt-2">Yields <span className="text-black font-black text-sm">{marginVal}%</span> Gross Margin</div>
+                        <div className="relative z-10 flex flex-col md:items-end w-full md:w-auto gap-2">
+                            <a href={`tel:${am.phone}`} className="bg-white/10 hover:bg-white/20 border border-white/20 px-5 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-colors flex items-center gap-3 w-full md:w-auto justify-center md:justify-start" style={{ textDecoration: 'none', color: 'white' }}>
+                                <span>📞</span> {am.phone}
+                            </a>
+                            <a href={`mailto:${am.email}`} className="text-gray-400 hover:text-white text-xs font-bold transition-colors text-center md:text-right w-full" style={{ textDecoration: 'none' }}>
+                                {am.email}
+                            </a>
                         </div>
                     </div>
-                    
-                    <input 
-                        type="range" 
-                        min="0" max="100" step="5" 
-                        value={profile.clientMargin} 
-                        onChange={e => setProfile({...profile, clientMargin: e.target.value})} 
-                        onMouseUp={handleMarginChangeSave}
-                        onTouchEnd={handleMarginChangeSave}
-                        onKeyUp={handleMarginChangeSave}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black mb-8" 
-                    />
-                    
-                    <div className="flex gap-4 mb-8">
-                        <button onClick={enableClientMode} className="w-full bg-gray-100 text-black px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors border border-gray-200 cursor-pointer outline-none">
-                            Preview General Catalog Portal
+
+                    {/* Catalog Client Pricing */}
+                    <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1.5 h-full bg-gold"></div>
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-100 pb-6 gap-4">
+                            <div>
+                                <h2 className="text-xl font-black uppercase tracking-tight">Catalog Client Pricing</h2>
+                                <p className="text-sm text-gray-500 mt-1 max-w-md">Set the default markup percentage applied to wholesale prices when your clients browse the general catalog.</p>
+                            </div>
+                            <div className="text-left md:text-right shrink-0 bg-gray-50 p-4 rounded-xl border border-gray-200 min-w-[200px]">
+                                <div className="text-3xl font-black text-gold leading-none">{markupVal}% <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Markup</span></div>
+                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2 border-t border-gray-200 pt-2">Yields <span className="text-black font-black text-sm">{marginVal}%</span> Gross Margin</div>
+                            </div>
+                        </div>
+                        
+                        <input 
+                            type="range" 
+                            min="0" max="100" step="5" 
+                            value={profile.clientMargin} 
+                            onChange={e => setProfile({...profile, clientMargin: e.target.value})} 
+                            onMouseUp={handleMarginChangeSave}
+                            onTouchEnd={handleMarginChangeSave}
+                            onKeyUp={handleMarginChangeSave}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black mb-8" 
+                        />
+                        
+                        <div className="flex gap-4 mb-8">
+                            <button onClick={enableClientMode} className="w-full bg-gray-100 text-black px-6 py-4 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-colors border border-gray-200 cursor-pointer outline-none">
+                                Preview General Catalog Portal
+                            </button>
+                        </div>
+
+                        <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
+                            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Your Master Catalog Link</h3>
+                            <p className="text-xs text-gray-500 mb-4">Share this link to let clients browse the entire catalog with your pricing applied.</p>
+                            
+                            {/* Only show branding radio toggles if they have White-Label activated */}
+                            {isWhiteLabelActive && (
+                                <div className="flex gap-6 mb-4">
+                                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                                        <input type="radio" name="linkBrand" checked={linkBranding === 'custom'} onChange={() => setLinkBranding('custom')} className="accent-black w-4 h-4" />
+                                        My White-Label Brand
+                                    </label>
+                                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                                        <input type="radio" name="linkBrand" checked={linkBranding === 'f55'} onChange={() => setLinkBranding('f55')} className="accent-black w-4 h-4" />
+                                        Floors 55 Brand
+                                    </label>
+                                </div>
+                            )}
+
+                            <div className="flex flex-col md:flex-row gap-3">
+                                <input type="text" readOnly value={portalLink} className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-mono text-gray-600 outline-none" />
+                                <button onClick={copyMagicLink} className="bg-black hover:bg-gold text-white hover:text-black px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap cursor-pointer outline-none">
+                                    Copy Link
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Business Profile */}
+                    <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1.5 h-full bg-black"></div>
+                        <h2 className="text-xl font-black mb-6 uppercase tracking-tight">Business Profile</h2>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Business Name</label>
+                                <input type="text" value={profile.business} onChange={e => setProfile({...profile, business: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Your Name</label>
+                                <input type="text" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Phone Number</label>
+                                <input type="tel" value={profile.phone} onChange={e => setProfile({...profile, phone: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Email Address (Login)</label>
+                                <input type="email" value={user?.email || ''} disabled className="w-full px-4 py-3 border border-gray-100 rounded-xl bg-gray-50 text-gray-500 outline-none cursor-not-allowed" />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Business Address</label>
+                                <input type="text" value={profile.address || ''} onChange={e => setProfile({...profile, address: e.target.value})} placeholder="e.g. 123 Main St, Portland OR 97204" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
+                            </div>
+                        </div>
+
+                        <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50 cursor-pointer outline-none">
+                            {isSaving ? "Saving..." : "Save Profile"}
                         </button>
                     </div>
 
-                    <div className="bg-gray-50 p-6 rounded-xl border border-gray-100">
-                        <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Your Master Catalog Link</h3>
-                        <p className="text-xs text-gray-500 mb-4">Share this link to let clients browse the entire catalog with your pricing and branding applied. (Note: Proposals and Boards have their own unique links).</p>
+                </div>
+
+                {/* TAB 2: PROPOSALS */}
+                <div className={activeTab === 'proposals' ? 'block animate-in fade-in duration-300' : 'hidden'}>
+                    <ProposalsManager proId={user.uid} />
+                </div>
+
+                {/* TAB 3: CLIENT BOARDS */}
+                <div className={activeTab === 'boards' ? 'block animate-in fade-in duration-300' : 'hidden'}>
+                    <ClientBoardsManager proId={user.uid} />
+                </div>
+
+                {/* TAB 4: BRANDING & SETTINGS */}
+                <div className={activeTab === 'branding' ? 'block space-y-6 animate-in fade-in duration-300' : 'hidden'}>
+                    
+                    <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
+                        <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6 gap-4 border-b border-gray-100 pb-6">
+                            <div>
+                                <h2 className="text-xl font-black mb-1 uppercase tracking-tight">White-Label Branding</h2>
+                                <p className="text-sm text-gray-500 max-w-lg">Customize the portal to look exactly like your own website when sharing presentation links and catalogs with your clients.</p>
+                            </div>
+                            <div className="shrink-0 bg-gray-50 p-4 rounded-xl border border-gray-200 w-full md:w-auto flex items-center justify-between gap-4">
+                                <span className="text-sm font-bold text-gray-900">Enable White-Label</span>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input type="checkbox" checked={isWhiteLabelActive} onChange={(e) => handleToggleWhiteLabel(e.target.checked)} className="sr-only peer" />
+                                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold"></div>
+                                </label>
+                            </div>
+                        </div>
                         
-                        <div className="flex flex-col md:flex-row gap-3">
-                            <input type="text" readOnly value={portalLink} className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-mono text-gray-600 outline-none" />
-                            <button onClick={copyMagicLink} className="bg-black hover:bg-gold text-white hover:text-black px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-colors shrink-0 whitespace-nowrap cursor-pointer outline-none">
-                                Copy Link
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* THE NEW PROPOSALS MANAGER */}
-                <ProposalsManager proId={user.uid} />
-
-                {/* Client Boards */}
-                <ClientBoardsManager proId={user.uid} />
-
-                {/* Business Profile */}
-                <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-1.5 h-full bg-black"></div>
-                    <h2 className="text-xl font-black mb-6 uppercase tracking-tight">Business Profile</h2>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Business Name</label>
-                            <input type="text" value={profile.business} onChange={e => setProfile({...profile, business: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Your Name</label>
-                            <input type="text" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Phone Number</label>
-                            <input type="tel" value={profile.phone} onChange={e => setProfile({...profile, phone: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Email Address (Login)</label>
-                            <input type="email" value={user?.email || ''} disabled className="w-full px-4 py-3 border border-gray-100 rounded-xl bg-gray-50 text-gray-500 outline-none cursor-not-allowed" />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Business Address</label>
-                            <input type="text" value={profile.address || ''} onChange={e => setProfile({...profile, address: e.target.value})} placeholder="e.g. 123 Main St, Portland OR 97204" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
-                        </div>
-                    </div>
-
-                    <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50 cursor-pointer outline-none">
-                        {isSaving ? "Saving..." : "Save Profile"}
-                    </button>
-                </div>
-
-                {/* White-Label Branding */}
-                <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
-                        <div>
-                            <h2 className="text-xl font-black mb-1 uppercase tracking-tight">White-Label Branding</h2>
-                            <p className="text-sm text-gray-500">Customize the portal to look like your own website when sharing links with clients.</p>
-                        </div>
-                        {(profile.logoUrl || profile.brandBgColor !== '#ffffff' || profile.brandTextColor !== '#000000') && (
-                            <button onClick={handlePurgeAndReset} className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest outline-none transition-colors shrink-0 cursor-pointer">
-                                ✕ Purge Logo & Reset
-                            </button>
-                        )}
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500">Company Logo</label>
-                                <button 
-                                    type="button"
-                                    onClick={() => setIsLogoInfoOpen(true)}
-                                    className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gold transition-colors flex items-center gap-1 bg-gray-50 hover:bg-gold/10 px-2 py-1 rounded-full border border-gray-200 outline-none cursor-pointer"
-                                >
-                                    <span>❓</span> Tips
+                        {isWhiteLabelActive ? (
+                            <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500">Company Logo</label>
+                                            <button 
+                                                type="button"
+                                                onClick={() => setIsLogoInfoOpen(true)}
+                                                className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gold transition-colors flex items-center gap-1 bg-gray-50 hover:bg-gold/10 px-2 py-1 rounded-full border border-gray-200 outline-none cursor-pointer"
+                                            >
+                                                <span>❓</span> Tips
+                                            </button>
+                                        </div>
+                                        {profile.logoUrl ? (
+                                            <div className="mt-2 bg-gray-50 border border-gray-200 p-4 rounded-xl flex items-center justify-center min-h-[100px] relative group">
+                                                <img src={profile.logoUrl} alt="Your Logo" className="h-16 object-contain" />
+                                                <button onClick={() => { setProfile({...profile, logoUrl: ""}) }} className="absolute top-2 right-2 bg-white text-red-500 hover:text-red-700 border border-gray-200 rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity outline-none cursor-pointer text-xs">✕</button>
+                                            </div>
+                                        ) : (
+                                            <div className="mt-2 relative">
+                                                <input type="file" accept="image/png, image/jpeg" onChange={handleLogoUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer" disabled={isUploading}/>
+                                                {isUploading && <p className="text-xs text-gold font-bold mt-2 animate-pulse">Uploading...</p>}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Header & Footer Background</label>
+                                            <div className="flex items-center gap-3">
+                                                <input type="color" value={profile.brandBgColor} onChange={e => setProfile({...profile, brandBgColor: e.target.value})} className="h-12 w-24 cursor-pointer rounded-lg border border-gray-200" />
+                                                <span className="text-sm font-mono text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">{profile.brandBgColor}</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Header & Footer Text</label>
+                                            <div className="flex items-center gap-3">
+                                                <input type="color" value={profile.brandTextColor} onChange={e => setProfile({...profile, brandTextColor: e.target.value})} className="h-12 w-24 cursor-pointer rounded-lg border border-gray-200" />
+                                                <span className="text-sm font-mono text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">{profile.brandTextColor}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50 cursor-pointer outline-none">
+                                    {isSaving ? "Saving..." : "Save Brand Settings"}
                                 </button>
                             </div>
-                            {profile.logoUrl ? (
-                                <div className="mt-2 bg-gray-50 border border-gray-200 p-4 rounded-xl flex items-center justify-center min-h-[100px]">
-                                    <img src={profile.logoUrl} alt="Your Logo" className="h-16 object-contain" />
-                                </div>
-                            ) : (
-                                <div className="mt-2 relative">
-                                    <input type="file" accept="image/png, image/jpeg" onChange={handleLogoUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer" disabled={isUploading}/>
-                                    {isUploading && <p className="text-xs text-gold font-bold mt-2 animate-pulse">Uploading...</p>}
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Header & Footer Background</label>
-                                <div className="flex items-center gap-3">
-                                    <input type="color" value={profile.brandBgColor} onChange={e => setProfile({...profile, brandBgColor: e.target.value})} className="h-10 w-20 cursor-pointer rounded border border-gray-200" />
-                                    <span className="text-sm font-mono text-gray-400">{profile.brandBgColor}</span>
-                                </div>
+                        ) : (
+                            <div className="text-center py-10 bg-gray-50 rounded-2xl border border-gray-100">
+                                <div className="text-4xl mb-3 opacity-20">🎨</div>
+                                <h3 className="text-lg font-bold text-gray-900 mb-1">Branding is currently disabled.</h3>
+                                <p className="text-sm text-gray-500">Your clients will see the standard Floors 55 design when they view your shared links.</p>
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Header & Footer Text</label>
-                                <div className="flex items-center gap-3">
-                                    <input type="color" value={profile.brandTextColor} onChange={e => setProfile({...profile, brandTextColor: e.target.value})} className="h-10 w-20 cursor-pointer rounded border border-gray-200" />
-                                    <span className="text-sm font-mono text-gray-400">{profile.brandTextColor}</span>
-                                </div>
-                            </div>
-                        </div>
+                        )}
                     </div>
-                    <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50 cursor-pointer outline-none">
-                        {isSaving ? "Saving..." : "Save Brand Settings"}
-                    </button>
                 </div>
 
             </div>
@@ -408,8 +516,8 @@ export default function MyAccountPage() {
                                 <div>
                                     <h4 className="font-bold text-gray-900 text-sm">White-Label Branding (Optional)</h4>
                                     <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                        Upload your company logo and pick your brand colors at the bottom of this dashboard. <br/>
-                                        <strong className="text-black bg-gray-100 px-1.5 py-0.5 rounded mt-1 inline-block">Note: This is entirely optional!</strong> If you leave your branding blank, your client links will automatically default to a beautifully clean, highly professional neutral design.
+                                        Navigate to the "White-Label Setup" tab to upload your company logo and pick your brand colors. <br/>
+                                        <strong className="text-black bg-gray-100 px-1.5 py-0.5 rounded mt-1 inline-block">Note: This is entirely optional!</strong> If you leave your branding disabled, your client links will automatically default to a beautifully clean, highly professional Floors 55 design.
                                     </p>
                                 </div>
                             </div>
@@ -418,7 +526,7 @@ export default function MyAccountPage() {
                                 <div>
                                     <h4 className="font-bold text-gray-900 text-sm">The Master Catalog Link</h4>
                                     <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                        Set your default markup using the slider in the "Catalog Client Pricing" section above. Then, copy your Master Catalog Link. When your clients browse using this link, they will see the entire store with your retail pricing baked in.
+                                        Set your default markup using the slider in the "Overview" tab. Then, copy your Master Catalog Link. When your clients browse using this link, they will see the entire store with your retail pricing baked in.
                                     </p>
                                 </div>
                             </div>
