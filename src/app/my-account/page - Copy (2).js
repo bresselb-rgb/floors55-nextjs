@@ -48,14 +48,9 @@ export default function MyAccountPage() {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     setProfile({ ...profile, ...data });
-                    
-                    // Read their saved toggle preference, fallback to checking if they have custom data
-                    if (data.isWhiteLabelEnabled !== undefined) {
-                        setIsWhiteLabelActive(data.isWhiteLabelEnabled);
-                    } else if (data.logoUrl || (data.brandBgColor && data.brandBgColor !== '#ffffff') || (data.brandTextColor && data.brandTextColor !== '#000000')) {
+                    // If they have any custom colors or logo saved, flip the toggle ON automatically
+                    if (data.logoUrl || (data.brandBgColor && data.brandBgColor !== '#ffffff') || (data.brandTextColor && data.brandTextColor !== '#000000')) {
                         setIsWhiteLabelActive(true);
-                    } else {
-                        setIsWhiteLabelActive(false);
                     }
                 } else {
                     await setDoc(docRef, { business: 'Flooring Pro', clientMargin: 20 });
@@ -126,22 +121,33 @@ export default function MyAccountPage() {
         setIsUploading(false);
     };
 
-    const handleToggleWhiteLabel = async (checked) => {
-        setIsWhiteLabelActive(checked);
-        if (!checked) {
+    const handlePurgeAndReset = async () => {
+        try {
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
+                logoUrl: "",
+                brandBgColor: "#ffffff",
+                brandTextColor: "#000000"
+            });
+            setProfile(prev => ({...prev, logoUrl: "", brandBgColor: "#ffffff", brandTextColor: "#000000"}));
+            sessionStorage.removeItem('client_logo');
+            sessionStorage.removeItem('client_bg');
+            sessionStorage.removeItem('client_text');
             setLinkBranding('f55'); // Auto-switch link generator back to F55
+            triggerToast("Branding successfully removed.");
+        } catch(err) {
+            triggerToast("Failed to reset branding");
         }
-        
-        // Instantly save their preference to the database so it remembers
-        if (user) {
-            try {
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
-                    isWhiteLabelEnabled: checked
-                });
-                triggerToast(checked ? "White-Label Enabled" : "White-Label Disabled");
-            } catch (err) {
-                console.error("Failed to save toggle state", err);
+    };
+
+    const handleToggleWhiteLabel = async (checked) => {
+        if (!checked) {
+            const confirm = window.confirm("Are you sure? This will permanently delete your custom logo and reset all your presentation links back to the Floors 55 brand.");
+            if (confirm) {
+                await handlePurgeAndReset();
+                setIsWhiteLabelActive(false);
             }
+        } else {
+            setIsWhiteLabelActive(true);
         }
     };
 
