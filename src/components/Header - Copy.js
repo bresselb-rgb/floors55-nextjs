@@ -64,6 +64,7 @@ export default function Header() {
   const [brandBg, setBrandBg] = useState('#ffffff');
   const [brandText, setBrandText] = useState('#000000');
   
+  // FIX: Supress default header rendering instantly if the URL is a magic link
   const [isProcessingMagicLink, setIsProcessingMagicLink] = useState(true);
 
   const pathname = usePathname();
@@ -222,22 +223,19 @@ export default function Header() {
 
   const closeMenu = () => setIsMobileMenuOpen(false);
 
-  // UPDATED: Now includes color search
   const filteredSearchProducts = headerSearchQuery.trim() === '' ? [] : allProducts.filter(p => {
       const query = headerSearchQuery.toLowerCase();
       const catLower = (p.category || '').toLowerCase();
       
+      // Inject hidden keywords so people searching "pad" find cushions
       const hiddenKeywords = catLower === 'carpet cushion' ? 'pad pads underlayment' : '';
       
-      const colorsTextCombined = (p.colors || []).map(c => `${c.name || ''} ${c.sku || ''}`).join(' ').toLowerCase();
-
       return (p.name || '').toLowerCase().includes(query) ||
              (p.privateName || '').toLowerCase().includes(query) ||
              (p.sku || '').toLowerCase().includes(query) ||
              catLower.includes(query) ||
              (p.manufacturer || '').toLowerCase().includes(query) ||
-             hiddenKeywords.includes(query) ||
-             colorsTextCombined.includes(query);
+             hiddenKeywords.includes(query);
   });
 
   const filteredSearchResources = headerSearchQuery.trim() === '' ? [] : RESOURCE_PAGES.filter(r => {
@@ -445,6 +443,7 @@ export default function Header() {
         )}
       </nav>
 
+      {}
       {isSearchOpen && (
         <div className="fixed inset-0 bg-black/80 z-[100] flex flex-col items-center pt-8 md:pt-24 px-4 transition-opacity duration-300">
           <div className="w-full max-w-3xl relative animate-in slide-in-from-top-4 duration-300">
@@ -455,7 +454,7 @@ export default function Header() {
               <input 
                 autoFocus
                 type="text" 
-                placeholder="Search products, colors, or resources..." 
+                placeholder="Search products, SKUs, or resources..." 
                 value={headerSearchQuery} 
                 onChange={e => setHeaderSearchQuery(e.target.value)}
                 className="w-full bg-white text-gray-900 text-lg md:text-xl rounded-2xl px-6 py-5 outline-none focus:ring-4 focus:ring-gold shadow-2xl"
@@ -525,6 +524,7 @@ export default function Header() {
         </div>
       )}
 
+      {}
       {isLoginModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-[200] flex items-center justify-center px-4 transition-opacity">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-in zoom-in-95">
