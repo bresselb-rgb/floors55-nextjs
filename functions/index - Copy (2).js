@@ -51,7 +51,31 @@ exports.alertNewMessage = onDocumentCreated("artifacts/{appId}/public/data/gener
     await sendAlerts("New Website Message", `From: ${data.name}\nSubject: ${data.subject}`);
 });
 
-// --- NEW: AUTOMATED PRO ONBOARDING WELCOME EMAIL ---
+// --- NEW: PRO ACTIVITY ALERTS ---
+exports.alertNewBoard = onDocumentCreated("artifacts/{appId}/public/data/client_boards/{docId}", async (event) => {
+    const data = event.data.data();
+    const db = admin.firestore();
+    
+    // Look up the Pro's business name
+    const proDoc = await db.doc(`artifacts/${event.params.appId}/public/data/users/${data.proId}`).get();
+    const proName = proDoc.exists ? (proDoc.data().business || "Unknown Pro") : "Unknown Pro";
+    
+    await sendAlerts("New Client Board Created", `Pro Partner: ${proName}\nClient Board: ${data.name}`);
+});
+
+exports.alertNewProposal = onDocumentCreated("artifacts/{appId}/public/data/pro_quotes/{docId}", async (event) => {
+    const data = event.data.data();
+    const db = admin.firestore();
+    
+    // Look up the Pro's business name
+    const proDoc = await db.doc(`artifacts/${event.params.appId}/public/data/users/${data.proId}`).get();
+    const proName = proDoc.exists ? (proDoc.data().business || "Unknown Pro") : "Unknown Pro";
+    
+    await sendAlerts("New Proposal Generated", `Pro Partner: ${proName}\nClient Name: ${data.clientName}\nProject: ${data.projectName || 'N/A'}\nTotal Amount: $${data.totals?.turnkeyRetail?.toFixed(2)}`);
+});
+
+
+// --- AUTOMATED PRO ONBOARDING WELCOME EMAIL ---
 exports.sendProWelcomeEmail = onDocumentCreated("artifacts/{appId}/public/data/users/{userId}", async (event) => {
     const userData = event.data.data();
     if (!userData || userData.role === 'admin') return; // Don't send this to staff
@@ -94,7 +118,9 @@ exports.sendProWelcomeEmail = onDocumentCreated("artifacts/{appId}/public/data/u
                     
                     <a href="${resetLink}" style="display: inline-block; padding: 12px 24px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; margin-top: 15px; letter-spacing: 1px;">SET MY PASSWORD</a>
                     
-                    <p style="margin-top: 40px; font-size: 12px; color: #9ca3af;">If you did not apply for a Floors 55 account, you can safely ignore this email. Link expires in 24 hours.</p>
+                    <p style="margin-top: 40px; font-size: 12px; color: #9ca3af; line-height: 1.5;">
+                        <strong>Security Notice:</strong> This activation link expires in exactly <strong>1 hour</strong>. If your link has expired, simply visit <a href="https://floors55pro.com" style="color: #c5a059;">floors55pro.com</a>, click "Sign In", and use the "Forgot Password" button to request a new activation link.
+                    </p>
                 </div>
             `
         });

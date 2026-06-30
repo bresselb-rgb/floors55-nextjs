@@ -26,7 +26,10 @@
         </div>
     </div>
 
+    <!-- MOBILE SIDEBAR OVERLAY -->
     <div id="sidebar-overlay" onclick="window.toggleSidebar()" class="fixed inset-0 bg-black/60 z-40 hidden md:hidden transition-opacity"></div>
+
+    <!-- SIDEBAR NAVIGATION (DRAWER STYLE ON MOBILE) -->
     <aside id="sidebar" class="fixed md:static inset-y-0 left-0 w-64 bg-gray-900 text-gray-300 flex flex-col shrink-0 shadow-2xl z-50 -translate-x-full md:translate-x-0 transition-transform duration-300">
         <div class="p-6 border-b border-gray-800 flex justify-between items-center">
             <div>
@@ -115,6 +118,7 @@
 
     <main class="flex-1 flex flex-col overflow-hidden relative" id="dashboard">
         
+        <!-- MOBILE NAV HEADER BAR -->
         <div class="md:hidden bg-gray-900 text-white h-16 px-6 flex items-center justify-between shrink-0 shadow-md">
             <h1 class="text-xl font-black">FLOORS <span class="text-gold">55</span></h1>
             <button onclick="window.toggleSidebar()" class="p-2 text-gray-400 hover:text-gold focus:outline-none">
@@ -124,6 +128,7 @@
             </button>
         </div>
 
+        <!-- DASHBOARD OVERVIEW TAB -->
         <div id="tab-dashboard" class="hidden flex-1 flex flex-col overflow-hidden bg-gray-50">
             <header class="bg-white h-16 border-b border-gray-200 flex items-center px-6 shrink-0 shadow-sm">
                 <h2 class="text-lg font-bold text-gray-800">Platform Overview</h2>
@@ -235,7 +240,7 @@
                                 <th class="w-[22%] px-4 py-2 cursor-pointer hover:text-gray-700 transition-colors select-none" onclick="window.sortPricing('name')">Product Name ↕</th>
                                 <th class="w-[15%] px-4 py-2 cursor-pointer hover:text-gray-700 transition-colors select-none" onclick="window.sortPricing('manufacturer')">Mfg / SKU ↕</th>
                                 <th class="w-[12%] px-4 py-2 cursor-pointer hover:text-gray-700 transition-colors select-none" onclick="window.sortPricing('category')">Category ↕</th>
-                                <th class="w-[23%] px-4 py-2 cursor-pointer hover:text-gray-700 transition-colors select-none" onclick="window.sortPricing('price')">Pricing / Margin / Ctn ↕</th>
+                                <th class="w-[23%] px-4 py-2 cursor-pointer hover:text-gray-700 transition-colors select-none" onclick="window.sortPricing('price')">Cost / Pricing / Margin / Ctn ↕</th>
                                 <th class="w-[16%] px-4 py-2 text-center">Visibility & Status</th>
                                 <th class="w-[12%] px-4 py-2 text-right">Actions</th>
                             </tr>
@@ -491,6 +496,7 @@
                         </div>
                     </div>
                     
+                    <!-- NEW INPUT: Carton Size -->
                     <div>
                         <label class="block text-[10px] font-black uppercase text-gray-400 mb-1">Carton Size (sqft)</label>
                         <input type="number" id="new-prod-carton-size" step="0.01" class="w-full px-3 py-2 border rounded focus:border-gold outline-none text-sm bg-white" placeholder="e.g. 24.5">
@@ -543,6 +549,7 @@
         </div>
     </div>
 
+    <!-- STAFF MODAL FOR ADDING / EDITING ACCOUNT MANAGERS -->
     <div id="staff-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-xl p-6 w-full max-w-md">
             <h3 class="text-lg font-bold text-gray-900 mb-1" id="staff-modal-title">Add Staff Member</h3>
@@ -604,6 +611,7 @@
         </div>
     </div>
 
+    <!-- CUSTOM PROMPT MODAL -->
     <div id="custom-prompt-modal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
         <div class="bg-white rounded-xl p-6 w-full max-w-sm text-center shadow-2xl">
             <div class="w-12 h-12 bg-gold/10 text-gold rounded-full flex items-center justify-center mx-auto mb-4 text-xl">✍️</div>
@@ -703,7 +711,8 @@
                 const proEl = document.getElementById('dash-pros');
                 if(proEl) proEl.innerText = prosMaster.length;
                 
-                // Re-render feed after pro data arrives
+                // CRITICAL FIX: Re-render the activity feed so the Pro Names show up
+                // after they have been loaded into memory!
                 updateActivityFeed();
             });
         }
@@ -729,7 +738,8 @@
                 const div = document.createElement('div');
                 div.className = "flex items-center justify-between p-4 hover:bg-gray-50 transition-colors";
                 
-                const dateStr = act.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric' });
+                const timeOpts = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
+                const dateStr = act.date.toLocaleDateString('en-US', timeOpts);
                 
                 // FIND THE PRO'S BUSINESS NAME WITH FALLBACK
                 const matchingPro = prosMaster.find(p => p.id === act.data.proId);
@@ -741,11 +751,14 @@
                         <div class="flex items-center gap-4">
                             <span class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-sm font-black shrink-0">📋</span>
                             <div>
-                                <div class="text-sm font-bold text-gray-900">Proposal: <span class="text-gold">${val}</span></div>
-                                <div class="text-[11px] text-gray-500 mt-0.5">By <span class="font-bold text-gray-700">${proName}</span> for ${act.data.clientName}</div>
+                                <div class="text-sm font-bold text-gray-900">Proposal Generated: <span class="text-gold">${val}</span></div>
+                                <div class="text-[11px] text-gray-500 mt-0.5">Built by <span class="font-bold text-gray-700">${proName}</span> for ${act.data.clientName}</div>
                             </div>
                         </div>
-                        <div class="text-[10px] font-bold text-gray-400 shrink-0 text-right">${dateStr}</div>
+                        <div class="text-right shrink-0">
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">${dateStr}</div>
+                            <a href="proposal/${act.data.id}" target="_blank" class="inline-block px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-black uppercase tracking-wider rounded-full transition-colors border border-gray-200" style="text-decoration:none;">View ↗</a>
+                        </div>
                     `;
                 } else {
                     div.innerHTML = `
@@ -753,15 +766,19 @@
                             <span class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm font-black shrink-0">🎨</span>
                             <div>
                                 <div class="text-sm font-bold text-gray-900">Client Board Created</div>
-                                <div class="text-[11px] text-gray-500 mt-0.5">By <span class="font-bold text-gray-700">${proName}</span> for "${act.data.name}"</div>
+                                <div class="text-[11px] text-gray-500 mt-0.5">Built by <span class="font-bold text-gray-700">${proName}</span> for "${act.data.name}"</div>
                             </div>
                         </div>
-                        <div class="text-[10px] font-bold text-gray-400 shrink-0 text-right">${dateStr}</div>
+                        <div class="text-right shrink-0">
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">${dateStr}</div>
+                            <a href="client/${act.data.slug}" target="_blank" class="inline-block px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-black uppercase tracking-wider rounded-full transition-colors border border-gray-200" style="text-decoration:none;">View ↗</a>
+                        </div>
                     `;
                 }
                 feed.appendChild(div);
             });
         }
+        // ------------------------------
 
         // --- GEMINI API INTEGRATION ---
         window.getGeminiKey = () => {
@@ -851,6 +868,7 @@
             
             btn.innerText = "Extract to JSON via Gemini";
         };
+        // ------------------------------
 
         window.customAlert = (title, message) => {
             document.getElementById('custom-alert-title').innerText = title;
@@ -990,6 +1008,7 @@
                     document.getElementById('sidebar').classList.remove('hidden');
                     document.getElementById('admin-name').innerText = user.email.split('@')[0];
                     
+                    // Set Dashboard as Default
                     window.showTab('pricing');
 
                     loadData(); loadRequests(); loadQuotesList(); loadMessages(); loadSamples(); loadStaff(); loadSettings(); loadDashboard();
@@ -1367,6 +1386,9 @@
             const cost = parseFloat(document.getElementById(`edit-cost-${id}`).value);
             const ws = parseFloat(document.getElementById(`edit-ws-${id}`).value);
             const ret = parseFloat(document.getElementById(`edit-ret-${id}`).value);
+            const cartonRaw = document.getElementById(`edit-carton-${id}`).value;
+            const cartonSize = cartonRaw !== '' ? parseFloat(cartonRaw) : null;
+            
             const name = document.getElementById(`edit-name-${id}`).value;
             const privateName = document.getElementById(`edit-private-name-${id}`).value;
             const manufacturer = document.getElementById(`edit-manufacturer-${id}`).value;
@@ -1378,9 +1400,6 @@
             const isPropMgt = document.getElementById(`edit-prop-${id}`).checked;
             const isContractor = document.getElementById(`edit-contractor-${id}`).checked;
             const imgPrefix = document.getElementById(`edit-img-prefix-${id}`).value;
-            
-            const cartonRaw = document.getElementById(`edit-carton-${id}`).value;
-            const cartonSize = cartonRaw !== '' ? parseFloat(cartonRaw) : null;
 
             const btn = e.target;
             const originalText = btn.innerText;
@@ -1392,6 +1411,7 @@
                     landedCost: cost,
                     price: ws, 
                     retailPrice: ret,
+                    cartonSize: cartonSize,
                     name: name,
                     manufacturer: manufacturer,
                     sku: sku,
@@ -1402,8 +1422,7 @@
                     isSale: isSale,
                     isPropMgt: isPropMgt,
                     isContractor: isContractor,
-                    imgPrefix: imgPrefix,
-                    cartonSize: cartonSize
+                    imgPrefix: imgPrefix
                 });
                 window.editingId = null; 
                 window.filterPricingTable(); 
@@ -1416,6 +1435,7 @@
             }
         };
 
+        // --- NEW: DUPLICATE PRODUCT ---
         window.duplicateProduct = async (id) => {
             const prodToCopy = productsMaster.find(p => p.id === id);
             if (!prodToCopy) return;
@@ -1429,6 +1449,7 @@
 
             if (!newName) return; 
 
+            // Find the highest product ID to generate the next one
             let max = 0; 
             productsMaster.forEach(p => { 
                 if (p.id && p.id.startsWith('prod_')) {
@@ -1438,18 +1459,22 @@
             });
             const nextId = `prod_${max + 1}`;
 
+            // Create a clean copy without the old ID
             const newProd = { ...prodToCopy };
             delete newProd.id;
             
+            // Assign the new name and slightly modify SKUs to prevent absolute collisions
             newProd.name = newName;
             if(newProd.sku) newProd.sku = newProd.sku + "-COPY";
             if(newProd.privateSku) newProd.privateSku = newProd.privateSku + "-COPY";
             
+            // Refresh the added timestamp so it shows up at the top if sorting by "Added"
             newProd.addedAt = new Date().toISOString();
 
             try {
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', nextId), newProd);
                 showToast("Product duplicated successfully!");
+                // Instantly open the new row in Edit Mode so they can fix the SKU/Price
                 window.startEdit(nextId);
             } catch (err) {
                 console.error(err);
@@ -1539,7 +1564,7 @@
                         price: parseFloat(document.getElementById('new-prod-price').value),
                         retailPrice: parseFloat(document.getElementById('new-prod-retail').value) || null,
                         unit: document.getElementById('new-prod-unit').value,
-                        cartonSize: isNaN(cSize) ? null : cSize, 
+                        cartonSize: isNaN(cSize) ? null : cSize, // Ensure it saves cleanly
                         isVisible: true,
                         colors: [{sku:'01', name:'Default'}], views: ["MAIN"], specs: [], addedAt: new Date().toISOString()
                     });
@@ -1556,10 +1581,13 @@
             } 
         };
 
+        // --- FILTER: ESTIMATES / QUOTE REQUESTS ---
         window.filterQuotesList = () => {
             const query = document.getElementById('quotes-search').value.toLowerCase().trim();
             
+            // Only search the standard homeowner quote requests array
             const filtered = quotesMaster.filter(q => {
+                // If it has a totals field, it's a generated Turnkey Proposal, hide it from this view
                 if (q.totals) return false;
 
                 return q.name.toLowerCase().includes(query) || 
@@ -1616,6 +1644,7 @@
         }
         window.delQuote = async (id) => { if(await window.customConfirm('Delete Request', 'Are you sure you want to permanently purge this customer estimate?')) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'quote_requests', id)); };
 
+        // --- FILTER: SAMPLE FULFILLMENT ORDERS ---
         window.filterSamplesList = () => {
             const query = document.getElementById('samples-search').value.toLowerCase().trim();
             const filtered = samplesMaster.filter(s => {
@@ -1684,6 +1713,7 @@
         }
         window.delSample = async (id) => { if(await window.customConfirm('Ship Sample', 'Purge and mark this package request as fulfilled?')) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'sample_requests', id)); };
 
+        // --- FILTER: INBOX MESSAGES ---
         window.filterMessagesList = () => {
             const query = document.getElementById('messages-search').value.toLowerCase().trim();
             const filtered = messagesMaster.filter(m => {
@@ -1736,6 +1766,7 @@
         }
         window.delMsg = async (id) => { if(await window.customConfirm('Delete Entry', 'Are you sure you want to permanently clear this message?')) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'general_inquiries', id)); };
 
+        // --- FILTER: PARTNER ACCREDITATION APPLICATIONS ---
         window.filterRequestsList = () => {
             const query = document.getElementById('requests-search').value.toLowerCase().trim();
             const statusFilter = document.getElementById('requests-status-filter').value;
@@ -1801,6 +1832,166 @@
         window.approveReq = (id, email) => { window.showProvisionProModal(); currentReqId = id; document.getElementById('new-pro-email').value = email; };
         window.deleteReq = async (id) => { if(await window.customConfirm('Discard File', 'Purge this wholesale credentials application from records?')) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'wholesale_requests', id)); };
 
+        // --- NEW: PROVISION PRO ACCOUNT ---
+        window.createPro = async (e) => {
+            e.preventDefault(); const btn = document.getElementById('create-acc-btn'); btn.disabled = true;
+            const email = document.getElementById('new-pro-email').value;
+            
+            const selectedAmId = document.getElementById('new-pro-am').value;
+            let selectedAm = { name: "Pending Assignment", phone: "Call Main Office", email: "support@floors55.com" };
+            
+            if (selectedAmId !== 'none') {
+                const found = staffMaster.find(s => s.id === selectedAmId);
+                if (found) { selectedAm = { name: found.name, phone: found.phone, email: found.email }; }
+            }
+
+            try {
+                const randomSecurePassword = crypto.randomUUID() + crypto.randomUUID() + "A!1a";
+
+                const tApp = initializeApp(firebaseConfig, "Temp");
+                const tAuth = getAuth(tApp);
+                const cred = await createUserWithEmailAndPassword(tAuth, email, randomSecurePassword);
+                
+                let profileData = {
+                    name: '', business: '', phone: '', address: '', clientMargin: 20, accountManager: selectedAm
+                };
+
+                if(currentReqId) {
+                    const requestData = requestsMaster.find(r => r.id === currentReqId);
+                    if (requestData) {
+                        profileData = { ...profileData, name: requestData.name, business: requestData.business, phone: requestData.phone, address: requestData.address };
+                    }
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'wholesale_requests', currentReqId), { status: 'approved' });
+                }
+
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', cred.user.uid), profileData);
+                
+                await signOut(tAuth); await deleteApp(tApp);
+                window.hideProvisionProModal(); 
+                
+                showToast("Pro Account provisioned! Welcome email sent.");
+            } catch (err) { 
+                window.customAlert("Provisioning Error", err.message); 
+            } finally { 
+                btn.disabled = false; 
+            }
+        };
+
+        // --- NEW: SAVE STAFF MEMBER ---
+        window.saveStaff = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('save-staff-btn'); btn.disabled = true;
+            
+            const id = document.getElementById('staff-id').value;
+            const name = document.getElementById('staff-name').value;
+            const phone = document.getElementById('staff-phone').value;
+            const email = document.getElementById('staff-email').value;
+            const hasConsoleAccess = document.getElementById('staff-console-access').checked;
+            
+            try {
+                if (id) {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', id), { name, phone, hasConsoleAccess });
+                    showToast("Staff profile updated!");
+                } else {
+                    const password = document.getElementById('staff-password').value;
+                    const tApp = initializeApp(firebaseConfig, "TempStaff");
+                    const tAuth = getAuth(tApp);
+                    const cred = await createUserWithEmailAndPassword(tAuth, email, password);
+                    
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', cred.user.uid), { 
+                        name, phone, email, role: 'admin', hasConsoleAccess
+                    });
+                    
+                    await signOut(tAuth); await deleteApp(tApp);
+                    showToast("New staff member created!");
+                }
+                window.closeStaffModal();
+            } catch (err) {
+                window.customAlert("Error Saving Staff", err.message);
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        window.deleteStaff = async (id, name) => {
+            const consent = await window.customConfirm("Remove Staff", `Are you sure you want to revoke console access and remove ${name} from the staff directory?`);
+            if (consent) {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', id));
+                showToast("Staff member removed.");
+            }
+        };
+
+        window.loginStaff = async (e) => { e.preventDefault(); try { await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value); } catch(err) { document.getElementById('login-error').innerText = "Access denied: Invalid admin password credentials."; document.getElementById('login-error').classList.remove('hidden'); } };
+        window.logoutStaff = async () => { try { await signOut(auth); window.location.reload(); } catch (err) { console.error(err); } };
+        
+        window.showTab = (t) => { 
+            ['dashboard', 'pricing', 'quotes', 'samples', 'messages', 'requests', 'staff', 'settings'].forEach(tab => {
+                document.getElementById(`tab-${tab}`).classList.add('hidden');
+                document.getElementById(`nav-${tab}`).classList.remove('bg-gray-800', 'text-white');
+                document.getElementById(`nav-${tab}`).classList.add('text-gray-400');
+            });
+            document.getElementById(`tab-${t}`).classList.remove('hidden'); 
+            document.getElementById(`nav-${t}`).classList.remove('text-gray-400');
+            document.getElementById(`nav-${t}`).classList.add('bg-gray-800', 'text-white');
+
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar && !sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            }
+        };
+
+        // Modal Controls
+        window.showAddProductModal = () => { document.getElementById('add-product-modal').classList.remove('hidden'); window.toggleAddMode('basic'); };
+        window.hideAddProductModal = () => document.getElementById('add-product-modal').classList.add('hidden');
+        
+        window.showProvisionProModal = () => { currentReqId = null; document.getElementById('provision-pro-modal').classList.remove('hidden'); };
+        window.hideProvisionProModal = () => { currentReqId = null; document.getElementById('provision-pro-modal').classList.add('hidden'); };
+        
+        window.openStaffModal = (id = null) => {
+            const modal = document.getElementById('staff-modal');
+            const title = document.getElementById('staff-modal-title');
+            const pwdContainer = document.getElementById('staff-password-container');
+            const pwdInput = document.getElementById('staff-password');
+            const emailInput = document.getElementById('staff-email');
+            const accessInput = document.getElementById('staff-console-access');
+            
+            if (id) {
+                const staff = staffMaster.find(s => s.id === id);
+                if(staff) {
+                    title.innerText = "Edit Staff Profile";
+                    document.getElementById('staff-id').value = staff.id;
+                    document.getElementById('staff-name').value = staff.name || '';
+                    document.getElementById('staff-phone').value = staff.phone || '';
+                    accessInput.checked = staff.hasConsoleAccess === true || (staff.hasConsoleAccess === undefined && staff.role === 'admin');
+                    emailInput.value = staff.email || '';
+                    
+                    emailInput.disabled = true;
+                    emailInput.classList.add('opacity-50', 'cursor-not-allowed');
+                    pwdContainer.classList.add('hidden');
+                    pwdInput.required = false;
+                }
+            } else {
+                title.innerText = "Add Staff Member";
+                document.getElementById('staff-id').value = '';
+                document.getElementById('staff-name').value = '';
+                document.getElementById('staff-phone').value = '';
+                accessInput.checked = false;
+                emailInput.value = '';
+                
+                emailInput.disabled = false;
+                emailInput.classList.remove('opacity-50', 'cursor-not-allowed');
+                pwdContainer.classList.remove('hidden');
+                pwdInput.required = true;
+            }
+            modal.classList.remove('hidden');
+        };
+        window.closeStaffModal = () => document.getElementById('staff-modal').classList.add('hidden');
+
+        window.handleCategoryChange = () => document.getElementById('new-prod-custom-cat').classList.toggle('hidden', document.getElementById('new-prod-cat').value !== 'Custom');
+        function showToast(msg) { const t = document.getElementById('toast'); document.getElementById('toast-message').innerText = msg; t.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none'); setTimeout(() => t.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none'), 3000); }
+        
         initAdmin();
     </script>
 </body>
