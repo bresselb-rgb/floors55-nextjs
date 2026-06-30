@@ -28,19 +28,6 @@ async function sendAlerts(subject, messageText) {
             console.log("Email alert sent successfully.");
         } catch (err) { console.error("Email Error:", err); }
     }
-
-    // Send Twilio SMS Alert (if approved)
-    if (settings.smsEnabled && settings.smsPhone && process.env.TWILIO_SID) {
-        try {
-            const twilio = require("twilio")(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
-            await twilio.messages.create({
-                body: `${subject}\n\n${messageText}`,
-                from: process.env.TWILIO_PHONE,
-                to: settings.smsPhone
-            });
-            console.log("SMS alert sent successfully.");
-        } catch (err) { console.error("Twilio Error:", err); }
-    }
 }
 
 // --- AUTOMATED ALERTS TRIGGERS ---

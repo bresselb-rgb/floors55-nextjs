@@ -184,10 +184,6 @@
                     <p class="text-[10px] text-gray-400 uppercase font-black tracking-wider">Spreadsheet Mode</p>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="window.exportImageCSV()" class="bg-gray-100 text-gray-700 border border-gray-200 px-4 py-2 rounded-lg font-bold text-xs hover:bg-gray-200 transition-colors uppercase tracking-widest flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        Export Image Checklist
-                    </button>
                     <button onclick="window.showAddProductModal()" class="bg-gold text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-black transition-colors uppercase tracking-widest">+ Add Catalog Product</button>
                 </div>
             </header>
@@ -499,6 +495,12 @@
                             </select>
                         </div>
                     </div>
+                    
+                    <!-- NEW INPUT: Carton Size -->
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-gray-400 mb-1">Carton Size (sqft)</label>
+                        <input type="number" id="new-prod-carton-size" step="0.01" class="w-full px-3 py-2 border rounded focus:border-gold outline-none text-sm bg-white" placeholder="e.g. 24.5">
+                    </div>
                 </div>
 
                 <div id="add-mode-json" class="hidden">
@@ -708,6 +710,10 @@
                 });
                 const proEl = document.getElementById('dash-pros');
                 if(proEl) proEl.innerText = prosMaster.length;
+                
+                // CRITICAL FIX: Re-render the activity feed so the Pro Names show up
+                // after they have been loaded into memory!
+                updateActivityFeed();
             });
         }
 
@@ -735,12 +741,9 @@
                 const timeOpts = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
                 const dateStr = act.date.toLocaleDateString('en-US', timeOpts);
                 
-                // FIND THE PRO'S BUSINESS NAME
-                let proName = "Unknown Pro";
+                // FIND THE PRO'S BUSINESS NAME WITH FALLBACK
                 const matchingPro = prosMaster.find(p => p.id === act.data.proId);
-                if (matchingPro) {
-                    proName = matchingPro.business || matchingPro.name || "Pro Partner";
-                }
+                const proName = matchingPro ? (matchingPro.business || matchingPro.name || "Pro Partner") : "Loading...";
 
                 if(act.type === 'quote') {
                     const val = act.data.totals?.turnkeyRetail?.toLocaleString('en-US', {style: 'currency', currency: 'USD'}) || '$0.00';
@@ -1387,6 +1390,9 @@
             const isContractor = document.getElementById(`edit-contractor-${id}`).checked;
             const imgPrefix = document.getElementById(`edit-img-prefix-${id}`).value;
 
+            // But since it's not currently an inline edit field, we skip it here.
+            // If you want to be able to edit it, it would need to be added to the tr.innerHTML block.
+
             const btn = e.target;
             const originalText = btn.innerText;
             btn.innerText = "Saving...";
@@ -1527,6 +1533,10 @@
                 } else {
                     let cat = document.getElementById('new-prod-cat').value;
                     if (cat === 'Custom') cat = document.getElementById('new-prod-custom-cat').value;
+                    
+                    let rawCartonSize = document.getElementById('new-prod-carton-size').value;
+                    let cSize = parseFloat(rawCartonSize);
+                    
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', nextId), {
                         name: document.getElementById('new-prod-name').value,
                         manufacturer: document.getElementById('new-prod-manufacturer').value,
@@ -1545,6 +1555,7 @@
                         price: parseFloat(document.getElementById('new-prod-price').value),
                         retailPrice: parseFloat(document.getElementById('new-prod-retail').value) || null,
                         unit: document.getElementById('new-prod-unit').value,
+                        cartonSize: isNaN(cSize) ? null : cSize, // Ensure it saves cleanly
                         isVisible: true,
                         colors: [{sku:'01', name:'Default'}], views: ["MAIN"], specs: [], addedAt: new Date().toISOString()
                     });
@@ -1972,37 +1983,6 @@
         window.handleCategoryChange = () => document.getElementById('new-prod-custom-cat').classList.toggle('hidden', document.getElementById('new-prod-cat').value !== 'Custom');
         function showToast(msg) { const t = document.getElementById('toast'); document.getElementById('toast-message').innerText = msg; t.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none'); setTimeout(() => t.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none'), 3000); }
         
-        window.exportImageCSV = () => {
-            let csv = "Product ID,Product Name,Category,Image Prefix,Color SKU,Color Name,Expected Main Image,Expected Room Image\n";
-            
-            productsMaster.forEach(p => {
-                const prefix = (p.imgPrefix || '').toLowerCase();
-                const colors = (p.colors && p.colors.length > 0) ? p.colors : [{sku: '01', name: 'Default'}];
-                const type = p.category === 'Carpet' ? 'swatch' : 'main';
-
-                colors.forEach(c => {
-                    const sku = (c.sku || '').toLowerCase();
-                    const mainImg = `${prefix}${sku}_${type}.jpg`;
-                    const roomImg = `${prefix}${sku}_room.jpg`;
-                    
-                    const safeName = `"${(p.name || 'Unnamed').replace(/"/g, '""')}"`;
-                    const safeColor = `"${(c.name || 'Default').replace(/"/g, '""')}"`;
-                    
-                    csv += `${p.id},${safeName},${p.category},${prefix},${sku},${safeColor},${mainImg},${roomImg}\n`;
-                });
-            });
-
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", "floors55_image_checklist.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            showToast("Image checklist downloaded!");
-        };
-
         initAdmin();
     </script>
 </body>
