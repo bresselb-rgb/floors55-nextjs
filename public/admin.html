@@ -1,4 +1,3 @@
-<!-- admin.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,7 +12,6 @@
 </head>
 <body class="bg-gray-100 font-sans text-gray-900 h-screen flex overflow-hidden relative">
 
-    <!-- AUTH SCREEN OVERLAY -->
     <div id="auth-screen" class="absolute inset-0 z-50 flex items-center justify-center bg-gray-900 px-4 transition-opacity duration-500">
         <div class="max-w-md w-full bg-white rounded-xl shadow-2xl p-8 text-center relative overflow-hidden">
             <h1 class="text-3xl font-black mb-2">FLOORS <span class="text-gold">55</span></h1>
@@ -30,7 +28,7 @@
     <!-- MOBILE SIDEBAR OVERLAY -->
     <div id="sidebar-overlay" onclick="window.toggleSidebar()" class="fixed inset-0 bg-black/60 z-40 hidden md:hidden transition-opacity"></div>
 
-    <!-- SIDEBAR NAVIGATION -->
+    <!-- SIDEBAR NAVIGATION (DRAWER STYLE ON MOBILE) -->
     <aside id="sidebar" class="fixed md:static inset-y-0 left-0 w-64 bg-gray-900 text-gray-300 flex flex-col shrink-0 shadow-2xl z-50 -translate-x-full md:translate-x-0 transition-transform duration-300">
         <div class="p-6 border-b border-gray-800 flex justify-between items-center">
             <div>
@@ -66,16 +64,15 @@
                 Messages 
                 <span id="message-badge" class="ml-auto bg-gold text-black text-[10px] font-black px-2 py-0.5 rounded-full hidden">0</span>
             </a>
-            
+
             <div class="h-px bg-gray-800 my-4 mx-2"></div>
-            
-            <!-- COMBINED PARTNER DIRECTORY TAB -->
+
             <a href="#" onclick="window.showTab('partners')" id="nav-partners" class="nav-item flex items-center gap-3 px-4 py-2.5 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 text-sm font-semibold">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                Partner Directory 
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                Partner Directory
                 <span id="request-count" class="ml-auto bg-gold text-black text-[10px] font-black px-2 py-0.5 rounded-full hidden">0</span>
             </a>
-
+            
             <a href="#" onclick="window.showTab('staff')" id="nav-staff" class="nav-item flex items-center gap-3 px-4 py-2.5 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 text-sm font-semibold">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                 Staff Directory
@@ -133,7 +130,6 @@
 
         <!-- DASHBOARD OVERVIEW TAB -->
         <div id="tab-dashboard" class="hidden flex-1 flex flex-col overflow-hidden bg-gray-50">
-            <!-- Existing Dashboard Content... -->
             <header class="bg-white h-16 border-b border-gray-200 flex items-center px-6 shrink-0 shadow-sm">
                 <h2 class="text-lg font-bold text-gray-800">Platform Overview</h2>
             </header>
@@ -181,9 +177,7 @@
             </div>
         </div>
 
-        <!-- PRICING TAB -->
         <div id="tab-pricing" class="flex-1 flex flex-col overflow-hidden">
-            <!-- Existing Pricing Content... -->
             <header class="bg-white h-16 border-b border-gray-200 flex items-center justify-between px-6 shrink-0 shadow-sm">
                 <div>
                     <h2 class="text-lg font-bold text-gray-800">Flooring Broker Pricing Matrix</h2>
@@ -197,7 +191,7 @@
             <div class="bg-white px-6 py-3 border-b border-gray-200 flex flex-col gap-3 shrink-0">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="flex items-center gap-2 w-full md:w-auto flex-1">
-                        <input type="text" id="price-search" placeholder="Search display name, private name, SKU, color..." oninput="window.filterPricingTable()" class="px-3 py-1.5 border border-gray-200 text-xs rounded-lg outline-none focus:border-gold w-full max-w-sm bg-gray-50">
+                        <input type="text" id="price-search" placeholder="Search display name, colors, SKU..." oninput="window.filterPricingTable()" class="px-3 py-1.5 border border-gray-200 text-xs rounded-lg outline-none focus:border-gold w-full max-w-sm bg-gray-50">
                         <select id="price-sort-dropdown" onchange="window.handleSortDropdown()" class="px-3 py-1.5 border border-gray-200 text-xs rounded-lg bg-gray-50 outline-none focus:border-gold text-gray-700 font-bold">
                             <option value="id-asc">Sort: Default (Added)</option>
                             <option value="name-asc">Sort: Name (A-Z)</option>
@@ -258,7 +252,6 @@
         </div>
 
         <div id="tab-quotes" class="hidden flex-1 flex flex-col overflow-hidden bg-gray-50">
-            <!-- Existing Quotes Content... -->
             <header class="bg-white h-16 border-b border-gray-200 flex items-center px-6 shrink-0 shadow-sm"><h2 class="text-lg font-bold text-gray-800">Customer Estimates</h2></header>
             
             <div class="bg-white px-6 py-2.5 border-b border-gray-200 flex flex-wrap gap-3 items-center justify-between shrink-0">
@@ -270,7 +263,6 @@
         </div>
 
         <div id="tab-samples" class="hidden flex-1 flex flex-col overflow-hidden bg-gray-50">
-            <!-- Existing Samples Content... -->
             <header class="bg-white h-16 border-b border-gray-200 flex items-center px-6 shrink-0 shadow-sm"><h2 class="text-lg font-bold text-gray-800">Sample Fulfillment Orders</h2></header>
             
             <div class="bg-white px-6 py-2.5 border-b border-gray-200 flex flex-wrap gap-3 items-center justify-between shrink-0">
@@ -282,7 +274,6 @@
         </div>
 
         <div id="tab-messages" class="hidden flex-1 flex flex-col overflow-hidden bg-gray-50">
-            <!-- Existing Messages Content... -->
             <header class="bg-white h-16 border-b border-gray-200 flex items-center px-6 shrink-0 shadow-sm"><h2 class="text-lg font-bold text-gray-800">General Inquiries Inbox</h2></header>
             
             <div class="bg-white px-6 py-2.5 border-b border-gray-200 flex flex-wrap gap-3 items-center justify-between shrink-0">
@@ -293,19 +284,17 @@
             <div class="flex-1 overflow-auto p-6 space-y-4" id="messages-body"></div>
         </div>
 
-        <!-- NEW COMBINED PARTNER DIRECTORY TAB -->
+        <!-- UNIFIED PARTNER DIRECTORY TAB -->
         <div id="tab-partners" class="hidden flex-1 flex flex-col overflow-hidden bg-gray-50">
-            <header class="bg-white h-16 border-b border-gray-200 flex items-center px-6 shrink-0 shadow-sm">
-                <h2 class="text-lg font-bold text-gray-800">Partner Directory</h2>
-            </header>
+            <header class="bg-white h-16 border-b border-gray-200 flex items-center px-6 shrink-0 shadow-sm"><h2 class="text-lg font-bold text-gray-800">Unified Partner Directory</h2></header>
             
-            <div class="bg-white px-6 py-3 border-b border-gray-200 flex flex-wrap gap-3 items-center justify-between shrink-0">
+            <div class="bg-white px-6 py-2.5 border-b border-gray-200 flex flex-wrap gap-3 items-center justify-between shrink-0">
                 <div class="flex items-center gap-2">
-                    <input type="text" id="partners-search" placeholder="Search business, contact, email..." oninput="window.filterPartnersList()" class="px-3 py-1.5 border border-gray-200 text-xs rounded-lg outline-none focus:border-gold w-72 bg-gray-50">
-                    <select id="partners-status-filter" onchange="window.filterPartnersList()" class="px-3 py-1.5 border border-gray-200 text-xs rounded-lg bg-gray-50 outline-none focus:border-gold text-gray-600 font-bold">
-                        <option value="all">All Partners & Applicants</option>
+                    <input type="text" id="partners-search" placeholder="Search business, applicant, email..." oninput="window.filterPartnersList()" class="px-3 py-1.5 border border-gray-200 text-xs rounded-lg outline-none focus:border-gold w-72 bg-gray-50">
+                    <select id="partners-status-filter" onchange="window.filterPartnersList()" class="px-3 py-1.5 border border-gray-200 text-xs rounded-lg bg-gray-50 outline-none focus:border-gold text-gray-600">
+                        <option value="all">All Partners</option>
                         <option value="pending">Pending Applications</option>
-                        <option value="active">Active Pro Accounts</option>
+                        <option value="approved">Active Pros</option>
                     </select>
                 </div>
                 <div class="text-[11px] text-gray-400 font-bold" id="partners-results-count"></div>
@@ -316,10 +305,9 @@
                     <table class="w-full text-left table-fixed">
                         <thead class="bg-gray-50 text-[10px] uppercase text-gray-400 border-b">
                             <tr>
-                                <th class="w-[25%] px-6 py-3">Business & Contact</th>
-                                <th class="w-[20%] px-6 py-3">Email / Phone</th>
-                                <th class="w-[15%] px-6 py-3">Status</th>
-                                <th class="w-[20%] px-6 py-3">Account Details</th>
+                                <th class="w-[30%] px-6 py-3">Business / Applicant</th>
+                                <th class="w-[25%] px-6 py-3">Contact Details</th>
+                                <th class="w-[25%] px-6 py-3">Status & Account Mgr</th>
                                 <th class="w-[20%] px-6 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -330,7 +318,6 @@
         </div>
 
         <div id="tab-staff" class="hidden flex-1 flex flex-col overflow-hidden bg-gray-50">
-            <!-- Existing Staff Content... -->
             <header class="bg-white h-16 border-b border-gray-200 flex items-center justify-between px-6 shrink-0 shadow-sm">
                 <h2 class="text-lg font-bold text-gray-800">Staff & Account Managers Directory</h2>
                 <button onclick="window.openStaffModal()" class="bg-black text-white px-4 py-2 rounded-lg font-bold text-xs hover:bg-gold hover:text-black transition-colors uppercase tracking-widest">+ Add Staff Member</button>
@@ -355,7 +342,6 @@
         </div>
 
         <div id="tab-settings" class="hidden flex-1 flex flex-col overflow-hidden bg-gray-50">
-            <!-- Existing Settings Content... -->
             <header class="bg-white h-16 border-b border-gray-200 flex items-center px-6 shrink-0 shadow-sm">
                 <h2 class="text-lg font-bold text-gray-800">System Settings & Routing</h2>
             </header>
@@ -395,7 +381,6 @@
         </div>
     </main>
 
-    <!-- Modals (Add Product, Provision Pro, Staff) -->
     <div id="add-product-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-xl p-6 w-full max-w-2xl shadow-2xl overflow-y-auto max-h-[90vh]">
             <h3 class="text-lg font-bold text-gray-900 mb-4">Add Product to Floors 55 Catalog</h3>
@@ -604,7 +589,6 @@
         </div>
     </div>
 
-    <!-- Alert / Confirm Modals -->
     <div id="custom-alert-modal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 transition-all">
         <div class="bg-white rounded-xl p-6 w-full max-w-sm text-center shadow-2xl animate-in zoom-in-95">
             <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">⚠️</div>
@@ -626,6 +610,7 @@
         </div>
     </div>
 
+    <!-- CUSTOM PROMPT MODAL -->
     <div id="custom-prompt-modal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
         <div class="bg-white rounded-xl p-6 w-full max-w-sm text-center shadow-2xl">
             <div class="w-12 h-12 bg-gold/10 text-gold rounded-full flex items-center justify-center mx-auto mb-4 text-xl">✍️</div>
@@ -646,7 +631,7 @@
     <script type="module">
         import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithCustomToken, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc, getDoc, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = { 
             apiKey: "AIzaSyCSO1glwpfcl6zMsDsxalO1_zTW89qiTqI", 
@@ -664,6 +649,7 @@
         // MASTER CLIENT-SIDE STORAGE
         let productsMaster = [];
         let quotesMaster = [];
+        let proQuotesMaster = [];
         let boardsMaster = [];
         let samplesMaster = [];
         let messagesMaster = [];
@@ -693,16 +679,16 @@
         function loadDashboard() {
             // Listen for Quotes
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'pro_quotes'), (snap) => {
-                quotesMaster = [];
+                proQuotesMaster = [];
                 let totalValue = 0;
                 snap.forEach(d => {
                     const data = d.data();
-                    quotesMaster.push({id: d.id, ...data});
+                    proQuotesMaster.push({id: d.id, ...data});
                     totalValue += (data.totals?.turnkeyRetail || 0);
                 });
                 const propEl = document.getElementById('dash-proposals');
                 const pipeEl = document.getElementById('dash-pipeline');
-                if(propEl) propEl.innerText = quotesMaster.length;
+                if(propEl) propEl.innerText = proQuotesMaster.length;
                 if(pipeEl) pipeEl.innerText = '$' + totalValue.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
                 updateActivityFeed();
             });
@@ -735,7 +721,7 @@
             if(!feed) return;
             
             let activities = [];
-            quotesMaster.forEach(q => activities.push({ type: 'quote', date: new Date(q.createdAt), data: q }));
+            proQuotesMaster.forEach(q => activities.push({ type: 'quote', date: new Date(q.createdAt), data: q }));
             boardsMaster.forEach(b => activities.push({ type: 'board', date: b.createdAt?.toDate() || new Date(), data: b }));
             
             activities.sort((a,b) => b.date - a.date);
@@ -791,6 +777,7 @@
                 feed.appendChild(div);
             });
         }
+        // ------------------------------
 
         // --- GEMINI API INTEGRATION ---
         window.getGeminiKey = () => {
@@ -1190,17 +1177,9 @@
                 const privSkuLower = (p.privateSku || '').toLowerCase();
                 const idLower = (p.id || '').toLowerCase();
                 
-                const colorsTextCombined = (p.colors || []).map(c => `${c.name || ''} ${c.sku || ''}`).join(' ').toLowerCase();
+                const colorsLower = (p.colors || []).map(c => `${c.name || ''} ${c.sku || ''}`).join(' ').toLowerCase();
 
-                const matchesSearch = nameLower.includes(searchVal) || 
-                                      privateLower.includes(searchVal) || 
-                                      idLower.includes(searchVal) || 
-                                      mfgLower.includes(searchVal) || 
-                                      skuLower.includes(searchVal) || 
-                                      privMfgLower.includes(searchVal) || 
-                                      privSkuLower.includes(searchVal) ||
-                                      colorsTextCombined.includes(searchVal);
-
+                const matchesSearch = nameLower.includes(searchVal) || privateLower.includes(searchVal) || idLower.includes(searchVal) || mfgLower.includes(searchVal) || skuLower.includes(searchVal) || privMfgLower.includes(searchVal) || privSkuLower.includes(searchVal) || colorsLower.includes(searchVal);
                 const matchesCategory = catVal === 'all' || p.category === catVal;
                 const matchesVisibility = visVal === 'all' || 
                                            (visVal === 'visible' && p.isVisible !== false) || 
@@ -1320,7 +1299,7 @@
                                     <span class="text-[9px] font-bold text-gray-400 uppercase mr-1">Ret: $</span>
                                     <input type="number" id="edit-ret-${p.id}" value="${retPrice.toFixed(2)}" step="0.01" class="w-14 px-1 py-0.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-gold bg-white outline-none">
                                 </div>
-                                <div class="flex items-center">
+                                <div class="flex items-center ml-2 border-l border-gray-200 pl-2">
                                     <span class="text-[9px] font-bold text-gray-400 uppercase mr-1">Ctn:</span>
                                     <input type="number" id="edit-carton-${p.id}" value="${p.cartonSize || ''}" step="0.01" class="w-12 px-1 py-0.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-gold bg-white outline-none" placeholder="sqft">
                                 </div>
@@ -1789,147 +1768,134 @@
         }
         window.delMsg = async (id) => { if(await window.customConfirm('Delete Entry', 'Are you sure you want to permanently clear this message?')) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'general_inquiries', id)); };
 
-        // --- UNIFIED PARTNER DIRECTORY (APPLICATIONS + ACTIVE PROS) ---
+        // --- FILTER: UNIFIED PARTNERS DIRECTORY ---
         window.filterPartnersList = () => {
             const query = (document.getElementById('partners-search')?.value || '').toLowerCase().trim();
             const statusFilter = document.getElementById('partners-status-filter')?.value || 'all';
 
-            // 1. Combine both arrays
-            let combined = [];
-            
-            requestsMaster.forEach(req => {
-                combined.push({
-                    type: 'application',
-                    id: req.id,
-                    name: req.name || '',
-                    business: req.business || '',
-                    email: req.email || '',
-                    phone: req.phone || '',
-                    trade: req.trade || '',
-                    status: req.status || 'pending',
-                    timestamp: req.timestamp?.toDate() || new Date(0)
-                });
+            let combinedList = [];
+
+            // Add pending applications
+            requestsMaster.forEach(r => {
+                if(r.status === 'pending') combinedList.push({ ...r, type: 'applicant' });
             });
 
-            prosMaster.forEach(pro => {
-                combined.push({
-                    type: 'active_pro',
-                    id: pro.id,
-                    name: pro.name || '',
-                    business: pro.business || '',
-                    email: pro.email || '',
-                    phone: pro.phone || '',
-                    clientMargin: pro.clientMargin !== undefined ? pro.clientMargin : 20,
-                    accountManager: pro.accountManager,
-                    status: 'active'
-                });
+            // Add active pros
+            prosMaster.forEach(p => {
+                combinedList.push({ ...p, type: 'pro' });
             });
 
-            // 2. Filter the combined array
-            const filtered = combined.filter(partner => {
-                const matchesSearch = partner.name.toLowerCase().includes(query) || 
-                                     partner.business.toLowerCase().includes(query) || 
-                                     partner.email.toLowerCase().includes(query) ||
-                                     partner.phone.toLowerCase().includes(query);
+            const filtered = combinedList.filter(item => {
+                const searchStr = `${item.business || ''} ${item.name || ''} ${item.email || ''} ${item.phone || ''}`.toLowerCase();
+                const matchesSearch = searchStr.includes(query);
                 
                 let matchesStatus = true;
-                if (statusFilter === 'pending') {
-                    matchesStatus = partner.type === 'application' && partner.status === 'pending';
-                } else if (statusFilter === 'active') {
-                    matchesStatus = partner.type === 'active_pro';
-                }
+                if (statusFilter === 'pending' && item.type !== 'applicant') matchesStatus = false;
+                if (statusFilter === 'approved' && item.type !== 'pro') matchesStatus = false;
 
                 return matchesSearch && matchesStatus;
             });
 
-            // 3. Sort (Pending requests at the top, then alphabetically by business)
-            filtered.sort((a, b) => {
-                if (a.type === 'application' && a.status === 'pending' && b.type !== 'application') return -1;
-                if (a.type !== 'application' && b.type === 'application' && b.status === 'pending') return 1;
-                return (a.business || a.name).localeCompare(b.business || b.name);
-            });
-
-            document.getElementById('partners-results-count').innerText = `Showing ${filtered.length} Results`;
+            document.getElementById('partners-results-count').innerText = `Showing ${filtered.length} Partners`;
             renderPartnersHTML(filtered);
         };
 
         function renderPartnersHTML(listToRender) {
             const tbody = document.getElementById('partners-body'); 
-            if (!tbody) return;
+            if(!tbody) return;
             tbody.innerHTML = '';
 
-            listToRender.forEach(partner => {
+            listToRender.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-gray-50 transition-colors border-b border-gray-100 text-xs";
                 
-                if (partner.type === 'application' && partner.status === 'pending') {
-                    // PENDING APPLICATION ROW
+                if (item.type === 'applicant') {
+                    // Render Applicant Row
                     const statusBadge = `<span class="bg-amber-100 text-amber-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">Pending Review</span>`;
-                    const actionBtns = `<button onclick="window.approveReq('${partner.id}', '${partner.email}')" class="bg-gold text-black px-3 py-1.5 rounded text-[9px] font-bold uppercase tracking-wider hover:bg-black hover:text-white transition-colors mr-2 outline-none">Approve & Issue Login</button>
-                                        <button onclick="window.deleteReq('${partner.id}')" class="text-gray-400 font-bold uppercase text-[9px] tracking-wider hover:text-red-500 outline-none">Reject</button>`;
-
-                    tr.innerHTML = `
-                        <td class="px-6 py-3"><b>${partner.business || 'Unnamed Business'}</b><br><span class="text-[10px] text-gray-500">${partner.name || '--'}</span></td>
-                        <td class="px-6 py-3 text-gray-500 font-mono">${partner.email}<br>${partner.phone || '--'}</td>
-                        <td class="px-6 py-3">${statusBadge}</td>
-                        <td class="px-6 py-3 text-gray-500 italic text-[10px]">Trade: ${partner.trade || 'N/A'}</td>
-                        <td class="px-6 py-3 text-right">${actionBtns}</td>
-                    `;
-                } else if (partner.type === 'active_pro') {
-                    // ACTIVE PRO ROW
-                    const statusBadge = `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">Active Partner</span>`;
+                    const actionBtns = `<button onclick="window.approveReq('${item.id}', '${item.email}')" class="text-gold font-bold uppercase text-[9px] tracking-wider hover:text-black mr-4">Approve & Issue Login</button><button onclick="window.deleteReq('${item.id}')" class="text-gray-400 font-bold uppercase text-[9px] tracking-wider hover:text-red-500">Reject</button>`;
                     
-                    let amOptions = '<option value="none">Pending AM Assignment</option>';
+                    tr.innerHTML = `
+                        <td class="px-6 py-2.5"><b>${item.business || 'N/A'}</b><br><span class="text-[10px] text-gray-500">${item.name}</span></td>
+                        <td class="px-6 py-2.5 text-gray-500 font-mono">${item.email}<br>${item.phone}</td>
+                        <td class="px-6 py-2.5">${statusBadge}<br><span class="text-[9px] text-gray-400">Trade: ${item.trade || 'N/A'}</span></td>
+                        <td class="px-6 py-2.5 text-right">${actionBtns}</td>
+                    `;
+                } else {
+                    // Render Pro Row
+                    const statusBadge = `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">Active Pro</span>`;
+                    
+                    let amOptions = '<option value="none">Pending Assignment</option>';
                     staffMaster.forEach(staff => {
-                        const isSelected = partner.accountManager?.email === staff.email ? 'selected' : '';
+                        const isSelected = item.accountManager?.email === staff.email ? 'selected' : '';
                         amOptions += `<option value="${staff.id}" ${isSelected}>${staff.name || staff.email}</option>`;
                     });
 
-                    const amDropdown = `
-                        <div class="flex flex-col gap-1 w-full max-w-[200px]">
-                            <select onchange="window.updateProAM('${partner.id}', this.value)" class="px-2 py-1 border border-gray-200 rounded text-[10px] font-bold text-gray-700 outline-none focus:border-gold bg-white w-full shadow-sm cursor-pointer">
-                                ${amOptions}
-                            </select>
-                            <span class="text-[9px] text-gray-400 font-mono">Margin: ${partner.clientMargin}%</span>
-                        </div>
-                    `;
-
                     const actionBtns = `
-                        <div class="flex flex-col items-end gap-1.5">
-                            <a href="https://floors55pro.com/category?pro=${partner.id}" target="_blank" class="text-blue-600 font-bold uppercase text-[9px] tracking-wider hover:text-blue-800 outline-none" style="text-decoration:none;">View Portal ↗</a>
-                            <button onclick="window.triggerResendEmail('${partner.email}')" class="text-gold font-bold uppercase text-[9px] tracking-wider hover:text-black outline-none">Resend Invite</button>
-                            <button onclick="window.deletePro('${partner.id}')" class="text-gray-400 font-bold uppercase text-[9px] tracking-wider hover:text-red-500 outline-none">Revoke Access</button>
-                        </div>
+                        <button onclick="window.triggerResendEmail('${item.email || ''}')" class="text-gold font-bold uppercase text-[9px] tracking-wider hover:text-black mr-4 outline-none">Resend Invite</button>
+                        <a href="https://floors55pro.com/category?pro=${item.id}" target="_blank" class="text-blue-500 font-bold uppercase text-[9px] tracking-wider hover:text-blue-700 mr-4 outline-none" style="text-decoration:none;">View Portal ↗</a>
+                        <button onclick="window.deletePro('${item.id}')" class="text-gray-400 font-bold uppercase text-[9px] tracking-wider hover:text-red-500 outline-none">Revoke Access</button>
                     `;
 
                     tr.innerHTML = `
-                        <td class="px-6 py-3"><b>${partner.business || 'Unnamed Business'}</b><br><span class="text-[10px] text-gray-500">${partner.name || '--'}</span></td>
-                        <td class="px-6 py-3 text-gray-500 font-mono">${partner.email}<br>${partner.phone || '--'}</td>
-                        <td class="px-6 py-3">${statusBadge}</td>
-                        <td class="px-6 py-3">${amDropdown}</td>
-                        <td class="px-6 py-3 text-right">${actionBtns}</td>
-                    `;
-                } else {
-                    // ARCHIVED / REJECTED APP ROW
-                    const statusBadge = `<span class="bg-gray-200 text-gray-600 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">Archived File</span>`;
-                    const actionBtns = `<button onclick="window.deleteReq('${partner.id}')" class="text-gray-400 font-bold uppercase text-[9px] tracking-wider hover:text-red-500 outline-none">Purge History</button>`;
-
-                    tr.innerHTML = `
-                        <td class="px-6 py-3"><b>${partner.business || 'Unnamed Business'}</b><br><span class="text-[10px] text-gray-500">${partner.name || '--'}</span></td>
-                        <td class="px-6 py-3 text-gray-500 font-mono">${partner.email}<br>${partner.phone || '--'}</td>
-                        <td class="px-6 py-3">${statusBadge}</td>
-                        <td class="px-6 py-3 text-gray-400 italic text-[10px]">Previously processed.</td>
-                        <td class="px-6 py-3 text-right">${actionBtns}</td>
+                        <td class="px-6 py-2.5"><b>${item.business || 'Unnamed Business'}</b><br><span class="text-[10px] text-gray-500">${item.name || '--'}</span></td>
+                        <td class="px-6 py-2.5 text-gray-500 font-mono">${item.email}<br>${item.phone || '--'}</td>
+                        <td class="px-6 py-2.5">
+                            ${statusBadge}
+                            <div class="mt-1">
+                                <select onchange="window.updateProAM('${item.id}', this.value)" class="px-2 py-1 border border-gray-200 rounded text-[10px] outline-none focus:border-gold bg-white w-full max-w-[150px]">
+                                    ${amOptions}
+                                </select>
+                            </div>
+                        </td>
+                        <td class="px-6 py-2.5 text-right">${actionBtns}</td>
                     `;
                 }
-                
                 tbody.appendChild(tr);
             });
 
             if (listToRender.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-gray-400 text-sm italic text-center bg-white">No partners or applications found matching your search.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-gray-400 text-sm italic text-center bg-white">No partners found.</td></tr>';
             }
         }
+
+        function loadRequests() {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'wholesale_requests'), (snap) => {
+                requestsMaster = [];
+                let pendingCount = 0; 
+                snap.forEach(d => {
+                    const r = d.data();
+                    if(r.status === 'pending') pendingCount++;
+                    requestsMaster.push({ id: d.id, ...r });
+                });
+
+                const badge = document.getElementById('request-count');
+                if(badge) {
+                    if(pendingCount > 0) { badge.innerText = pendingCount; badge.classList.remove('hidden'); } 
+                    else badge.classList.add('hidden');
+                }
+                
+                if(window.filterPartnersList) window.filterPartnersList();
+            });
+        }
+
+        window.approveReq = (id, email) => { window.showProvisionProModal(); currentReqId = id; document.getElementById('new-pro-email').value = email; };
+        window.deleteReq = async (id) => { if(await window.customConfirm('Discard File', 'Purge this wholesale credentials application from records?')) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'wholesale_requests', id)); };
+
+        // --- NEW: RESEND & DELETE PRO LOGIC ---
+        window.triggerResendEmail = async (email) => {
+            if (!email) return window.customAlert('Error', 'No email found for this user.');
+            if(await window.customConfirm('Resend Welcome Email', 'Generate a new password setup link and email it to ' + email + '?')) {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'resend_invites'), { email, timestamp: new Date().toISOString() });
+                showToast('Resend request queued successfully!');
+            }
+        };
+
+        window.deletePro = async (id) => {
+            if(await window.customConfirm('Revoke Access', 'Are you sure you want to delete this Pro account and revoke their login?')) {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', id));
+                showToast("Pro access permanently revoked.");
+            }
+        };
 
         window.updateProAM = async (userId, staffId) => {
             let amData = { name: "Pending Assignment", phone: "Call Main Office", email: "support@floors55.com" };
@@ -1945,39 +1911,6 @@
                 window.customAlert("Error", "Could not update Account Manager.");
             }
         };
-
-        window.triggerResendEmail = async (email) => {
-            if (!email) return window.customAlert('Error', 'No email address found for this user.');
-            const consent = await window.customConfirm("Resend Invite", `Generate a new password setup link and email it to ${email}?`);
-            if (consent) {
-                try {
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'resend_invites'), {
-                        email: email,
-                        timestamp: new Date().toISOString()
-                    });
-                    showToast("Resend request queued! Email will dispatch shortly.");
-                } catch(err) {
-                    console.error("Error queueing resend:", err);
-                    window.customAlert("Error", "Failed to queue resend request.");
-                }
-            }
-        };
-
-        window.deletePro = async (id) => {
-            const consent = await window.customConfirm("Revoke Access", "Are you sure you want to permanently revoke this Pro's access and delete their profile?");
-            if (consent) {
-                try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', id));
-                    showToast("Pro account permanently deleted.");
-                } catch (err) {
-                    console.error("Error deleting pro:", err);
-                    window.customAlert("Error", "Failed to delete account.");
-                }
-            }
-        };
-
-        window.approveReq = (id, email) => { window.showProvisionProModal(); currentReqId = id; document.getElementById('new-pro-email').value = email; };
-        window.deleteReq = async (id) => { if(await window.customConfirm('Discard File', 'Purge this wholesale credentials application from records?')) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'wholesale_requests', id)); };
 
         // --- NEW: PROVISION PRO ACCOUNT ---
         window.createPro = async (e) => {
