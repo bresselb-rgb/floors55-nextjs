@@ -240,7 +240,7 @@
                                 <th class="w-[22%] px-4 py-2 cursor-pointer hover:text-gray-700 transition-colors select-none" onclick="window.sortPricing('name')">Product Name ↕</th>
                                 <th class="w-[15%] px-4 py-2 cursor-pointer hover:text-gray-700 transition-colors select-none" onclick="window.sortPricing('manufacturer')">Mfg / SKU ↕</th>
                                 <th class="w-[12%] px-4 py-2 cursor-pointer hover:text-gray-700 transition-colors select-none" onclick="window.sortPricing('category')">Category ↕</th>
-                                <th class="w-[23%] px-4 py-2 cursor-pointer hover:text-gray-700 transition-colors select-none" onclick="window.sortPricing('price')">Cost / Pricing / Margin ↕</th>
+                                <th class="w-[23%] px-4 py-2 cursor-pointer hover:text-gray-700 transition-colors select-none" onclick="window.sortPricing('price')">Cost / Pricing / Margin / Ctn ↕</th>
                                 <th class="w-[16%] px-4 py-2 text-center">Visibility & Status</th>
                                 <th class="w-[12%] px-4 py-2 text-right">Actions</th>
                             </tr>
@@ -1297,7 +1297,10 @@
                                     <span class="text-[9px] font-bold text-gray-400 uppercase mr-1">Ret: $</span>
                                     <input type="number" id="edit-ret-${p.id}" value="${retPrice.toFixed(2)}" step="0.01" class="w-14 px-1 py-0.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-gold bg-white outline-none">
                                 </div>
-                                <span class="text-[9px] text-gray-400">/${p.unit}</span>
+                                <div class="flex items-center">
+                                    <span class="text-[9px] font-bold text-gray-400 uppercase mr-1">Ctn:</span>
+                                    <input type="number" id="edit-carton-${p.id}" value="${p.cartonSize || ''}" step="0.01" class="w-12 px-1 py-0.5 border border-gray-200 rounded text-xs focus:ring-1 focus:ring-gold bg-white outline-none" placeholder="sqft">
+                                </div>
                             </div>
                         </td>
                         <td class="px-4 py-1.5 align-middle text-center"></td>
@@ -1345,8 +1348,13 @@
                                 <span class="text-gray-300">|</span>
                                 <span class="text-xs font-bold text-gray-600">$${retPrice.toFixed(2)} <span class="text-[8px] text-gray-400 font-normal uppercase">Ret</span></span>
                             </div>
-                            <div class="text-[9px] font-bold ${marginPct >= 20 ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-rose-500 bg-rose-50 border-rose-100'} inline-block px-1.5 py-0.5 rounded border">
-                                Internal Margin: ${marginPct}%
+                            <div class="flex items-center gap-2">
+                                <div class="text-[9px] font-bold ${marginPct >= 20 ? 'text-emerald-600 bg-emerald-50 border-emerald-100' : 'text-rose-500 bg-rose-50 border-rose-100'} inline-block px-1.5 py-0.5 rounded border">
+                                    Margin: ${marginPct}%
+                                </div>
+                                <div class="text-[9px] font-bold text-gray-500 bg-gray-50 border border-gray-200 inline-block px-1.5 py-0.5 rounded ml-1">
+                                    Ctn: ${p.cartonSize ? p.cartonSize + ' sf' : '--'}
+                                </div>
                             </div>
                         </td>
                         <td class="px-4 py-1.5 align-middle text-center">
@@ -1378,6 +1386,9 @@
             const cost = parseFloat(document.getElementById(`edit-cost-${id}`).value);
             const ws = parseFloat(document.getElementById(`edit-ws-${id}`).value);
             const ret = parseFloat(document.getElementById(`edit-ret-${id}`).value);
+            const cartonRaw = document.getElementById(`edit-carton-${id}`).value;
+            const cartonSize = cartonRaw !== '' ? parseFloat(cartonRaw) : null;
+            
             const name = document.getElementById(`edit-name-${id}`).value;
             const privateName = document.getElementById(`edit-private-name-${id}`).value;
             const manufacturer = document.getElementById(`edit-manufacturer-${id}`).value;
@@ -1390,9 +1401,6 @@
             const isContractor = document.getElementById(`edit-contractor-${id}`).checked;
             const imgPrefix = document.getElementById(`edit-img-prefix-${id}`).value;
 
-            // But since it's not currently an inline edit field, we skip it here.
-            // If you want to be able to edit it, it would need to be added to the tr.innerHTML block.
-
             const btn = e.target;
             const originalText = btn.innerText;
             btn.innerText = "Saving...";
@@ -1403,6 +1411,7 @@
                     landedCost: cost,
                     price: ws, 
                     retailPrice: ret,
+                    cartonSize: cartonSize,
                     name: name,
                     manufacturer: manufacturer,
                     sku: sku,
