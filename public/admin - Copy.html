@@ -67,14 +67,19 @@
             </a>
             <a href="#" onclick="window.showTab('requests')" id="nav-requests" class="nav-item flex items-center gap-3 px-4 py-2.5 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 text-sm font-semibold">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                Pro Access 
+                New Applications 
                 <span id="request-count" class="ml-auto bg-gold text-black text-[10px] font-black px-2 py-0.5 rounded-full hidden">0</span>
+            </a>
+
+            <a href="#" onclick="window.showTab('pros')" id="nav-pros" class="nav-item flex items-center gap-3 px-4 py-2.5 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 text-sm font-semibold">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                Pro Accounts Directory
             </a>
             
             <div class="h-px bg-gray-800 my-4 mx-2"></div>
             
             <a href="#" onclick="window.showTab('staff')" id="nav-staff" class="nav-item flex items-center gap-3 px-4 py-2.5 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 text-sm font-semibold">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                 Staff Directory
             </a>
 
@@ -97,13 +102,9 @@
                 Firestore DB Terminal ⚡
             </a>
             
-            <a href="#" onclick="window.showProvisionProModal()" class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 text-sm font-semibold">
+            <a href="#" onclick="window.showProvisionProModal()" class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 text-sm font-semibold mt-4">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
                 Provision New Pro
-            </a>
-            <a href="#" onclick="window.promptResendInvite()" class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 text-sm font-semibold">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                Resend Pro Invite
             </a>
             <a href="https://floors55pro.com" target="_blank" class="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 text-sm font-semibold">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
@@ -316,6 +317,34 @@
                             </tr>
                         </thead>
                         <tbody id="requests-body" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                 </div>
+             </div>
+        </div>
+
+        <!-- NEW PRO ACCOUNTS DIRECTORY TAB -->
+        <div id="tab-pros" class="hidden flex-1 flex flex-col overflow-hidden bg-gray-50">
+            <header class="bg-white h-16 border-b border-gray-200 flex items-center px-6 shrink-0 shadow-sm">
+                <h2 class="text-lg font-bold text-gray-800">Pro Accounts Directory</h2>
+            </header>
+            
+            <div class="bg-white px-6 py-2.5 border-b border-gray-200 flex flex-wrap gap-3 items-center justify-between shrink-0">
+                <input type="text" id="pros-search" placeholder="Search business name, contact, or email..." oninput="window.renderProsDirectory()" class="px-3 py-1.5 border border-gray-200 text-xs rounded-lg outline-none focus:border-gold w-72 bg-gray-50">
+                <div class="text-[11px] text-gray-400 font-bold" id="pros-results-count"></div>
+            </div>
+
+            <div class="flex-1 overflow-auto p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 text-[10px] uppercase text-gray-400 border-b">
+                            <tr>
+                                <th class="px-6 py-3">Business / Contact Name</th>
+                                <th class="px-6 py-3">Default Margin</th>
+                                <th class="px-6 py-3">Assigned Account Manager</th>
+                                <th class="px-6 py-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pros-body" class="divide-y divide-gray-100"></tbody>
                     </table>
                  </div>
              </div>
@@ -636,7 +665,7 @@
     <script type="module">
         import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithCustomToken, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc, getDoc, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = { 
             apiKey: "AIzaSyCSO1glwpfcl6zMsDsxalO1_zTW89qiTqI", 
@@ -715,11 +744,68 @@
                 const proEl = document.getElementById('dash-pros');
                 if(proEl) proEl.innerText = prosMaster.length;
                 
-                // CRITICAL FIX: Re-render the activity feed so the Pro Names show up
-                // after they have been loaded into memory!
                 updateActivityFeed();
+                if(window.renderProsDirectory) window.renderProsDirectory();
             });
         }
+
+        window.renderProsDirectory = () => {
+            const tbody = document.getElementById('pros-body');
+            if(!tbody) return;
+            const searchVal = (document.getElementById('pros-search')?.value || '').toLowerCase().trim();
+            
+            const filtered = prosMaster.filter(p => {
+                return (p.business || '').toLowerCase().includes(searchVal) || 
+                       (p.name || '').toLowerCase().includes(searchVal) || 
+                       (p.email || '').toLowerCase().includes(searchVal);
+            });
+            
+            tbody.innerHTML = '';
+            filtered.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition-colors border-b border-gray-100 text-xs";
+                
+                let amOptions = '<option value="none">Pending Assignment</option>';
+                staffMaster.forEach(staff => {
+                    const isSelected = p.accountManager?.email === staff.email ? 'selected' : '';
+                    amOptions += `<option value="${staff.id}" ${isSelected}>${staff.name || staff.email}</option>`;
+                });
+
+                tr.innerHTML = `
+                    <td class="px-6 py-3"><b>${p.business || 'Unnamed Business'}</b><br><span class="text-[10px] text-gray-500">${p.name || '--'}</span></td>
+                    <td class="px-6 py-3 font-bold text-gray-600">${p.clientMargin !== undefined ? p.clientMargin + '%' : '20%'}</td>
+                    <td class="px-6 py-3">
+                        <select onchange="window.updateProAM('${p.id}', this.value)" class="px-2 py-1 border border-gray-200 rounded text-xs outline-none focus:border-gold bg-white w-full max-w-[200px]">
+                            ${amOptions}
+                        </select>
+                    </td>
+                    <td class="px-6 py-3 text-right">
+                        <a href="https://floors55pro.com/category?pro=${p.id}" target="_blank" class="text-gold font-bold uppercase text-[9px] tracking-wider hover:text-black border border-gold/30 px-2 py-1 rounded hover:bg-gold/10 transition-colors" style="text-decoration:none;">View Portal ↗</a>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-gray-400 text-sm italic text-center bg-white">No active pro accounts found.</td></tr>';
+            }
+            const countEl = document.getElementById('pros-results-count');
+            if(countEl) countEl.innerText = `Showing ${filtered.length} Pros`;
+        };
+
+        window.updateProAM = async (userId, staffId) => {
+            let amData = { name: "Pending Assignment", phone: "Call Main Office", email: "support@floors55.com" };
+            if (staffId !== 'none') {
+                const staff = staffMaster.find(s => s.id === staffId);
+                if (staff) amData = { name: staff.name || staff.email, phone: staff.phone || '', email: staff.email };
+            }
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userId), { accountManager: amData });
+                showToast("Account Manager updated successfully.");
+            } catch (err) {
+                console.error(err);
+                window.customAlert("Error", "Could not update Account Manager.");
+            }
+        };
 
         function updateActivityFeed() {
             const feed = document.getElementById('dash-activity-feed');
@@ -959,23 +1045,6 @@
             });
         };
 
-        window.promptResendInvite = async () => {
-            const email = await window.customPrompt("Resend Invite", "Enter the Pro's email address:", "pro@example.com");
-            if(email) window.triggerResendEmail(email);
-        };
-
-        window.triggerResendEmail = async (email) => {
-            try {
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'resend_invites'), {
-                    email: email,
-                    timestamp: new Date().toISOString()
-                });
-                showToast(`Invite resent to ${email}`);
-            } catch (err) {
-                window.customAlert("Error", "Could not trigger resend: " + err.message);
-            }
-        };
-
         window.shareProduct = (id) => {
             const basePath = window.location.pathname.replace(/[^/]*$/, '');
             const url = window.location.origin + basePath + 'product/' + id;
@@ -1114,6 +1183,7 @@
                 opt.innerText = `${am.name || am.email} (${am.phone || 'No phone'})`;
                 select.appendChild(opt);
             });
+            if(window.renderProsDirectory) window.renderProsDirectory();
         }
 
         function loadStaff() {
@@ -1874,7 +1944,7 @@
                 const cred = await createUserWithEmailAndPassword(tAuth, email, randomSecurePassword);
                 
                 let profileData = {
-                    name: '', business: '', phone: '', address: '', clientMargin: 20, accountManager: selectedAm
+                    name: '', business: '', phone: '', email: email, address: '', clientMargin: 20, accountManager: selectedAm
                 };
 
                 if(currentReqId) {
@@ -1946,14 +2016,22 @@
         window.logoutStaff = async () => { try { await signOut(auth); window.location.reload(); } catch (err) { console.error(err); } };
         
         window.showTab = (t) => { 
-            ['dashboard', 'pricing', 'quotes', 'samples', 'messages', 'requests', 'staff', 'settings'].forEach(tab => {
-                document.getElementById(`tab-${tab}`).classList.add('hidden');
-                document.getElementById(`nav-${tab}`).classList.remove('bg-gray-800', 'text-white');
-                document.getElementById(`nav-${tab}`).classList.add('text-gray-400');
+            ['dashboard', 'pricing', 'quotes', 'samples', 'messages', 'requests', 'pros', 'staff', 'settings'].forEach(tab => {
+                const tabEl = document.getElementById(`tab-${tab}`);
+                const navEl = document.getElementById(`nav-${tab}`);
+                if (tabEl) tabEl.classList.add('hidden');
+                if (navEl) {
+                    navEl.classList.remove('bg-gray-800', 'text-white');
+                    navEl.classList.add('text-gray-400');
+                }
             });
-            document.getElementById(`tab-${t}`).classList.remove('hidden'); 
-            document.getElementById(`nav-${t}`).classList.remove('text-gray-400');
-            document.getElementById(`nav-${t}`).classList.add('bg-gray-800', 'text-white');
+            const activeTab = document.getElementById(`tab-${t}`);
+            const activeNav = document.getElementById(`nav-${t}`);
+            if (activeTab) activeTab.classList.remove('hidden'); 
+            if (activeNav) {
+                activeNav.classList.remove('text-gray-400');
+                activeNav.classList.add('bg-gray-800', 'text-white');
+            }
 
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');

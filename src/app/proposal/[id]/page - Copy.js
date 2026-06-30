@@ -138,7 +138,9 @@ export default function ProposalPage({ params }) {
     // Magic Link Generation for Product Image
     let cmToken = '';
     try { cmToken = btoa((quote.totals.margin).toString()); } catch(e) {}
-    const productLink = `/product/${quote.productId}?pro=${quote.proId}&cm=${cmToken}#${quote.productId}?color=${displaySku}`;
+    
+    // UPDATED: Use proper query parameters instead of hash
+    const productLink = `/product/${quote.productId}?color=${displaySku}&pro=${quote.proId}&cm=${cmToken}`;
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans flex flex-col print:bg-white">
@@ -312,7 +314,7 @@ export default function ProposalPage({ params }) {
                         <li><strong>Payment Terms:</strong> A standard project deposit is required to order materials and reserve your installation date. The remaining balance is due upon project completion.</li>
                     </ul>
 
-                    {/* NEW SIGNATURE BLOCK */}
+                    {/* SIGNATURE BLOCK */}
                     <div className="pt-8 print:pt-4 border-t-2 border-dashed border-gray-200 print:border-gray-300 mt-8 print:mt-4">
                         <h3 className="text-sm print:text-[10px] font-black uppercase tracking-widest text-gray-900 mb-6 print:mb-4">Proposal Acceptance</h3>
                         <p className="text-xs print:text-[8px] text-gray-600 mb-8 print:mb-6">The prices, specifications, and conditions are satisfactory and are hereby accepted. You are authorized to do the work as specified.</p>

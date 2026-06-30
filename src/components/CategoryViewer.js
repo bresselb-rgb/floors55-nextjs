@@ -593,6 +593,9 @@ function CategoryViewerContent({ initialCategory }) {
         const descLower = (p.desc || '').toLowerCase();
         const specTextCombined = (p.specs || []).join(' ').toLowerCase();
         const catLower = (p.category || '').toLowerCase();
+        
+        // NEW: Map through the colors array and combine names/skus into a searchable string
+        const colorsTextCombined = (p.colors || []).map(c => `${c.name || ''} ${c.sku || ''}`).join(' ').toLowerCase();
 
         // Inject hidden keywords so people searching "pad" find cushions
         const hiddenKeywords = catLower === 'carpet cushion' ? 'pad pads underlayment' : '';
@@ -604,6 +607,7 @@ function CategoryViewerContent({ initialCategory }) {
                               descLower.includes(searchVal) || 
                               specTextCombined.includes(searchVal) ||
                               catLower.includes(searchVal) ||
+                              colorsTextCombined.includes(searchVal) ||
                               hiddenKeywords.includes(searchVal);
 
         const matchesCategory = (activeCategory === "All Products" && (searchVal !== '' || p.category !== 'Carpet Cushion')) || 

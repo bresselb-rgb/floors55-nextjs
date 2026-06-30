@@ -10,10 +10,6 @@ export default function ClientBoardsManager({ proId }) {
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   
-  // House Account Logic
-  const [isStaff, setIsStaff] = useState(false);
-  const [boardBrand, setBoardBrand] = useState('custom');
-
   const [showToast, setShowToast] = useState(false);
 
   // Load the Pro's existing boards
@@ -21,10 +17,6 @@ export default function ClientBoardsManager({ proId }) {
     if (!proId || !db) return;
     const fetchBoards = async () => {
       try {
-          // Check if user is staff to unlock Abbey branding
-          const staffSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', proId));
-          if (staffSnap.exists()) setIsStaff(true);
-
           const q = query(collection(db, "artifacts", appId, "public", "data", "client_boards"), where("proId", "==", proId));
           const querySnapshot = await getDocs(q);
           const boardsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -56,21 +48,9 @@ export default function ClientBoardsManager({ proId }) {
     try {
         const proRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', proId);
         const proSnap = await getDoc(proRef);
-        if (proSnap.exists() && proSnap.data().clientMargin !== undefined) {
-            lockedMargin = Number(proSnap.data().clientMargin);
-        }
-
-        // Apply selected brand override
-        if (boardBrand === 'abbey') {
-            lockedBusiness = "Abbey Carpet & Floor";
-            lockedBgColor = "#003366"; // Navy Blue
-            lockedTextColor = "#ffffff";
-        } else if (boardBrand === 'f55') {
-            lockedBusiness = "Floors 55";
-            lockedBgColor = "#000000";
-            lockedTextColor = "#ffffff";
-        } else if (proSnap.exists()) {
+        if (proSnap.exists()) {
             const data = proSnap.data();
+            if (data.clientMargin !== undefined) lockedMargin = Number(data.clientMargin);
             if (data.business) lockedBusiness = data.business;
             if (data.logoUrl) lockedLogo = data.logoUrl;
             if (data.brandBgColor) lockedBgColor = data.brandBgColor;
@@ -183,15 +163,6 @@ export default function ClientBoardsManager({ proId }) {
           className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-gold text-sm transition-colors"
           required
         />
-        <select 
-            value={boardBrand} 
-            onChange={(e) => setBoardBrand(e.target.value)} 
-            className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-gold text-sm bg-white text-gray-700 font-bold"
-        >
-            <option value="custom">My Brand</option>
-            <option value="f55">Floors 55</option>
-            {isStaff && <option value="abbey">Abbey Carpet & Floor</option>}
-        </select>
         <button 
           type="submit" 
           disabled={isCreating}
@@ -222,11 +193,6 @@ export default function ClientBoardsManager({ proId }) {
                       {board.margin !== undefined && (
                           <span className="text-[10px] font-black bg-gold/10 text-gold px-2 py-0.5 rounded uppercase tracking-widest border border-gold/20">
                               Locked @ {markupVal}% Markup / {marginVal}% Margin
-                          </span>
-                      )}
-                      {board.businessName === "Abbey Carpet & Floor" && (
-                          <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2 py-0.5 rounded uppercase tracking-widest border border-blue-200">
-                              Abbey Brand
                           </span>
                       )}
                   </div>

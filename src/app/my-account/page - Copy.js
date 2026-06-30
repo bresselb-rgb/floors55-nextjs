@@ -48,9 +48,14 @@ export default function MyAccountPage() {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     setProfile({ ...profile, ...data });
-                    // If they have any custom colors or logo saved, flip the toggle ON automatically
-                    if (data.logoUrl || (data.brandBgColor && data.brandBgColor !== '#ffffff') || (data.brandTextColor && data.brandTextColor !== '#000000')) {
+                    
+                    // Read their saved toggle preference, fallback to checking if they have custom data
+                    if (data.isWhiteLabelEnabled !== undefined) {
+                        setIsWhiteLabelActive(data.isWhiteLabelEnabled);
+                    } else if (data.logoUrl || (data.brandBgColor && data.brandBgColor !== '#ffffff') || (data.brandTextColor && data.brandTextColor !== '#000000')) {
                         setIsWhiteLabelActive(true);
+                    } else {
+                        setIsWhiteLabelActive(false);
                     }
                 } else {
                     await setDoc(docRef, { business: 'Flooring Pro', clientMargin: 20 });
@@ -121,33 +126,22 @@ export default function MyAccountPage() {
         setIsUploading(false);
     };
 
-    const handlePurgeAndReset = async () => {
-        try {
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
-                logoUrl: "",
-                brandBgColor: "#ffffff",
-                brandTextColor: "#000000"
-            });
-            setProfile(prev => ({...prev, logoUrl: "", brandBgColor: "#ffffff", brandTextColor: "#000000"}));
-            sessionStorage.removeItem('client_logo');
-            sessionStorage.removeItem('client_bg');
-            sessionStorage.removeItem('client_text');
-            setLinkBranding('f55'); // Auto-switch link generator back to F55
-            triggerToast("Branding successfully removed.");
-        } catch(err) {
-            triggerToast("Failed to reset branding");
-        }
-    };
-
     const handleToggleWhiteLabel = async (checked) => {
+        setIsWhiteLabelActive(checked);
         if (!checked) {
-            const confirm = window.confirm("Are you sure? This will permanently delete your custom logo and reset all your presentation links back to the Floors 55 brand.");
-            if (confirm) {
-                await handlePurgeAndReset();
-                setIsWhiteLabelActive(false);
+            setLinkBranding('f55'); // Auto-switch link generator back to F55
+        }
+        
+        // Instantly save their preference to the database so it remembers
+        if (user) {
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), {
+                    isWhiteLabelEnabled: checked
+                });
+                triggerToast(checked ? "White-Label Enabled" : "White-Label Disabled");
+            } catch (err) {
+                console.error("Failed to save toggle state", err);
             }
-        } else {
-            setIsWhiteLabelActive(true);
         }
     };
 
@@ -246,9 +240,22 @@ export default function MyAccountPage() {
                     </button>
                 </div>
 
+                {}
                 {/* TAB 1: OVERVIEW & PRICING */}
                 <div className={activeTab === 'overview' ? 'block space-y-6 animate-in fade-in duration-300' : 'hidden'}>
                     
+                    {/* INLINE QUICK GUIDE: OVERVIEW */}
+                    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 shadow-inner">
+                        <h4 className="text-blue-900 font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span className="text-base">📘</span> Quick Guide: Sharing the Catalog
+                        </h4>
+                        <ul className="text-blue-800 text-xs space-y-1.5 list-disc pl-5 leading-relaxed font-medium m-0">
+                            <li><strong>Global Markup:</strong> Adjust the slider to set your universal profit margin. This securely hides wholesale pricing and ensures your profit is baked into the retail numbers clients see.</li>
+                            <li><strong>Master Link:</strong> Share this custom link with clients so they can browse the entire catalog with your retail pricing applied.</li>
+                            <li><strong>Client Mode:</strong> Click "Preview" to browse the catalog safely on your own device if a customer is sitting right next to you.</li>
+                        </ul>
+                    </div>
+
                     {/* Account Manager Banner */}
                     <div className="bg-gray-900 text-white p-6 md:p-8 rounded-2xl shadow-xl border border-gray-800 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
                         <div className="absolute top-0 right-0 p-8 opacity-5 text-8xl pointer-events-none">🤝</div>
@@ -364,19 +371,59 @@ export default function MyAccountPage() {
 
                 </div>
 
+                {}
                 {/* TAB 2: PROPOSALS */}
                 <div className={activeTab === 'proposals' ? 'block animate-in fade-in duration-300' : 'hidden'}>
+                    
+                    {/* INLINE QUICK GUIDE: PROPOSALS */}
+                    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 mb-6 shadow-inner">
+                        <h4 className="text-blue-900 font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span className="text-base">📘</span> Quick Guide: Turnkey Proposals
+                        </h4>
+                        <ul className="text-blue-800 text-xs space-y-1.5 list-disc pl-5 leading-relaxed font-medium m-0">
+                            <li><strong>How to Create:</strong> Browse the catalog, open any product, and click the "Build Custom Proposal" button in the bottom right corner.</li>
+                            <li><strong>Build the Bid:</strong> Enter your net square footage, waste factor, and select required trims/carpet pad. Add your labor costs for a complete package.</li>
+                            <li><strong>Present to Client:</strong> Adjust your final profit margin and save. You can instantly share a digital link with your client or download a professional PDF.</li>
+                        </ul>
+                    </div>
+
                     <ProposalsManager proId={user.uid} />
                 </div>
 
+                {}
                 {/* TAB 3: CLIENT BOARDS */}
                 <div className={activeTab === 'boards' ? 'block animate-in fade-in duration-300' : 'hidden'}>
+                    
+                    {/* INLINE QUICK GUIDE: BOARDS */}
+                    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 mb-6 shadow-inner">
+                        <h4 className="text-blue-900 font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span className="text-base">📘</span> Quick Guide: Client Boards
+                        </h4>
+                        <ul className="text-blue-800 text-xs space-y-1.5 list-disc pl-5 leading-relaxed font-medium m-0">
+                            <li><strong>What it is:</strong> A digital "showroom" curated specifically for one client (e.g., "The Smith Kitchen"). It helps narrow down options without overwhelming them.</li>
+                            <li><strong>Step 1:</strong> Create a new board below. The system locks in your current margin & branding for this specific board.</li>
+                            <li><strong>Step 2:</strong> Browse the catalog and use the "Quick Save" dropdown on any product page to add it to their board.</li>
+                        </ul>
+                    </div>
+
                     <ClientBoardsManager proId={user.uid} />
                 </div>
 
+                {}
                 {/* TAB 4: BRANDING & SETTINGS */}
                 <div className={activeTab === 'branding' ? 'block space-y-6 animate-in fade-in duration-300' : 'hidden'}>
                     
+                    {/* INLINE QUICK GUIDE: BRANDING */}
+                    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 shadow-inner">
+                        <h4 className="text-blue-900 font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span className="text-base">📘</span> Quick Guide: White-Label Setup
+                        </h4>
+                        <ul className="text-blue-800 text-xs space-y-1.5 list-disc pl-5 leading-relaxed font-medium m-0">
+                            <li><strong>Make it Yours:</strong> Upload your company logo and brand colors to replace the Floors 55 brand on all shared links and proposals.</li>
+                            <li><strong>Temporary Disable:</strong> You can toggle the master switch off at any time to temporarily use the established Floors 55 brand for trust, without losing your saved logo or hex colors!</li>
+                        </ul>
+                    </div>
+
                     <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
                         <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6 gap-4 border-b border-gray-100 pb-6">
                             <div>
@@ -452,6 +499,7 @@ export default function MyAccountPage() {
 
             </div>
 
+            {}
             {/* Logo Info Modal */}
             {isLogoInfoOpen && (
                 <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">

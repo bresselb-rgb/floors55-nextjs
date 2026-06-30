@@ -1268,7 +1268,11 @@
                 const privSkuLower = (p.privateSku || '').toLowerCase();
                 const idLower = (p.id || '').toLowerCase();
                 
-                const matchesSearch = nameLower.includes(searchVal) || privateLower.includes(searchVal) || idLower.includes(searchVal) || mfgLower.includes(searchVal) || skuLower.includes(searchVal) || privMfgLower.includes(searchVal) || privSkuLower.includes(searchVal);
+                // NEW: Combine all color names and SKUs into a searchable string
+                const colorsLower = (p.colors || []).map(c => `${c.name || ''} ${c.sku || ''}`).join(' ').toLowerCase();
+                
+                const matchesSearch = nameLower.includes(searchVal) || privateLower.includes(searchVal) || idLower.includes(searchVal) || mfgLower.includes(searchVal) || skuLower.includes(searchVal) || privMfgLower.includes(searchVal) || privSkuLower.includes(searchVal) || colorsLower.includes(searchVal);
+                
                 const matchesCategory = catVal === 'all' || p.category === catVal;
                 const matchesVisibility = visVal === 'all' || 
                                            (visVal === 'visible' && p.isVisible !== false) || 

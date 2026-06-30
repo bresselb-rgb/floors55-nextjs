@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
-import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc, setDoc } from "firebase/firestore";
 import { auth, db, appId } from "../lib/firebase";
 
 function ProductViewerContent({ initialProduct }) {
@@ -270,79 +270,79 @@ function ProductViewerContent({ initialProduct }) {
     };
 
     const handleZoomPan = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    let clientX = e.clientX;
-    let clientY = e.clientY;
-    
-    if (e.touches && e.touches.length > 0) {
-        clientX = e.touches[0].clientX;
-        clientY = e.touches[0].clientY;
-    }
+        const rect = e.currentTarget.getBoundingClientRect();
+        let clientX = e.clientX;
+        let clientY = e.clientY;
+        
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        }
 
-    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
-    setZoomPos({ x, y });
-  };
+        const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+        const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+        setZoomPos({ x, y });
+    };
 
-  const shareProduct = () => {
-      let url = `${window.location.origin}/product/${productData.id}?color=${activeColor?.sku || ''}`;
-      
-      if (clientMargin !== null) {
-          const encodedMargin = btoa(clientMargin.toString());
-          url += `&cm=${encodedMargin}`;
-          
-          if (user && !user.isAnonymous) {
-              url += `&pro=${user.uid}`;
-          } else {
-              const storedBrand = sessionStorage.getItem('client_brand');
-              if (storedBrand) url += `&cb=${btoa(storedBrand)}`;
-          }
-      }
+    const shareProduct = async () => {
+        let targetPath = `/product/${productData.id}?color=${activeColor?.sku || ''}`;
+        
+        if (clientMargin !== null) {
+            const encodedMargin = btoa(clientMargin.toString());
+            targetPath += `&cm=${encodedMargin}`;
+            
+            if (user && !user.isAnonymous) {
+                targetPath += `&pro=${user.uid}`;
+            } else {
+                const storedBrand = sessionStorage.getItem('client_brand');
+                if (storedBrand) targetPath += `&cb=${btoa(storedBrand)}`;
+            }
+        }
 
-      const title = productData.displayTitle;
-      const plainText = `${title}\n${url}`;
-      const htmlText = `<a href="${url}">${title}</a>`;
-      
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        // Generate Native Short Link
+        const shortCode = Math.random().toString(36).substring(2, 8);
+        let finalUrl = `${window.location.origin}/s/${shortCode}`;
+        
+        try {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'short_links', shortCode), {
+                target: targetPath,
+                createdAt: new Date().toISOString()
+            });
+        } catch(err) {
+            console.warn("Short link generation failed, using long URL.", err);
+            finalUrl = `${window.location.origin}${targetPath}`;
+        }
 
-      if (navigator.share && isMobile) {
-          navigator.share({ title: title, text: title, url: url }).catch(console.error);
-      } else {
-          const copyRichLink = async () => {
-              if (navigator.clipboard && window.ClipboardItem) {
-                  try {
-                      const textPlainBlob = new Blob([plainText], { type: "text/plain" });
-                      const textHtmlBlob = new Blob([htmlText], { type: "text/html" });
-                      const clipboardItem = new ClipboardItem({
-                          "text/plain": textPlainBlob,
-                          "text/html": textHtmlBlob
-                      });
-                      await navigator.clipboard.write([clipboardItem]);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
-                      return;
-                  } catch (e) {
-                      console.warn("Rich text copy failed, falling back to standard copy", e);
-                  }
-              }
-              try {
-                  await navigator.clipboard.writeText(plainText);
-              } catch (e) {
-                  const textArea = document.createElement("textarea");
-                  textArea.value = plainText;
-                  document.body.appendChild(textArea);
-                  textArea.select();
-                  document.execCommand('copy');
-                  document.body.removeChild(textArea);
-              }
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-          };
-          copyRichLink();
-      }
-  };
+        const title = productData.displayTitle;
+        const plainText = `${title}\n${finalUrl}`;
+        
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const isDesktop = !isMobile;
 
-  const isClientMode = clientMargin !== null;
+        if (navigator.share && isMobile) {
+            navigator.share({ title: title, text: title, url: finalUrl }).catch(console.error);
+        } else {
+            const copyRichLink = async () => {
+                if (navigator.clipboard && window.ClipboardItem && isDesktop) {
+                    try {
+                        await navigator.clipboard.writeText(plainText);
+                    } catch (e) {
+                        const textArea = document.createElement("textarea");
+                        textArea.value = plainText;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                    }
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                }
+            };
+            copyRichLink();
+        }
+    };
+
+    const isClientMode = clientMargin !== null;
     const basePrice = productData?.price || 0;
     const isCarpet = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
     const isCarpetCushionOnly = productData?.category === 'Carpet Cushion';

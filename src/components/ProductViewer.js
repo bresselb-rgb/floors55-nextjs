@@ -14,6 +14,7 @@ function ProductViewerContent({ initialProduct }) {
     const urlColorSku = searchParams.get('color');
 
     const [user, setUser] = useState(null);
+    const [isStaff, setIsStaff] = useState(false);
     const [productData, setProductData] = useState(initialProduct);
 
     const [activeColor, setActiveColor] = useState(() => {
@@ -58,7 +59,7 @@ function ProductViewerContent({ initialProduct }) {
     
     const [clientMargin, setClientMargin] = useState(null);
     const [builderMargin, setBuilderMargin] = useState(20);
-    const [useCustomBranding, setUseCustomBranding] = useState(true);
+    const [proposalBrand, setProposalBrand] = useState('custom'); // 'custom', 'f55', 'abbey'
     const [copied, setCopied] = useState(false);
     const [isMagicLink, setIsMagicLink] = useState(false);
 
@@ -146,8 +147,16 @@ function ProductViewerContent({ initialProduct }) {
 
     useEffect(() => {
         let isMounted = true;
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            if (isMounted) setUser(currentUser);
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (isMounted) {
+                setUser(currentUser);
+                if (currentUser && !currentUser.isAnonymous) {
+                    // Check if Staff
+                    const staffRef = doc(db, 'artifacts', appId, 'public', 'data', 'staff', currentUser.uid);
+                    const staffSnap = await getDoc(staffRef);
+                    if (staffSnap.exists() && isMounted) setIsStaff(true);
+                }
+            }
         });
 
         if (!auth.currentUser) {
@@ -467,7 +476,8 @@ function ProductViewerContent({ initialProduct }) {
                 proId: user.uid,
                 clientName: quoteClientName,
                 projectName: quoteProjectName || 'Flooring Project',
-                useCustomBranding: useCustomBranding,
+                brandOverride: proposalBrand, // 'custom', 'f55', or 'abbey'
+                useCustomBranding: proposalBrand === 'custom', // Legacy fallback support
                 productId: productData.id,
                 productName: productData.displayTitle,
                 colorSku: activeColor?.sku || '',
@@ -892,8 +902,8 @@ function ProductViewerContent({ initialProduct }) {
                                   <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Your Base Cost</div>
                                   <div className="text-lg font-mono text-gray-200">${totalWholesaleProjectCost.toFixed(2)}</div>
                               </div>
-                              <div className="text-right">
-                                  <div className="text-[10px] text-gold font-bold uppercase tracking-widest flex items-center gap-2 justify-end">
+                              <div className="text-right flex flex-col items-end">
+                                  <div className="text-[10px] text-gold font-bold uppercase tracking-widest mb-1 flex items-center gap-2">
                                       Margin: {builderMargin}%
                                   </div>
                                   <div className="text-2xl font-black text-white font-mono">${turnkeyRetailPrice.toFixed(2)}</div>
@@ -903,10 +913,25 @@ function ProductViewerContent({ initialProduct }) {
                           
                           <input type="range" min="0" max="100" step="1" value={builderMargin} onChange={e => setBuilderMargin(Number(e.target.value))} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold mb-6" />
 
-                          <label className="flex items-center gap-2 mb-4 text-xs font-bold text-gray-400 cursor-pointer">
-                              <input type="checkbox" checked={useCustomBranding} onChange={e => setUseCustomBranding(e.target.checked)} className="accent-gold w-4 h-4" />
-                              Apply my White-Label Branding
-                          </label>
+                          <div className="mb-4">
+                              <label className="block text-[10px] font-bold uppercase text-gray-400 mb-2">Presentation Branding</label>
+                              <div className="flex gap-4">
+                                  <label className="flex items-center gap-2 text-xs font-bold text-gray-400 cursor-pointer">
+                                      <input type="radio" name="propBrand" checked={proposalBrand === 'custom'} onChange={() => setProposalBrand('custom')} className="accent-gold w-4 h-4" />
+                                      My Brand
+                                  </label>
+                                  <label className="flex items-center gap-2 text-xs font-bold text-gray-400 cursor-pointer">
+                                      <input type="radio" name="propBrand" checked={proposalBrand === 'f55'} onChange={() => setProposalBrand('f55')} className="accent-gold w-4 h-4" />
+                                      Floors 55
+                                  </label>
+                                  {isStaff && (
+                                      <label className="flex items-center gap-2 text-xs font-bold text-blue-400 cursor-pointer">
+                                          <input type="radio" name="propBrand" checked={proposalBrand === 'abbey'} onChange={() => setProposalBrand('abbey')} className="accent-blue-500 w-4 h-4" />
+                                          Abbey Carpet
+                                      </label>
+                                  )}
+                              </div>
+                          </div>
 
                           <div className="space-y-3">
                               <button onClick={handleSaveStandaloneQuote} disabled={isSavingToBoard || netSqftNum === 0 || !quoteClientName.trim()} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50 cursor-pointer outline-none">
