@@ -76,8 +76,8 @@ export default function ProposalPage({ params }) {
             const bName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55" : (proProfile.business || "Your Flooring Professional"));
             const mgn = quote?.totals?.margin || proProfile.clientMargin || 20;
             const lUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? "" : (proProfile.logoUrl || ""));
-            const bBg = isAbbey ? "#003057" : (isF55 ? "#000000" : (proProfile.brandBgColor || "#ffffff"));
-            const bText = isAbbey ? "#C5A059" : (isF55 ? "#ffffff" : (proProfile.brandTextColor || "#000000"));
+            const bBg = isAbbey ? "#003366" : (isF55 ? "#000000" : (proProfile.brandBgColor || "#ffffff"));
+            const bText = isAbbey ? "#ffffff" : (isF55 ? "#ffffff" : (proProfile.brandTextColor || "#000000"));
 
             sessionStorage.setItem('client_brand', bName);
             if (lUrl) sessionStorage.setItem('client_logo', lUrl);
@@ -115,8 +115,8 @@ export default function ProposalPage({ params }) {
 
     const businessName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55" : (proProfile?.business || "Your Flooring Professional"));
     const logoUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? "" : (proProfile?.logoUrl || ""));
-    const brandBgColor = isAbbey ? "#003057" : (isF55 ? "#000000" : (proProfile?.brandBgColor || "#ffffff"));
-    const brandTextColor = isAbbey ? "#C5A059" : (isF55 ? "#ffffff" : (proProfile?.brandTextColor || "#000000"));
+    const brandBgColor = isAbbey ? "#003366" : (isF55 ? "#000000" : (proProfile?.brandBgColor || "#ffffff"));
+    const brandTextColor = isAbbey ? "#ffffff" : (isF55 ? "#ffffff" : (proProfile?.brandTextColor || "#000000"));
     
     // Product Image Logic
     const safePrefix = quote.imgPrefix || productDetails?.imgPrefix || '';

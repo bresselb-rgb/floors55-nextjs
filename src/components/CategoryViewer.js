@@ -290,11 +290,11 @@ function CategoryViewerContent({ initialCategory }) {
                       sessionStorage.setItem('client_brand', decodedBrand);
                       
                       // INJECT ABBEY BRANDING IF TRIGGERED
-                      if (decodedBrand === 'Abbey Carpet & Floor') {
-                          sessionStorage.setItem('client_logo', ABBEY_LOGO_URL);
-                          sessionStorage.setItem('client_bg', '#003366'); // Abbey Navy
-                          sessionStorage.setItem('client_text', '#ffffff');
-                      }
+                    if (decodedBrand === 'Abbey Carpet & Floor') {
+                        sessionStorage.setItem('client_logo', '/images/abbey-logo.png'); // Points to your local public file
+                        sessionStorage.setItem('client_bg', '#003057'); // Corporate Abbey Blue
+                        sessionStorage.setItem('client_text', '#C5A059'); // Corporate Abbey Gold 
+                    }
                       shouldReplace = true;
                   } catch(e) {}
               }
