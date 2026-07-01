@@ -68,17 +68,18 @@ export default function ProposalPage({ params }) {
 
     useEffect(() => {
         if (proProfile && quote) {
-            // Reverted back to the original working logic!
-            const isAbbey = quote.brandOverride === 'abbey';
-            const isF55 = quote.brandOverride === 'f55' || (quote.brandOverride !== 'abbey' && quote.useCustomBranding === false);
+            const isAbbey = quote?.brand === 'Abbey Carpet & Floor' || quote?.brandOverride === 'abbey';
+            const isF55 = quote?.brand === 'Floors 55' || quote?.brandOverride === 'f55' || quote?.useCustomBranding === false;
 
             const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
 
             const bName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55" : (proProfile.business || "Your Flooring Professional"));
             const mgn = quote?.totals?.margin || proProfile.clientMargin || 20;
+            
+            // Revert colors to standard Floors 55 White/Black scheme
             const lUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? "" : (proProfile.logoUrl || ""));
-            const bBg = isAbbey ? "#003057" : (isF55 ? "#000000" : (proProfile.brandBgColor || "#ffffff"));
-            const bText = isAbbey ? "#C5A059" : (isF55 ? "#ffffff" : (proProfile.brandTextColor || "#000000"));
+            const bBg = isAbbey ? "#ffffff" : (isF55 ? "#ffffff" : (proProfile.brandBgColor || "#ffffff"));
+            const bText = isAbbey ? "#000000" : (isF55 ? "#000000" : (proProfile.brandTextColor || "#000000"));
 
             sessionStorage.setItem('client_brand', bName);
             if (lUrl) sessionStorage.setItem('client_logo', lUrl);
@@ -109,17 +110,19 @@ export default function ProposalPage({ params }) {
         );
     }
 
-    // Reverted back to the original working logic!
-    const isAbbey = quote.brandOverride === 'abbey';
-    const isF55 = quote.brandOverride === 'f55' || (quote.brandOverride !== 'abbey' && quote.useCustomBranding === false);
+    const isAbbey = quote?.brand === 'Abbey Carpet & Floor' || quote?.brandOverride === 'abbey';
+    const isF55 = quote?.brand === 'Floors 55' || quote?.brandOverride === 'f55' || quote?.useCustomBranding === false;
 
     const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
 
     const businessName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55" : (proProfile?.business || "Your Flooring Professional"));
     const logoUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? "" : (proProfile?.logoUrl || ""));
-    const brandBgColor = isAbbey ? "#003057" : (isF55 ? "#000000" : (proProfile?.brandBgColor || "#ffffff"));
-    const brandTextColor = isAbbey ? "#C5A059" : (isF55 ? "#ffffff" : (proProfile?.brandTextColor || "#000000"));
+    const brandBgColor = isAbbey ? "#ffffff" : (isF55 ? "#ffffff" : (proProfile?.brandBgColor || "#ffffff"));
+    const brandTextColor = isAbbey ? "#000000" : (isF55 ? "#000000" : (proProfile?.brandTextColor || "#000000"));
     
+    // Add a gold accent if the background is white, otherwise use the brand background
+    const accentColor = brandBgColor.toLowerCase() === '#ffffff' ? '#c5a059' : brandBgColor;
+
     // Product Image Logic
     const safePrefix = quote.imgPrefix || productDetails?.imgPrefix || '';
     const displaySku = quote.colorSku || '01';
@@ -187,7 +190,7 @@ export default function ProposalPage({ params }) {
 
                 {/* PROPOSAL TITLE BLOCK - Squashed for print */}
                 <div className="bg-white p-8 md:p-10 print:p-4 rounded-3xl print:rounded-xl shadow-sm border border-gray-100 mb-8 print:mb-3 relative overflow-hidden print:border-gray-300 print:shadow-none">
-                    <div className="absolute top-0 left-0 w-2 h-full print:w-1" style={{ backgroundColor: brandBgColor }}></div>
+                    <div className="absolute top-0 left-0 w-2 h-full print:w-1" style={{ backgroundColor: accentColor }}></div>
                     <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6 print:gap-2">
                         <div>
                             <h2 className="text-[10px] print:text-[8px] font-black uppercase tracking-widest text-gray-400 mb-2 print:mb-0.5">Prepared For:</h2>
@@ -226,7 +229,7 @@ export default function ProposalPage({ params }) {
                     <ul className="space-y-4 print:space-y-1.5 text-base print:text-[10px] text-gray-700">
                         {/* Material */}
                         <li className="flex gap-4 print:gap-2 items-start">
-                            <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px]" style={{ backgroundColor: isAbbey ? '#eff6ff' : '#d1fae5', color: isAbbey ? '#1e3a8a' : '#059669', borderColor: isAbbey ? '#1e3a8a' : '#059669' }}>✓</span> 
+                            <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
                             <div>
                                 <span className="font-bold text-gray-900 block print:leading-tight">Premium Flooring Material</span>
                                 <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">{Math.ceil(quote.measurements.netSqft)} net sqft of {quote.productName} in {quote.colorName}.</span>
@@ -236,7 +239,7 @@ export default function ProposalPage({ params }) {
                         {/* Pad */}
                         {quote.addons?.pad && (
                             <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px]" style={{ backgroundColor: isAbbey ? '#eff6ff' : '#d1fae5', color: isAbbey ? '#1e3a8a' : '#059669', borderColor: isAbbey ? '#1e3a8a' : '#059669' }}>✓</span> 
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block print:leading-tight">Carpet Cushion</span>
                                     <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">{quote.addons.pad.name}.</span>
@@ -247,7 +250,7 @@ export default function ProposalPage({ params }) {
                         {/* Custom Addons / Trims */}
                         {quote.addons?.customList?.items?.map((item, idx) => (
                             <li key={idx} className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px]" style={{ backgroundColor: isAbbey ? '#eff6ff' : '#d1fae5', color: isAbbey ? '#1e3a8a' : '#059669', borderColor: isAbbey ? '#1e3a8a' : '#059669' }}>✓</span> 
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block print:leading-tight">{item.name}</span>
                                     <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">Qty: {item.qty} Included.</span>
@@ -258,7 +261,7 @@ export default function ProposalPage({ params }) {
                         {/* Legacy Trims */}
                         {!quote.addons?.customList && quote.addons?.trims && (
                             <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px]" style={{ backgroundColor: isAbbey ? '#eff6ff' : '#d1fae5', color: isAbbey ? '#1e3a8a' : '#059669', borderColor: isAbbey ? '#1e3a8a' : '#059669' }}>✓</span> 
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block print:leading-tight">Transitions & Moldings</span>
                                     <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">{trimText} included.</span>
@@ -269,7 +272,7 @@ export default function ProposalPage({ params }) {
                         {/* Prep */}
                         {quote.services?.prep > 0 && (
                             <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px]" style={{ backgroundColor: isAbbey ? '#eff6ff' : '#d1fae5', color: isAbbey ? '#1e3a8a' : '#059669', borderColor: isAbbey ? '#1e3a8a' : '#059669' }}>✓</span> 
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block print:leading-tight">Tear Out & Prep</span>
                                     <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">Removal of old flooring and subfloor preparation.</span>
@@ -280,7 +283,7 @@ export default function ProposalPage({ params }) {
                         {/* Install */}
                         {quote.services?.installTotal > 0 && (
                             <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px]" style={{ backgroundColor: isAbbey ? '#eff6ff' : '#d1fae5', color: isAbbey ? '#1e3a8a' : '#059669', borderColor: isAbbey ? '#1e3a8a' : '#059669' }}>✓</span> 
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block print:leading-tight">Professional Installation</span>
                                     <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">Expert installation of {quote.measurements.netSqft} net sqft.</span>
@@ -291,7 +294,7 @@ export default function ProposalPage({ params }) {
                         {/* Delivery */}
                         {quote.services?.delivery > 0 && (
                             <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px]" style={{ backgroundColor: isAbbey ? '#eff6ff' : '#d1fae5', color: isAbbey ? '#1e3a8a' : '#059669', borderColor: isAbbey ? '#1e3a8a' : '#059669' }}>✓</span> 
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block print:leading-tight">Materials Delivery</span>
                                     <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">Logistics and handling to job site.</span>
@@ -302,7 +305,7 @@ export default function ProposalPage({ params }) {
                         {/* Custom Lines */}
                         {quote.services?.custom1 && (
                             <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px]" style={{ backgroundColor: isAbbey ? '#eff6ff' : '#d1fae5', color: isAbbey ? '#1e3a8a' : '#059669', borderColor: isAbbey ? '#1e3a8a' : '#059669' }}>✓</span> 
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block print:leading-tight">{quote.services.custom1.name}</span>
                                 </div>
@@ -310,7 +313,7 @@ export default function ProposalPage({ params }) {
                         )}
                         {quote.services?.custom2 && (
                             <li className="flex gap-4 print:gap-2 items-start">
-                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px]" style={{ backgroundColor: isAbbey ? '#eff6ff' : '#d1fae5', color: isAbbey ? '#1e3a8a' : '#059669', borderColor: isAbbey ? '#1e3a8a' : '#059669' }}>✓</span> 
+                                <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
                                 <div>
                                     <span className="font-bold text-gray-900 block print:leading-tight">{quote.services.custom2.name}</span>
                                 </div>
@@ -360,9 +363,9 @@ export default function ProposalPage({ params }) {
             {/* BRANDED FOOTER */}
             <footer className="py-12 print:py-2 text-center mt-auto border-t border-gray-200 print:hidden" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
                 {logoUrl && (
-                    <img src={logoUrl} alt={businessName} className="h-12 w-auto mx-auto object-contain mb-4 opacity-80" style={{ filter: brandBgColor.toLowerCase() === '#ffffff' ? 'none' : 'brightness(0) invert(1) opacity(0.8)' }} />
+                    <img src={logoUrl} alt={businessName} className="h-12 w-auto mx-auto object-contain mb-4 opacity-80" />
                 )}
-                <p className="text-xs uppercase tracking-widest font-bold opacity-80 m-0">
+                <p className="text-xs uppercase tracking-widest font-bold opacity-80 m-0 mt-4">
                     © {new Date().getFullYear()} {businessName}. All Rights Reserved.
                 </p>
             </footer>

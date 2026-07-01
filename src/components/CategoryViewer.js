@@ -153,7 +153,7 @@ function CategoryViewerContent({ initialCategory }) {
   const [isMagicLink, setIsMagicLink] = useState(false);
 
   const [liveProductsRaw, setLiveProductsRaw] = useState([]);
-  const [activeCategory, setActiveCategory] = useState(initialCategory);
+  const [activeCategory, useState] = useState(initialCategory);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -185,6 +185,11 @@ function CategoryViewerContent({ initialCategory }) {
           
           if (user && !user.isAnonymous) {
               targetPath += `&pro=${user.uid}`;
+              // Force Abbey Override in the URL if it's active
+              const storedBrand = sessionStorage.getItem('client_brand');
+              if (storedBrand && storedBrand.includes('Abbey')) {
+                  targetPath += `&cb=${btoa('Abbey Carpet & Floor')}`;
+              }
           } else {
               const storedBrand = sessionStorage.getItem('client_brand');
               if (storedBrand) targetPath += `&cb=${btoa(storedBrand)}`;
@@ -207,6 +212,7 @@ function CategoryViewerContent({ initialCategory }) {
 
       const title = p.displayTitle;
       const plainText = `${title}\n${finalUrl}`;
+      const htmlText = `<a href="${finalUrl}">${title}</a>`;
       
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -240,7 +246,7 @@ function CategoryViewerContent({ initialCategory }) {
           const cmParam = searchParams.get('cm');
           const proParam = searchParams.get('pro');
           const cbParam = searchParams.get('cb'); 
-          
+
           // HARDCODED ABBEY LOGO CONSTANT
           const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
 
@@ -250,12 +256,28 @@ function CategoryViewerContent({ initialCategory }) {
                         const proDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', proParam));
                         if (proDoc.exists()) {
                             const pData = proDoc.data();
-                            sessionStorage.setItem('client_brand', pData.business || 'Premium Floors');
-                            if (pData.logoUrl) sessionStorage.setItem('client_logo', pData.logoUrl);
-                            else sessionStorage.removeItem('client_logo');
                             
-                            sessionStorage.setItem('client_bg', pData.brandBgColor || '#ffffff');
-                            sessionStorage.setItem('client_text', pData.brandTextColor || '#000000');
+                            // CHECK FOR ABBEY OVERRIDE FIRST (Using .includes() for safety)
+                            let isAbbey = false;
+                            if (cbParam) {
+                                try {
+                                    if (atob(cbParam).includes('Abbey')) isAbbey = true;
+                                } catch(e) {}
+                            }
+
+                            if (isAbbey) {
+                                sessionStorage.setItem('client_brand', 'Abbey Carpet & Floor');
+                                sessionStorage.setItem('client_logo', ABBEY_LOGO_URL);
+                                sessionStorage.setItem('client_bg', '#ffffff');
+                                sessionStorage.setItem('client_text', '#000000');
+                            } else {
+                                sessionStorage.setItem('client_brand', pData.business || 'Premium Floors');
+                                if (pData.logoUrl) sessionStorage.setItem('client_logo', pData.logoUrl);
+                                else sessionStorage.removeItem('client_logo');
+                                
+                                sessionStorage.setItem('client_bg', pData.brandBgColor || '#ffffff');
+                                sessionStorage.setItem('client_text', pData.brandTextColor || '#000000');
+                            }
                             
                             if (cmParam) {
                                 const decoded = parseInt(atob(cmParam), 10);
@@ -288,13 +310,11 @@ function CategoryViewerContent({ initialCategory }) {
                   try {
                       const decodedBrand = atob(cbParam);
                       sessionStorage.setItem('client_brand', decodedBrand);
-                      
-                      // INJECT ABBEY BRANDING IF TRIGGERED
-                    if (decodedBrand === 'Abbey Carpet & Floor') {
-                        sessionStorage.setItem('client_logo', '/images/abbey-logo.png'); // Points to your local public file
-                        sessionStorage.setItem('client_bg', '#003057'); // Corporate Abbey Blue
-                        sessionStorage.setItem('client_text', '#C5A059'); // Corporate Abbey Gold 
-                    }
+                      if (decodedBrand.includes('Abbey')) {
+                          sessionStorage.setItem('client_logo', ABBEY_LOGO_URL);
+                          sessionStorage.setItem('client_bg', '#ffffff');
+                          sessionStorage.setItem('client_text', '#000000');
+                      }
                       shouldReplace = true;
                   } catch(e) {}
               }
@@ -364,11 +384,10 @@ function CategoryViewerContent({ initialCategory }) {
               data.category = cat || 'Uncategorized';
           }
 
-          // SMART AUTO-TAGGER: Fills in the blanks if manufacturers forgot specs!
+          // SMART AUTO-TAGGER
           const fullDesc = (data.desc || '').toLowerCase();
           let existingSpecs = data.specs || [];
           
-          // Helper to safely check if a normalized spec exists
           const hasSpec = (targetKey) => {
               return existingSpecs.some(s => {
                   const parts = s.split(':');
@@ -377,33 +396,21 @@ function CategoryViewerContent({ initialCategory }) {
           };
           
           if (data.category === 'Luxury Vinyl (LVP)') {
-              // Ensure Waterproof exists
-              if (!hasSpec('Waterproof')) {
-                  existingSpecs.push('Waterproof: 100% Waterproof');
-              }
-              
-              // Ensure Pad exists
+              if (!hasSpec('Waterproof')) existingSpecs.push('Waterproof: 100% Waterproof');
               if (!hasSpec('Attached Pad')) {
                   if (fullDesc.includes('cork')) existingSpecs.push('Attached Pad: Attached Cork');
                   else existingSpecs.push('Attached Pad: Attached Pad');
               }
-
-              // Ensure Core exists
               if (!hasSpec('Construction / Core')) {
                   if (fullDesc.includes('wpc')) existingSpecs.push('Construction / Core: WPC');
                   else if (fullDesc.includes('spc') || fullDesc.includes('rigid') || fullDesc.includes('solid')) existingSpecs.push('Construction / Core: SPC');
               }
           } else if (data.category === 'Hardwood') {
-              // Ensure Core exists for Hardwood (Engineered vs Solid)
               if (!hasSpec('Construction / Core')) {
-                  if (fullDesc.includes('solid') || data.displayTitle.toLowerCase().includes('solid')) {
-                      existingSpecs.push('Construction / Core: Solid');
-                  } else {
-                      existingSpecs.push('Construction / Core: Engineered');
-                  }
+                  if (fullDesc.includes('solid') || data.displayTitle.toLowerCase().includes('solid')) existingSpecs.push('Construction / Core: Solid');
+                  else existingSpecs.push('Construction / Core: Engineered');
               }
           } else if (data.category === 'Carpet') {
-              // Ensure Fiber Type exists for Carpet
               if (!hasSpec('Fiber Type')) {
                   if (fullDesc.includes('nylon')) existingSpecs.push('Fiber Type: Nylon');
                   else if (fullDesc.includes('triexta') || fullDesc.includes('smartstrand') || fullDesc.includes('sorona')) existingSpecs.push('Fiber Type: Triexta');
@@ -411,11 +418,7 @@ function CategoryViewerContent({ initialCategory }) {
                   else if (fullDesc.includes('polyester') || fullDesc.includes(' pet ')) existingSpecs.push('Fiber Type: Polyester');
               }
           } else {
-              // Non-LVP/Hardwood auto-tags just in case
-              if (fullDesc.includes('cork') && !hasSpec('Attached Pad')) {
-                  existingSpecs.push('Attached Pad: Attached Cork');
-              }
-              
+              if (fullDesc.includes('cork') && !hasSpec('Attached Pad')) existingSpecs.push('Attached Pad: Attached Cork');
               if (!hasSpec('Construction / Core')) {
                   if (fullDesc.includes('wpc')) existingSpecs.push('Construction / Core: WPC');
                   else if (fullDesc.includes('spc') || fullDesc.includes('rigid') || fullDesc.includes('solid')) existingSpecs.push('Construction / Core: SPC');
@@ -872,7 +875,7 @@ function CategoryViewerContent({ initialCategory }) {
                             <span>⚙️</span> Filters
                         </button>
                         
-                        {/* NEW: Mobile-only inline search bar */}
+                        {/* Mobile-only inline search bar */}
                         <div className="relative flex-1 lg:hidden">
                             <input 
                                 type="text" 
