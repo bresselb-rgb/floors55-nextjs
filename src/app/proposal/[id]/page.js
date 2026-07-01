@@ -68,8 +68,9 @@ export default function ProposalPage({ params }) {
 
     useEffect(() => {
         if (proProfile && quote) {
-            const isAbbey = quote?.brand === 'Abbey Carpet & Floor';
-            const isF55 = quote?.brand === 'Floors 55' || quote?.useCustomBranding === false;
+            // Reverted back to the original working logic!
+            const isAbbey = quote.brandOverride === 'abbey';
+            const isF55 = quote.brandOverride === 'f55' || (quote.brandOverride !== 'abbey' && quote.useCustomBranding === false);
 
             const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
 
@@ -108,8 +109,9 @@ export default function ProposalPage({ params }) {
         );
     }
 
-    const isAbbey = quote?.brand === 'Abbey Carpet & Floor';
-    const isF55 = quote?.brand === 'Floors 55' || quote?.useCustomBranding === false;
+    // Reverted back to the original working logic!
+    const isAbbey = quote.brandOverride === 'abbey';
+    const isF55 = quote.brandOverride === 'f55' || (quote.brandOverride !== 'abbey' && quote.useCustomBranding === false);
 
     const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
 
@@ -167,7 +169,7 @@ export default function ProposalPage({ params }) {
             {/* BRANDED HEADER - Squashed for print */}
             <header className="border-b border-gray-200 py-6 px-6 print:py-3 print:px-2 text-center shadow-sm print:shadow-none" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
                 {logoUrl ? (
-                    <img src={logoUrl} alt={businessName} className="h-16 md:h-20 print:h-10 w-auto mx-auto object-contain" style={{ filter: brandBgColor.toLowerCase() === '#ffffff' ? 'none' : 'brightness(0) invert(1)' }} />
+                    <img src={logoUrl} alt={businessName} className="h-16 md:h-20 print:h-10 w-auto mx-auto object-contain" />
                 ) : (
                     <h1 className="text-2xl md:text-3xl print:text-xl font-black uppercase tracking-tighter leading-none m-0">{businessName}</h1>
                 )}
