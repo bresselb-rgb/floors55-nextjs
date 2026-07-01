@@ -22,7 +22,10 @@ export default function ClientBoardsManager({ proId }) {
     const fetchBoardsAndProfile = async () => {
       try {
           const staffSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', proId));
-          if (staffSnap.exists()) setIsStaff(true);
+          if (staffSnap.exists()) {
+              setIsStaff(true);
+              setBoardBrand('f55'); // Default staff to Floors 55
+          }
 
           const proSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', proId));
           if (proSnap.exists() && proSnap.data().clientMargin !== undefined) {
@@ -63,12 +66,12 @@ export default function ClientBoardsManager({ proId }) {
         if (boardBrand === 'abbey') {
             lockedBusiness = "Abbey Carpet & Floor";
             lockedLogo = ABBEY_LOGO_URL;
-            lockedBgColor = "#003366"; 
-            lockedTextColor = "#ffffff";
+            lockedBgColor = "#ffffff"; 
+            lockedTextColor = "#000000";
         } else if (boardBrand === 'f55') {
             lockedBusiness = "Floors 55";
-            lockedBgColor = "#000000";
-            lockedTextColor = "#ffffff";
+            lockedBgColor = "#ffffff";
+            lockedTextColor = "#000000";
         } else if (proSnap.exists()) {
             const data = proSnap.data();
             if (data.business) lockedBusiness = data.business;
@@ -175,7 +178,7 @@ export default function ClientBoardsManager({ proId }) {
                 onChange={(e) => setBoardBrand(e.target.value)} 
                 className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-gold text-sm bg-white text-gray-700 font-bold shrink-0"
             >
-                <option value="custom">My Brand</option>
+                {!isStaff && <option value="custom">My Brand</option>}
                 <option value="f55">Floors 55</option>
                 {isStaff && <option value="abbey">Abbey Carpet & Floor</option>}
             </select>
