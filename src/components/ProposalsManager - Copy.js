@@ -1,4 +1,3 @@
-// src/components/ProposalsManager.js
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -29,6 +28,7 @@ export default function ProposalsManager({ proId }) {
   const [padSelection, setPadSelection] = useState('none');
   const [padCost, setPadCost] = useState('0.00'); // Stored per SF
   
+  // NEW: Dynamic Addons State replaces hardcoded trims
   const [globalAddons, setGlobalAddons] = useState(null);
   const [selectedAddons, setSelectedAddons] = useState([]);
 
@@ -42,21 +42,11 @@ export default function ProposalsManager({ proId }) {
   
   const [builderMargin, setBuilderMargin] = useState(20);
   const [availablePads, setAvailablePads] = useState([]);
-  
-  // NEW: State for the Edit Drawer Branding Dropdown
-  const [isStaff, setIsStaff] = useState(false);
-  const [editProposalBrand, setEditProposalBrand] = useState('custom');
 
   useEffect(() => {
     if (!proId || !db) return;
     const fetchQuotesAndPads = async () => {
       try {
-          // Check if this Pro ID actually belongs to an internal Staff member
-          const staffSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', proId));
-          if (staffSnap.exists()) {
-              setIsStaff(true);
-          }
-
           const q = query(collection(db, "artifacts", appId, "public", "data", "pro_quotes"), where("proId", "==", proId));
           const querySnapshot = await getDocs(q);
           const quotesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -231,10 +221,6 @@ Thank you!`;
       setCustomLabor2Cost(quote.services?.custom2?.cost || '');
 
       setBuilderMargin(quote.totals?.margin || 20);
-      
-      // Load their previously selected brand for this quote
-      setEditProposalBrand(quote.brandOverride || (quote.useCustomBranding ? 'custom' : 'f55'));
-      
       setEditingQuote(quote);
   };
 
@@ -301,8 +287,6 @@ Thank you!`;
       const updatedQuote = {
           clientName: editClientName,
           projectName: editProjectName || 'Flooring Project',
-          brandOverride: editProposalBrand, 
-          useCustomBranding: editProposalBrand === 'custom',
           measurements: { waste: parseFloat(calcWaste), netSqft: netSqftNum, coverageSqft: finalMaterialCoverageSqft },
           material: { qty: finalMaterialQty, unit: finalMaterialUnit, wholesaleTotal: totalMaterialCost },
           addons: {
@@ -734,19 +718,6 @@ Thank you!`;
                       </div>
                       
                       <input type="range" min="0" max="100" step="1" value={builderMargin} onChange={e => setBuilderMargin(Number(e.target.value))} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold mb-6" />
-
-                      <div className="mb-6">
-                          <label className="block text-[10px] font-bold uppercase text-gray-400 mb-2">Presentation Branding</label>
-                          <select 
-                              value={editProposalBrand} 
-                              onChange={e => setEditProposalBrand(e.target.value)} 
-                              className="w-full p-3 border border-gray-700 rounded-xl text-sm font-bold bg-gray-800 text-white focus:border-gold outline-none cursor-pointer"
-                          >
-                              {!isStaff && <option value="custom">My White-Label Brand</option>}
-                              <option value="f55">Floors 55 Pro</option>
-                              {isStaff && <option value="abbey">Abbey Carpet & Floor</option>}
-                          </select>
-                      </div>
 
                       <div className="space-y-3">
                           <button onClick={handleSaveEdit} disabled={isSaving || netSqftNum === 0 || !editClientName.trim()} className="w-full bg-gold text-black hover:bg-white font-black uppercase tracking-widest py-4 rounded-xl transition-colors disabled:opacity-50 cursor-pointer outline-none">
