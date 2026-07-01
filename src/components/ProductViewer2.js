@@ -939,26 +939,17 @@ function ProductViewerContent({ initialProduct }) {
                           
                           <input type="range" min="0" max="100" step="1" value={builderMargin} onChange={e => setBuilderMargin(Number(e.target.value))} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold mb-6" />
 
-                          <div className="mb-4">
+                          <div className="mb-6">
                               <label className="block text-[10px] font-bold uppercase text-gray-400 mb-2">Presentation Branding</label>
-                              <div className="flex gap-4">
-                                  {!isStaff && (
-                                      <label className="flex items-center gap-2 text-xs font-bold text-gray-400 cursor-pointer">
-                                          <input type="radio" name="propBrand" checked={proposalBrand === 'custom'} onChange={() => setProposalBrand('custom')} className="accent-gold w-4 h-4" />
-                                          My Brand
-                                      </label>
-                                  )}
-                                  <label className="flex items-center gap-2 text-xs font-bold text-gray-400 cursor-pointer">
-                                      <input type="radio" name="propBrand" checked={proposalBrand === 'f55'} onChange={() => setProposalBrand('f55')} className="accent-gold w-4 h-4" />
-                                      Floors 55
-                                  </label>
-                                  {isStaff && (
-                                      <label className="flex items-center gap-2 text-xs font-bold text-blue-400 cursor-pointer">
-                                          <input type="radio" name="propBrand" checked={proposalBrand === 'abbey'} onChange={() => setProposalBrand('abbey')} className="accent-blue-500 w-4 h-4" />
-                                          Abbey Carpet
-                                      </label>
-                                  )}
-                              </div>
+                              <select 
+                                  value={proposalBrand} 
+                                  onChange={e => setProposalBrand(e.target.value)} 
+                                  className="w-full p-3 border border-gray-700 rounded-xl text-sm font-bold bg-gray-800 text-white focus:border-gold outline-none cursor-pointer"
+                              >
+                                  {!isStaff && <option value="custom">My White-Label Brand</option>}
+                                  <option value="f55">Floors 55 Pro</option>
+                                  {isStaff && <option value="abbey">Abbey Carpet & Floor</option>}
+                              </select>
                           </div>
 
                           <div className="space-y-3">
