@@ -1,3 +1,4 @@
+// src/app/my-account/page.js
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -154,9 +155,11 @@ export default function MyAccountPage() {
     const enableClientMode = () => {
         sessionStorage.setItem('client_margin', profile.clientMargin);
         
+        const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+
         if (linkBranding === 'abbey') {
             sessionStorage.setItem('client_brand', 'Abbey Carpet & Floor');
-            sessionStorage.removeItem('client_logo');
+            sessionStorage.setItem('client_logo', ABBEY_LOGO_URL);
             sessionStorage.setItem('client_bg', '#003366'); // Abbey Navy
             sessionStorage.setItem('client_text', '#ffffff');
         } else if (isWhiteLabelActive && linkBranding === 'custom') {

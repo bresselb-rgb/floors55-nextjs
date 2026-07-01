@@ -1,3 +1,4 @@
+// src/components/ProductViewer.js
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
@@ -78,6 +79,8 @@ function ProductViewerContent({ initialProduct }) {
             const proParam = searchParams.get('pro');
             const cbParam = searchParams.get('cb'); 
 
+            const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+
             if (proParam) {
                 const fetchProBranding = async () => {
                     try {
@@ -126,6 +129,11 @@ function ProductViewerContent({ initialProduct }) {
                     try {
                         const decodedBrand = atob(cbParam);
                         sessionStorage.setItem('client_brand', decodedBrand);
+                        if (decodedBrand === 'Abbey Carpet & Floor') {
+                            sessionStorage.setItem('client_logo', ABBEY_LOGO_URL);
+                            sessionStorage.setItem('client_bg', '#003366');
+                            sessionStorage.setItem('client_text', '#ffffff');
+                        }
                         updated = true;
                     } catch(e) {}
                 }
@@ -951,8 +959,20 @@ function ProductViewerContent({ initialProduct }) {
           {isLightboxOpen && (
               <div className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center backdrop-blur-sm transition-opacity" onClick={(e) => { if (e.target === e.currentTarget) setIsLightboxOpen(false); }}>
                   <button className="absolute top-5 right-5 bg-black/60 text-white border-2 border-white rounded-full w-11 h-11 text-2xl flex items-center justify-center cursor-pointer hover:bg-gold hover:border-gold hover:text-black transition-colors z-[10000] outline-none" onClick={() => setIsLightboxOpen(false)}>✕</button>
-                  <div className="w-[90vw] max-w-[1200px] h-[85vh] relative rounded-lg overflow-hidden cursor-crosshair touch-none" onMouseMove={handleZoomPan} onTouchMove={handleZoomPan} onMouseLeave={() => setZoomPos({x:50, y:50})} onTouchEnd={() => setZoomPos({x:50, y:50})}>
-                      <Image src={getMediaPath(activeView) || TBD_IMG} alt="Zoomed Product" fill sizes="100vw" className="object-contain transition-transform duration-150 ease-out hover:scale-[2.2]" style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }} onError={(e) => { e.currentTarget.srcset = ''; e.currentTarget.src = TBD_IMG; }} />
+                  <div 
+                      className="w-[90vw] max-w-[1200px] h-[85vh] relative rounded-lg overflow-hidden cursor-crosshair touch-none" 
+                      onMouseMove={handleZoomPan} 
+                      onTouchMove={handleZoomPan} 
+                      onMouseLeave={() => setZoomPos({x:50, y:50})} 
+                      onTouchEnd={() => setZoomPos({x:50, y:50})}
+                  >
+                      <img 
+                          src={getMediaPath(activeView) || TBD_IMG} 
+                          alt="Zoomed Product" 
+                          className="w-full h-full object-contain transition-transform duration-150 ease-out hover:scale-[2.2]"
+                          style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }}
+                          onError={(e) => { e.currentTarget.srcset = ''; e.currentTarget.src = TBD_IMG; }}
+                      />
                   </div>
               </div>
           )}

@@ -10,6 +10,7 @@ import ProposalsManager from "../../components/ProposalsManager";
 
 export default function MyAccountPage() {
     const [user, setUser] = useState(null);
+    const [isStaff, setIsStaff] = useState(false);
     const [profile, setProfile] = useState({
         business: '',
         name: '',
@@ -43,13 +44,18 @@ export default function MyAccountPage() {
         const unsub = onAuthStateChanged(auth, async (currentUser) => {
             if (currentUser && !currentUser.isAnonymous) {
                 setUser(currentUser);
+                
+                // Check if they are internal Staff (House Account)
+                const staffSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', currentUser.uid));
+                if (staffSnap.exists()) setIsStaff(true);
+
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     setProfile({ ...profile, ...data });
                     
-                    // Read their saved toggle preference, fallback to checking if they have custom data
+                    // Read their saved toggle preference
                     if (data.isWhiteLabelEnabled !== undefined) {
                         setIsWhiteLabelActive(data.isWhiteLabelEnabled);
                     } else if (data.logoUrl || (data.brandBgColor && data.brandBgColor !== '#ffffff') || (data.brandTextColor && data.brandTextColor !== '#000000')) {
@@ -128,7 +134,7 @@ export default function MyAccountPage() {
 
     const handleToggleWhiteLabel = async (checked) => {
         setIsWhiteLabelActive(checked);
-        if (!checked) {
+        if (!checked && linkBranding === 'custom') {
             setLinkBranding('f55'); // Auto-switch link generator back to F55
         }
         
@@ -147,7 +153,15 @@ export default function MyAccountPage() {
 
     const enableClientMode = () => {
         sessionStorage.setItem('client_margin', profile.clientMargin);
-        if (isWhiteLabelActive && linkBranding === 'custom') {
+        
+        const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+
+        if (linkBranding === 'abbey') {
+            sessionStorage.setItem('client_brand', 'Abbey Carpet & Floor');
+            sessionStorage.setItem('client_logo', ABBEY_LOGO_URL);
+            sessionStorage.setItem('client_bg', '#003366'); // Abbey Navy
+            sessionStorage.setItem('client_text', '#ffffff');
+        } else if (isWhiteLabelActive && linkBranding === 'custom') {
             sessionStorage.setItem('client_brand', profile.business);
             if (profile.logoUrl) sessionStorage.setItem('client_logo', profile.logoUrl);
             else sessionStorage.removeItem('client_logo');
@@ -168,7 +182,7 @@ export default function MyAccountPage() {
     const portalLink = user 
         ? (isWhiteLabelActive && linkBranding === 'custom')
             ? `${typeof window !== 'undefined' ? window.location.origin : ''}/category?pro=${user.uid}&cm=${encodedMargin}` 
-            : `${typeof window !== 'undefined' ? window.location.origin : ''}/category?cm=${encodedMargin}`
+            : `${typeof window !== 'undefined' ? window.location.origin : ''}/category?cm=${encodedMargin}${linkBranding === 'abbey' ? '&cb=' + btoa('Abbey Carpet & Floor') : ''}`
         : '';
 
     const copyMagicLink = () => {
@@ -203,6 +217,7 @@ export default function MyAccountPage() {
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <h1 className="text-3xl font-black tracking-tight m-0">Pro Dashboard</h1>
+                            {isStaff && <span className="bg-blue-100 text-blue-800 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider">House Account Active</span>}
                             <button onClick={() => setIsGlobalInfoOpen(true)} className="bg-black text-white hover:bg-gold hover:text-black px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors shadow-sm outline-none cursor-pointer flex items-center gap-1.5">
                                 <span>📘</span> Quick Start Guide
                             </button>
@@ -240,7 +255,6 @@ export default function MyAccountPage() {
                     </button>
                 </div>
 
-                {}
                 {/* TAB 1: OVERVIEW & PRICING */}
                 <div className={activeTab === 'overview' ? 'block space-y-6 animate-in fade-in duration-300' : 'hidden'}>
                     
@@ -313,17 +327,25 @@ export default function MyAccountPage() {
                             <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Your Master Catalog Link</h3>
                             <p className="text-xs text-gray-500 mb-4">Share this link to let clients browse the entire catalog with your pricing applied.</p>
                             
-                            {/* Only show branding radio toggles if they have White-Label activated */}
-                            {isWhiteLabelActive && (
-                                <div className="flex gap-6 mb-4">
-                                    <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
-                                        <input type="radio" name="linkBrand" checked={linkBranding === 'custom'} onChange={() => setLinkBranding('custom')} className="accent-black w-4 h-4" />
-                                        My White-Label Brand
-                                    </label>
+                            {/* ABBEY BRANDING INJECTION */}
+                            {(isWhiteLabelActive || isStaff) && (
+                                <div className="flex flex-wrap gap-4 mb-4">
+                                    {isWhiteLabelActive && (
+                                        <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                                            <input type="radio" name="linkBrand" checked={linkBranding === 'custom'} onChange={() => setLinkBranding('custom')} className="accent-black w-4 h-4" />
+                                            My White-Label Brand
+                                        </label>
+                                    )}
                                     <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
                                         <input type="radio" name="linkBrand" checked={linkBranding === 'f55'} onChange={() => setLinkBranding('f55')} className="accent-black w-4 h-4" />
                                         Floors 55 Brand
                                     </label>
+                                    {isStaff && (
+                                        <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer border border-blue-200 bg-blue-50 px-3 py-1.5 rounded-lg shadow-sm">
+                                            <input type="radio" name="linkBrand" checked={linkBranding === 'abbey'} onChange={() => setLinkBranding('abbey')} className="accent-blue-800 w-4 h-4 cursor-pointer" />
+                                            <span className="text-blue-900">Abbey Carpet & Floor</span>
+                                        </label>
+                                    )}
                                 </div>
                             )}
 
@@ -371,7 +393,6 @@ export default function MyAccountPage() {
 
                 </div>
 
-                {}
                 {/* TAB 2: PROPOSALS */}
                 <div className={activeTab === 'proposals' ? 'block animate-in fade-in duration-300' : 'hidden'}>
                     
@@ -390,7 +411,6 @@ export default function MyAccountPage() {
                     <ProposalsManager proId={user.uid} />
                 </div>
 
-                {}
                 {/* TAB 3: CLIENT BOARDS */}
                 <div className={activeTab === 'boards' ? 'block animate-in fade-in duration-300' : 'hidden'}>
                     
@@ -409,7 +429,6 @@ export default function MyAccountPage() {
                     <ClientBoardsManager proId={user.uid} />
                 </div>
 
-                {}
                 {/* TAB 4: BRANDING & SETTINGS */}
                 <div className={activeTab === 'branding' ? 'block space-y-6 animate-in fade-in duration-300' : 'hidden'}>
                     

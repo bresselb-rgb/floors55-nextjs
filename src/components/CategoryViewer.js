@@ -1,3 +1,4 @@
+// src/components/CategoryViewer.js
 "use client";
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
@@ -206,10 +207,8 @@ function CategoryViewerContent({ initialCategory }) {
 
       const title = p.displayTitle;
       const plainText = `${title}\n${finalUrl}`;
-      const htmlText = `<a href="${finalUrl}">${title}</a>`;
       
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const isDesktop = !isMobile;
 
       if (navigator.share && isMobile) {
           navigator.share({ title: title, text: title, url: finalUrl }).catch(console.error);
@@ -241,6 +240,9 @@ function CategoryViewerContent({ initialCategory }) {
           const cmParam = searchParams.get('cm');
           const proParam = searchParams.get('pro');
           const cbParam = searchParams.get('cb'); 
+          
+          // HARDCODED ABBEY LOGO CONSTANT
+          const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
 
           if (proParam) {
                 const fetchProBranding = async () => {
@@ -286,6 +288,13 @@ function CategoryViewerContent({ initialCategory }) {
                   try {
                       const decodedBrand = atob(cbParam);
                       sessionStorage.setItem('client_brand', decodedBrand);
+                      
+                      // INJECT ABBEY BRANDING IF TRIGGERED
+                      if (decodedBrand === 'Abbey Carpet & Floor') {
+                          sessionStorage.setItem('client_logo', ABBEY_LOGO_URL);
+                          sessionStorage.setItem('client_bg', '#003366'); // Abbey Navy
+                          sessionStorage.setItem('client_text', '#ffffff');
+                      }
                       shouldReplace = true;
                   } catch(e) {}
               }
@@ -594,7 +603,7 @@ function CategoryViewerContent({ initialCategory }) {
         const specTextCombined = (p.specs || []).join(' ').toLowerCase();
         const catLower = (p.category || '').toLowerCase();
         
-        // NEW: Map through the colors array and combine names/skus into a searchable string
+        // Map through the colors array and combine names/skus into a searchable string
         const colorsTextCombined = (p.colors || []).map(c => `${c.name || ''} ${c.sku || ''}`).join(' ').toLowerCase();
 
         // Inject hidden keywords so people searching "pad" find cushions

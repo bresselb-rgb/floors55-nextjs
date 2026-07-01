@@ -1,8 +1,8 @@
+// src/components/ClientBoardsManager.js
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-// Correct path to the firebase lib from components directory
 import { db, appId } from "../lib/firebase";
 
 export default function ClientBoardsManager({ proId }) {
@@ -10,32 +10,35 @@ export default function ClientBoardsManager({ proId }) {
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   
-  // House Account Logic
   const [isStaff, setIsStaff] = useState(false);
   const [boardBrand, setBoardBrand] = useState('custom');
+  
+  const [boardMargin, setBoardMargin] = useState(20);
 
   const [showToast, setShowToast] = useState(false);
 
-  // Load the Pro's existing boards
   useEffect(() => {
     if (!proId || !db) return;
-    const fetchBoards = async () => {
+    const fetchBoardsAndProfile = async () => {
       try {
-          // Check if user is staff to unlock Abbey branding
           const staffSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', proId));
           if (staffSnap.exists()) setIsStaff(true);
+
+          const proSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', proId));
+          if (proSnap.exists() && proSnap.data().clientMargin !== undefined) {
+              setBoardMargin(Number(proSnap.data().clientMargin));
+          }
 
           const q = query(collection(db, "artifacts", appId, "public", "data", "client_boards"), where("proId", "==", proId));
           const querySnapshot = await getDocs(q);
           const boardsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          // Sort newest first
           boardsData.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
           setBoards(boardsData);
       } catch (e) {
           console.error("Error fetching client boards:", e);
       }
     };
-    fetchBoards();
+    fetchBoardsAndProfile();
   }, [proId]);
 
   const handleCreateBoard = async (e) => {
@@ -46,24 +49,21 @@ export default function ClientBoardsManager({ proId }) {
     const randomString = Math.random().toString(36).substring(2, 6);
     const slug = `${newBoardName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${randomString}`;
 
-    // Fetch the absolute latest margin AND branding directly from the database right now
-    let lockedMargin = 20;
     let lockedBusiness = "Your Flooring Professional";
     let lockedLogo = "";
     let lockedBgColor = "#ffffff";
     let lockedTextColor = "#000000";
 
+    const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+
     try {
         const proRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', proId);
         const proSnap = await getDoc(proRef);
-        if (proSnap.exists() && proSnap.data().clientMargin !== undefined) {
-            lockedMargin = Number(proSnap.data().clientMargin);
-        }
 
-        // Apply selected brand override
         if (boardBrand === 'abbey') {
             lockedBusiness = "Abbey Carpet & Floor";
-            lockedBgColor = "#003366"; // Navy Blue
+            lockedLogo = ABBEY_LOGO_URL;
+            lockedBgColor = "#003366"; 
             lockedTextColor = "#ffffff";
         } else if (boardBrand === 'f55') {
             lockedBusiness = "Floors 55";
@@ -77,7 +77,7 @@ export default function ClientBoardsManager({ proId }) {
             if (data.brandTextColor) lockedTextColor = data.brandTextColor;
         }
     } catch(err) {
-        console.error("Could not fetch pro profile for margin locking:", err);
+        console.error("Could not fetch pro profile for branding lock:", err);
     }
 
     const newBoard = {
@@ -85,7 +85,7 @@ export default function ClientBoardsManager({ proId }) {
       name: newBoardName,
       slug: slug,
       products: [],
-      margin: lockedMargin, // Permanently snapshotted!
+      margin: boardMargin, 
       businessName: lockedBusiness,
       logoUrl: lockedLogo,
       brandBgColor: lockedBgColor,
@@ -119,9 +119,7 @@ export default function ClientBoardsManager({ proId }) {
 
   const triggerToast = () => {
       setShowToast(true);
-      setTimeout(() => {
-          setShowToast(false);
-      }, 3000);
+      setTimeout(() => setShowToast(false), 3000);
   };
 
   const copyToClipboard = async (board) => {
@@ -130,35 +128,24 @@ export default function ClientBoardsManager({ proId }) {
       let finalUrl = `${window.location.origin}/s/${shortCode}`;
       
       try {
-          // Save the short link to the database
           await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'short_links', shortCode), {
               target: targetPath,
               createdAt: new Date().toISOString()
           });
       } catch(err) {
-          console.warn("Short link generation failed, using long URL.", err);
           finalUrl = `${window.location.origin}${targetPath}`;
       }
 
-      // Format it perfectly for text messages with the title on top and the link below
       const plainText = `Project Presentation: ${board.name}\n${finalUrl}`;
 
-      // Cross-browser clipboard logic
       if (navigator.clipboard && window.isSecureContext) {
-          navigator.clipboard.writeText(plainText).then(triggerToast).catch(err => {
-              console.error('Failed to copy', err);
-          });
+          navigator.clipboard.writeText(plainText).then(triggerToast).catch(err => console.error('Failed to copy', err));
       } else {
           const tempInput = document.createElement("textarea");
           tempInput.value = plainText;
           document.body.appendChild(tempInput);
           tempInput.select();
-          try {
-              document.execCommand("copy");
-              triggerToast();
-          } catch (err) {
-              console.error('Fallback copy failed', err);
-          }
+          try { document.execCommand("copy"); triggerToast(); } catch (err) { console.error('Fallback copy failed', err); }
           document.body.removeChild(tempInput);
       }
   };
@@ -173,41 +160,56 @@ export default function ClientBoardsManager({ proId }) {
       
       <p className="text-sm text-gray-500 mb-6">Create curated product boards to share with your clients.</p>
       
-      {/* Create New Board Form */}
-      <form onSubmit={handleCreateBoard} className="flex flex-col sm:flex-row gap-3 mb-8">
-        <input
-          type="text"
-          value={newBoardName}
-          onChange={(e) => setNewBoardName(e.target.value)}
-          placeholder="e.g., Smith Kitchen Remodel"
-          className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-gold text-sm transition-colors"
-          required
-        />
-        <select 
-            value={boardBrand} 
-            onChange={(e) => setBoardBrand(e.target.value)} 
-            className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-gold text-sm bg-white text-gray-700 font-bold"
-        >
-            <option value="custom">My Brand</option>
-            <option value="f55">Floors 55</option>
-            {isStaff && <option value="abbey">Abbey Carpet & Floor</option>}
-        </select>
-        <button 
-          type="submit" 
-          disabled={isCreating}
-          className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50 whitespace-nowrap"
-        >
-          {isCreating ? "Creating..." : "+ New Board"}
-        </button>
+      <form onSubmit={handleCreateBoard} className="bg-gray-50 p-5 border border-gray-100 rounded-xl mb-8 space-y-5">
+        <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              value={newBoardName}
+              onChange={(e) => setNewBoardName(e.target.value)}
+              placeholder="e.g., Smith Kitchen Remodel"
+              className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-gold text-sm transition-colors bg-white"
+              required
+            />
+            <select 
+                value={boardBrand} 
+                onChange={(e) => setBoardBrand(e.target.value)} 
+                className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-gold text-sm bg-white text-gray-700 font-bold shrink-0"
+            >
+                <option value="custom">My Brand</option>
+                <option value="f55">Floors 55</option>
+                {isStaff && <option value="abbey">Abbey Carpet & Floor</option>}
+            </select>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+            <div className="flex-1">
+                <div className="flex justify-between items-center mb-2">
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Locked Profit Margin</label>
+                    <span className="text-sm font-black text-gold font-mono">{boardMargin}%</span>
+                </div>
+                <input 
+                    type="range" 
+                    min="0" max="100" step="1" 
+                    value={boardMargin} 
+                    onChange={e => setBoardMargin(Number(e.target.value))} 
+                    className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black" 
+                />
+            </div>
+            <button 
+              type="submit" 
+              disabled={isCreating}
+              className="bg-black text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50 whitespace-nowrap w-full sm:w-auto mt-2 sm:mt-0 outline-none cursor-pointer"
+            >
+              {isCreating ? "Creating..." : "+ New Board"}
+            </button>
+        </div>
       </form>
 
-      {/* Boards List */}
       <div className="space-y-4">
         {boards.length === 0 ? (
           <p className="text-gray-400 text-sm italic text-center py-6 bg-gray-50 rounded-xl border border-gray-100">No client boards created yet.</p>
         ) : (
           boards.map((board) => {
-            // Calculate Markup and Margin for display
             const markupVal = board.margin !== undefined ? Number(board.margin) : 0;
             const marginVal = markupVal > 0 ? Math.round((markupVal / (100 + markupVal)) * 100) : 0;
 
@@ -245,12 +247,10 @@ export default function ClientBoardsManager({ proId }) {
         )}
       </div>
 
-      {/* Toast Notification */}
       <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 bg-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[9999] ${showToast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
           <span className="font-black text-gold">✓</span>
           <p className="font-bold text-xs uppercase tracking-widest m-0">Link Copied</p>
       </div>
-
     </div>
   );
 }

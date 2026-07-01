@@ -1,3 +1,4 @@
+// src/app/proposal/[id]/page.js
 "use client";
 
 import React, { useState, useEffect, use } from 'react';
@@ -70,9 +71,11 @@ export default function ProposalPage({ params }) {
             const isAbbey = quote.brandOverride === 'abbey';
             const isF55 = quote.brandOverride === 'f55' || (quote.brandOverride !== 'abbey' && quote.useCustomBranding === false);
 
+            const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+
             const bName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55" : (proProfile.business || "Your Flooring Professional"));
             const mgn = quote?.totals?.margin || proProfile.clientMargin || 20;
-            const lUrl = isAbbey ? "" : (isF55 ? "" : (proProfile.logoUrl || ""));
+            const lUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? "" : (proProfile.logoUrl || ""));
             const bBg = isAbbey ? "#003366" : (isF55 ? "#000000" : (proProfile.brandBgColor || "#ffffff"));
             const bText = isAbbey ? "#ffffff" : (isF55 ? "#ffffff" : (proProfile.brandTextColor || "#000000"));
 
@@ -108,8 +111,10 @@ export default function ProposalPage({ params }) {
     const isAbbey = quote.brandOverride === 'abbey';
     const isF55 = quote.brandOverride === 'f55' || (quote.brandOverride !== 'abbey' && quote.useCustomBranding === false);
 
+    const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+
     const businessName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55" : (proProfile?.business || "Your Flooring Professional"));
-    const logoUrl = isAbbey ? "" : (isF55 ? "" : (proProfile?.logoUrl || ""));
+    const logoUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? "" : (proProfile?.logoUrl || ""));
     const brandBgColor = isAbbey ? "#003366" : (isF55 ? "#000000" : (proProfile?.brandBgColor || "#ffffff"));
     const brandTextColor = isAbbey ? "#ffffff" : (isF55 ? "#ffffff" : (proProfile?.brandTextColor || "#000000"));
     

@@ -1,3 +1,4 @@
+// src/app/client/[slug]/page.js
 "use client";
 
 import React, { useState, useEffect, use } from 'react';
@@ -81,11 +82,16 @@ export default function ClientBoardPage({ params }) {
 
     useEffect(() => {
         if (board) {
-            const bName = board.businessName || proProfile?.business || "Your Flooring Professional";
+            const isAbbey = board.businessName === "Abbey Carpet & Floor";
+            const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+
+            const bName = isAbbey ? "Abbey Carpet & Floor" : (board.businessName || proProfile?.business || "Your Flooring Professional");
             const mgn = board.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
-            const lUrl = board.logoUrl || proProfile?.logoUrl || "";
-            const bBg = board.brandBgColor || proProfile?.brandBgColor || "#ffffff";
-            const bText = board.brandTextColor || proProfile?.brandTextColor || "#000000";
+            
+            // Hardcode Abbey Logo injection
+            const lUrl = isAbbey ? ABBEY_LOGO_URL : (board.logoUrl || proProfile?.logoUrl || "");
+            const bBg = isAbbey ? "#003366" : (board.brandBgColor || proProfile?.brandBgColor || "#ffffff");
+            const bText = isAbbey ? "#ffffff" : (board.brandTextColor || proProfile?.brandTextColor || "#000000");
 
             sessionStorage.setItem('client_brand', bName);
             if (lUrl) sessionStorage.setItem('client_logo', lUrl);
@@ -116,11 +122,14 @@ export default function ClientBoardPage({ params }) {
         );
     }
 
-    const businessName = board?.businessName || proProfile?.business || "Your Flooring Professional";
+    const isAbbey = board.businessName === "Abbey Carpet & Floor";
+    const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+
+    const businessName = isAbbey ? "Abbey Carpet & Floor" : (board?.businessName || proProfile?.business || "Your Flooring Professional");
     const margin = board?.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
-    const logoUrl = board?.logoUrl || proProfile?.logoUrl || "";
-    const brandBgColor = board?.brandBgColor || proProfile?.brandBgColor || "#ffffff";
-    const brandTextColor = board?.brandTextColor || proProfile?.brandTextColor || "#000000";
+    const logoUrl = isAbbey ? ABBEY_LOGO_URL : (board?.logoUrl || proProfile?.logoUrl || "");
+    const brandBgColor = isAbbey ? "#003366" : (board?.brandBgColor || proProfile?.brandBgColor || "#ffffff");
+    const brandTextColor = isAbbey ? "#ffffff" : (board?.brandTextColor || proProfile?.brandTextColor || "#000000");
     
     let cmToken = '';
     let cbToken = '';
@@ -167,7 +176,7 @@ export default function ClientBoardPage({ params }) {
                             const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
                             const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
-                            const productLink = `/product/${p.id}?color=${displaySku}&pro=${board.proId || ''}&cm=${cmToken}`;
+                            const productLink = `/product/${p.id}?color=${displaySku}&pro=${board.proId || ''}&cm=${cmToken}${isAbbey ? '&cb=' + cbToken : ''}`;
 
                             const hasQuote = p.quote && p.quote.totals;
 
