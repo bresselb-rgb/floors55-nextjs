@@ -82,7 +82,7 @@ export default function ClientBoardPage({ params }) {
 
     useEffect(() => {
         if (board) {
-            const isAbbey = board.businessName === "Abbey Carpet & Floor";
+            const isAbbey = board?.brand === "Abbey Carpet & Floor" || board?.businessName === "Abbey Carpet & Floor";
             const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
 
             const bName = isAbbey ? "Abbey Carpet & Floor" : (board.businessName || proProfile?.business || "Your Flooring Professional");
@@ -122,7 +122,7 @@ export default function ClientBoardPage({ params }) {
         );
     }
 
-    const isAbbey = board.businessName === "Abbey Carpet & Floor";
+    const isAbbey = board?.brand === "Abbey Carpet & Floor" || board?.businessName === "Abbey Carpet & Floor";
     const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
 
     const businessName = isAbbey ? "Abbey Carpet & Floor" : (board?.businessName || proProfile?.business || "Your Flooring Professional");
@@ -142,7 +142,7 @@ export default function ClientBoardPage({ params }) {
         <div className="min-h-screen bg-gray-50 font-sans flex flex-col">
             <header className="border-b border-gray-200 py-6 px-6 text-center shadow-sm" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
                 {logoUrl ? (
-                    <img src={logoUrl} alt={businessName} className="h-16 md:h-20 w-auto mx-auto object-contain" />
+                    <img src={logoUrl} alt={businessName} className="h-16 md:h-20 w-auto mx-auto object-contain" style={{ filter: brandBgColor.toLowerCase() === '#ffffff' ? 'none' : 'brightness(0) invert(1)' }} />
                 ) : (
                     <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none">{businessName}</h1>
                 )}
