@@ -87,12 +87,28 @@ function ProductViewerContent({ initialProduct }) {
                         const proDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', proParam));
                         if (proDoc.exists()) {
                             const pData = proDoc.data();
-                            sessionStorage.setItem('client_brand', pData.business || 'Premium Floors');
-                            if (pData.logoUrl) sessionStorage.setItem('client_logo', pData.logoUrl);
-                            else sessionStorage.removeItem('client_logo');
                             
-                            sessionStorage.setItem('client_bg', pData.brandBgColor || '#ffffff');
-                            sessionStorage.setItem('client_text', pData.brandTextColor || '#000000');
+                            // Support Abbey Override if passed alongside a Pro link
+                            let isAbbey = false;
+                            if (cbParam) {
+                                try {
+                                    if (atob(cbParam).includes('Abbey')) isAbbey = true;
+                                } catch(e) {}
+                            }
+
+                            if (isAbbey) {
+                                sessionStorage.setItem('client_brand', 'Abbey Carpet & Floor');
+                                sessionStorage.setItem('client_logo', ABBEY_LOGO_URL);
+                                sessionStorage.setItem('client_bg', '#ffffff');
+                                sessionStorage.setItem('client_text', '#000000');
+                            } else {
+                                sessionStorage.setItem('client_brand', pData.business || 'Premium Floors');
+                                if (pData.logoUrl) sessionStorage.setItem('client_logo', pData.logoUrl);
+                                else sessionStorage.removeItem('client_logo');
+                                
+                                sessionStorage.setItem('client_bg', pData.brandBgColor || '#ffffff');
+                                sessionStorage.setItem('client_text', pData.brandTextColor || '#000000');
+                            }
                             
                             let decodedMargin = 20;
                             if (cmParam) {
@@ -129,10 +145,10 @@ function ProductViewerContent({ initialProduct }) {
                     try {
                         const decodedBrand = atob(cbParam);
                         sessionStorage.setItem('client_brand', decodedBrand);
-                        if (decodedBrand === 'Abbey Carpet & Floor') {
+                        if (decodedBrand.includes('Abbey')) {
                             sessionStorage.setItem('client_logo', ABBEY_LOGO_URL);
-                            sessionStorage.setItem('client_bg', '#003366');
-                            sessionStorage.setItem('client_text', '#ffffff');
+                            sessionStorage.setItem('client_bg', '#ffffff');
+                            sessionStorage.setItem('client_text', '#000000');
                         }
                         updated = true;
                     } catch(e) {}
@@ -162,7 +178,10 @@ function ProductViewerContent({ initialProduct }) {
                     // Check if Staff
                     const staffRef = doc(db, 'artifacts', appId, 'public', 'data', 'staff', currentUser.uid);
                     const staffSnap = await getDoc(staffRef);
-                    if (staffSnap.exists() && isMounted) setIsStaff(true);
+                    if (staffSnap.exists() && isMounted) {
+                        setIsStaff(true);
+                        setProposalBrand('f55'); // Default staff to Floors 55 instead of custom
+                    }
                 }
             }
         });
@@ -235,7 +254,7 @@ function ProductViewerContent({ initialProduct }) {
                         setAvailablePads(pads);
                     }
 
-                    // Fetch Addon Rules from Firebase (Using hyphenated ID)
+                    // Fetch Addon Rules from Firebase
                     const addonSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'proposal-addons'));
                     if (addonSnap.exists()) {
                         setGlobalAddons(addonSnap.data());
@@ -273,16 +292,15 @@ function ProductViewerContent({ initialProduct }) {
 
         const prefix = productData.imgPrefix || '';
         let path = '';
-
+        
         if (view === 'ROOM' && productData.roomPrefix) {
             const suffix = productData.roomSuffix || '_room.jpg';
-            path = `images/${folderName}/${productData.roomPrefix}${activeColor.sku}${suffix}`;
+            path = `/images/${folderName}/${productData.roomPrefix}${activeColor.sku}${suffix}`;
         } else if (view === 'VIDEO') {
-            path = `images/${folderName}/${prefix}${activeColor.sku}_video.mp4`;
+            path = `/images/${folderName}/${prefix}${activeColor.sku}_video.mp4`;
         } else {
-            path = `images/${folderName}/${prefix}${activeColor.sku}_${view}.jpg`;
+            path = `/images/${folderName}/${prefix}${activeColor.sku}_${view}.jpg`;
         }
-        
         return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path.toLowerCase())}?alt=media`;
     };
 
@@ -855,10 +873,10 @@ function ProductViewerContent({ initialProduct }) {
                                               if (selected) {
                                                   const resolvedCost = selected.cost !== undefined ? selected.cost : (selected.defaultCost || 0);
                                                   setSelectedAddons([...selectedAddons, { ...selected, cost: resolvedCost, qty: 1 }]);
-                                              }
                                           }
-                                          e.target.value = '';
                                       }
+                                      e.target.value = '';
+                                  }
                                   }} className="w-full p-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 outline-none focus:border-gold cursor-pointer bg-white">
                                       <option value="">+ Add Accessory / Trim...</option>
                                       {categoryAddons.map(a => {
@@ -924,10 +942,12 @@ function ProductViewerContent({ initialProduct }) {
                           <div className="mb-4">
                               <label className="block text-[10px] font-bold uppercase text-gray-400 mb-2">Presentation Branding</label>
                               <div className="flex gap-4">
-                                  <label className="flex items-center gap-2 text-xs font-bold text-gray-400 cursor-pointer">
-                                      <input type="radio" name="propBrand" checked={proposalBrand === 'custom'} onChange={() => setProposalBrand('custom')} className="accent-gold w-4 h-4" />
-                                      My Brand
-                                  </label>
+                                  {!isStaff && (
+                                      <label className="flex items-center gap-2 text-xs font-bold text-gray-400 cursor-pointer">
+                                          <input type="radio" name="propBrand" checked={proposalBrand === 'custom'} onChange={() => setProposalBrand('custom')} className="accent-gold w-4 h-4" />
+                                          My Brand
+                                      </label>
+                                  )}
                                   <label className="flex items-center gap-2 text-xs font-bold text-gray-400 cursor-pointer">
                                       <input type="radio" name="propBrand" checked={proposalBrand === 'f55'} onChange={() => setProposalBrand('f55')} className="accent-gold w-4 h-4" />
                                       Floors 55
