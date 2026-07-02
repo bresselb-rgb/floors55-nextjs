@@ -90,8 +90,8 @@ export default function ClientBoardPage({ params }) {
             
             // Clean Floors 55 brand colors with Abbey Logo
             const lUrl = isAbbey ? ABBEY_LOGO_URL : (board.logoUrl || proProfile?.logoUrl || "");
-            const bBg = isAbbey ? "#ffffff" : (board.brandBgColor || proProfile?.brandBgColor || "#ffffff");
-            const bText = isAbbey ? "#000000" : (board.brandTextColor || proProfile?.brandTextColor || "#000000");
+            const bBg = board.brandBgColor || proProfile?.brandBgColor || "#ffffff";
+            const bText = board.brandTextColor || proProfile?.brandTextColor || "#000000";
 
             sessionStorage.setItem('client_brand', bName);
             if (lUrl) sessionStorage.setItem('client_logo', lUrl);
@@ -128,8 +128,8 @@ export default function ClientBoardPage({ params }) {
     const businessName = isAbbey ? "Abbey Carpet & Floor" : (board?.businessName || proProfile?.business || "Your Flooring Professional");
     const margin = board?.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
     const logoUrl = isAbbey ? ABBEY_LOGO_URL : (board?.logoUrl || proProfile?.logoUrl || "");
-    const brandBgColor = isAbbey ? "#ffffff" : (board?.brandBgColor || proProfile?.brandBgColor || "#ffffff");
-    const brandTextColor = isAbbey ? "#000000" : (board?.brandTextColor || proProfile?.brandTextColor || "#000000");
+    const brandBgColor = board?.brandBgColor || proProfile?.brandBgColor || "#ffffff";
+    const brandTextColor = board?.brandTextColor || proProfile?.brandTextColor || "#000000";
     
     let cmToken = '';
     let cbToken = '';

@@ -1,3 +1,4 @@
+// src/app/client/[slug]/page.js
 "use client";
 
 import React, { useState, useEffect, use } from 'react';
@@ -81,11 +82,16 @@ export default function ClientBoardPage({ params }) {
 
     useEffect(() => {
         if (board) {
-            const bName = board.businessName || proProfile?.business || "Your Flooring Professional";
+            const isAbbey = board?.brand === "Abbey Carpet & Floor" || board?.businessName === "Abbey Carpet & Floor";
+            const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+
+            const bName = isAbbey ? "Abbey Carpet & Floor" : (board.businessName || proProfile?.business || "Your Flooring Professional");
             const mgn = board.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
-            const lUrl = board.logoUrl || proProfile?.logoUrl || "";
-            const bBg = board.brandBgColor || proProfile?.brandBgColor || "#ffffff";
-            const bText = board.brandTextColor || proProfile?.brandTextColor || "#000000";
+            
+            // Clean Floors 55 brand colors with Abbey Logo
+            const lUrl = isAbbey ? ABBEY_LOGO_URL : (board.logoUrl || proProfile?.logoUrl || "");
+            const bBg = isAbbey ? "#ffffff" : (board.brandBgColor || proProfile?.brandBgColor || "#ffffff");
+            const bText = isAbbey ? "#000000" : (board.brandTextColor || proProfile?.brandTextColor || "#000000");
 
             sessionStorage.setItem('client_brand', bName);
             if (lUrl) sessionStorage.setItem('client_logo', lUrl);
@@ -116,11 +122,14 @@ export default function ClientBoardPage({ params }) {
         );
     }
 
-    const businessName = board?.businessName || proProfile?.business || "Your Flooring Professional";
+    const isAbbey = board?.brand === "Abbey Carpet & Floor" || board?.businessName === "Abbey Carpet & Floor";
+    const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+
+    const businessName = isAbbey ? "Abbey Carpet & Floor" : (board?.businessName || proProfile?.business || "Your Flooring Professional");
     const margin = board?.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
-    const logoUrl = board?.logoUrl || proProfile?.logoUrl || "";
-    const brandBgColor = board?.brandBgColor || proProfile?.brandBgColor || "#ffffff";
-    const brandTextColor = board?.brandTextColor || proProfile?.brandTextColor || "#000000";
+    const logoUrl = isAbbey ? ABBEY_LOGO_URL : (board?.logoUrl || proProfile?.logoUrl || "");
+    const brandBgColor = isAbbey ? "#ffffff" : (board?.brandBgColor || proProfile?.brandBgColor || "#ffffff");
+    const brandTextColor = isAbbey ? "#000000" : (board?.brandTextColor || proProfile?.brandTextColor || "#000000");
     
     let cmToken = '';
     let cbToken = '';
@@ -167,7 +176,7 @@ export default function ClientBoardPage({ params }) {
                             const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
                             const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
-                            const productLink = `/product/${p.id}?color=${displaySku}&pro=${board.proId || ''}&cm=${cmToken}`;
+                            const productLink = `/product/${p.id}?color=${displaySku}&pro=${board.proId || ''}&cm=${cmToken}${isAbbey ? '&cb=' + cbToken : ''}`;
 
                             const hasQuote = p.quote && p.quote.totals;
 
@@ -247,9 +256,9 @@ export default function ClientBoardPage({ params }) {
 
             <footer className="py-12 text-center mt-auto border-t border-gray-200" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
                 {logoUrl && (
-                    <img src={logoUrl} alt={businessName} className="h-12 w-auto mx-auto object-contain mb-4 opacity-80" style={{ filter: brandBgColor.toLowerCase() === '#ffffff' ? 'none' : 'brightness(0) invert(1) opacity(0.8)' }} />
+                    <img src={logoUrl} alt={businessName} className="h-12 w-auto mx-auto object-contain mb-4 opacity-80" />
                 )}
-                <p className="text-xs uppercase tracking-widest font-bold opacity-80">
+                <p className="text-xs uppercase tracking-widest font-bold opacity-80 m-0 mt-4">
                     © {new Date().getFullYear()} {businessName}. All Rights Reserved.
                 </p>
             </footer>

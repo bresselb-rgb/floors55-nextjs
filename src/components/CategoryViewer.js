@@ -153,10 +153,7 @@ function CategoryViewerContent({ initialCategory }) {
   const [isMagicLink, setIsMagicLink] = useState(false);
 
   const [liveProductsRaw, setLiveProductsRaw] = useState([]);
-  
-  // FIX: This line was crashing the site due to the 'useState' typo overriding React!
   const [activeCategory, setActiveCategory] = useState(initialCategory);
-  
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -218,6 +215,7 @@ function CategoryViewerContent({ initialCategory }) {
       const htmlText = `<a href="${finalUrl}">${title}</a>`;
       
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const isDesktop = !isMobile;
 
       if (navigator.share && isMobile) {
           navigator.share({ title: title, text: title, url: finalUrl }).catch(console.error);
@@ -253,34 +251,40 @@ function CategoryViewerContent({ initialCategory }) {
           // HARDCODED ABBEY LOGO CONSTANT
           const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
 
-          if (proParam) {
+          // CHECK FOR ABBEY OVERRIDE FIRST TO PREVENT PRO ID FROM OVERWRITING IT
+          let isAbbey = false;
+          if (cbParam) {
+              try {
+                  if (atob(cbParam).includes('Abbey')) isAbbey = true;
+              } catch(e) {}
+          }
+
+          if (isAbbey) {
+              sessionStorage.setItem('client_brand', 'Abbey Carpet & Floor');
+              sessionStorage.setItem('client_logo', ABBEY_LOGO_URL);
+              sessionStorage.setItem('client_bg', '#ffffff');
+              sessionStorage.setItem('client_text', '#000000');
+              
+              if (cmParam) {
+                  const decoded = parseInt(atob(cmParam), 10);
+                  if (!isNaN(decoded)) sessionStorage.setItem('client_margin', decoded);
+              }
+              
+              sessionStorage.setItem('magic_link_client', 'true');
+              window.location.replace(window.location.pathname);
+          } else if (proParam) {
                 const fetchProBranding = async () => {
                     try {
                         const proDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', proParam));
                         if (proDoc.exists()) {
                             const pData = proDoc.data();
                             
-                            // CHECK FOR ABBEY OVERRIDE FIRST
-                            let isAbbey = false;
-                            if (cbParam) {
-                                try {
-                                    if (atob(cbParam).includes('Abbey')) isAbbey = true;
-                                } catch(e) {}
-                            }
-
-                            if (isAbbey) {
-                                sessionStorage.setItem('client_brand', 'Abbey Carpet & Floor');
-                                sessionStorage.setItem('client_logo', ABBEY_LOGO_URL);
-                                sessionStorage.setItem('client_bg', '#ffffff');
-                                sessionStorage.setItem('client_text', '#000000');
-                            } else {
-                                sessionStorage.setItem('client_brand', pData.business || 'Premium Floors');
-                                if (pData.logoUrl) sessionStorage.setItem('client_logo', pData.logoUrl);
-                                else sessionStorage.removeItem('client_logo');
-                                
-                                sessionStorage.setItem('client_bg', pData.brandBgColor || '#ffffff');
-                                sessionStorage.setItem('client_text', pData.brandTextColor || '#000000');
-                            }
+                            sessionStorage.setItem('client_brand', pData.business || 'Premium Floors');
+                            if (pData.logoUrl) sessionStorage.setItem('client_logo', pData.logoUrl);
+                            else sessionStorage.removeItem('client_logo');
+                            
+                            sessionStorage.setItem('client_bg', pData.brandBgColor || '#ffffff');
+                            sessionStorage.setItem('client_text', pData.brandTextColor || '#000000');
                             
                             if (cmParam) {
                                 const decoded = parseInt(atob(cmParam), 10);
@@ -309,17 +313,10 @@ function CategoryViewerContent({ initialCategory }) {
                       }
                   } catch(e) {}
               }
-              if (cbParam) {
+              if (cbParam && !isAbbey) {
                   try {
                       const decodedBrand = atob(cbParam);
                       sessionStorage.setItem('client_brand', decodedBrand);
-                      
-                      // INJECT ABBEY BRANDING IF TRIGGERED
-                      if (decodedBrand.includes('Abbey')) {
-                          sessionStorage.setItem('client_logo', ABBEY_LOGO_URL);
-                          sessionStorage.setItem('client_bg', '#ffffff');
-                          sessionStorage.setItem('client_text', '#000000');
-                      }
                       shouldReplace = true;
                   } catch(e) {}
               }
@@ -941,7 +938,7 @@ function CategoryViewerContent({ initialCategory }) {
                         {filteredProducts.map(p => {
                             const finalPrice = isClientMode 
                                 ? (p.price * (1 + clientMargin / 100)).toFixed(2)
-                                : (isWholesale ? p.price.toFixed(2) : (p.retailPrice ? parseFloat(p.retailPrice) : (p.price * 2.2).toFixed(2)));
+                                : (isWholesale ? p.price.toFixed(2) : (p.retailPrice ? parseFloat(p.retailPrice).toFixed(2) : (p.price * 2.2).toFixed(2)));
                             
                             const retailPriceValue = p.retailPrice ? parseFloat(p.retailPrice) : (p.price * 2.2);
                             const retailPriceFormatted = !isNaN(retailPriceValue) ? retailPriceValue.toFixed(2) : '--';
