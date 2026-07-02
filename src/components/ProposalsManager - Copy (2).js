@@ -43,16 +43,15 @@ export default function ProposalsManager({ proId }) {
   const [builderMargin, setBuilderMargin] = useState(20);
   const [availablePads, setAvailablePads] = useState([]);
   
+  // NEW: State for the Edit Drawer Branding Dropdown
   const [isStaff, setIsStaff] = useState(false);
   const [editProposalBrand, setEditProposalBrand] = useState('custom');
-
-  const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
-  const F55_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media";
 
   useEffect(() => {
     if (!proId || !db) return;
     const fetchQuotesAndPads = async () => {
       try {
+          // Check if this Pro ID actually belongs to an internal Staff member
           const staffSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', proId));
           if (staffSnap.exists()) {
               setIsStaff(true);
@@ -64,11 +63,13 @@ export default function ProposalsManager({ proId }) {
           quotesData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           setQuotes(quotesData);
           
+          // Fetch live carpet pads
           const padQ = query(collection(db, "artifacts", appId, "public", "data", "pricing"), where("category", "==", "Carpet Cushion"));
           const padSnap = await getDocs(padQ);
           const pads = padSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.isVisible !== false);
           setAvailablePads(pads);
 
+          // Fetch Addon Rules from Firebase
           const addonSnap = await getDoc(doc(db, "artifacts", appId, "public", "data", "settings", "proposal-addons"));
           if (addonSnap.exists()) {
               setGlobalAddons(addonSnap.data());
@@ -94,6 +95,7 @@ export default function ProposalsManager({ proId }) {
       let finalUrl = `${window.location.origin}/s/${shortCode}`;
 
       try {
+          // Save the short link to the database
           await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'short_links', shortCode), {
               target: targetPath,
               createdAt: new Date().toISOString()
@@ -103,8 +105,10 @@ export default function ProposalsManager({ proId }) {
           finalUrl = `${window.location.origin}${targetPath}`;
       }
 
+      // Format it perfectly for text messages with the title on top and the link below
       const plainText = `Project Proposal: ${quote.clientName}\n${finalUrl}`;
 
+      // Cross-browser clipboard logic
       if (navigator.clipboard && window.isSecureContext) {
           navigator.clipboard.writeText(plainText).then(() => triggerToast("Link Copied")).catch(console.error);
       } else {
@@ -128,6 +132,12 @@ export default function ProposalsManager({ proId }) {
               quote.addons.customList.items.forEach(item => {
                   addonsText += `- ${item.name}: ${item.qty}\n`;
               });
+          } else if (quote.addons?.trims?.details) {
+              // Legacy support
+              const trims = quote.addons.trims.details;
+              if (trims.standard > 0) addonsText += `- Standard Transitions: ${trims.standard}\n`;
+              if (trims.stairnose > 0) addonsText += `- Stair Noses: ${trims.stairnose}\n`;
+              if (trims.quarterRound > 0) addonsText += `- Quarter Round: ${trims.quarterRound}\n`;
           }
       }
 
@@ -200,9 +210,14 @@ Thank you!`;
           setPadCost('0.00');
       }
 
+      // Convert legacy trims or load new custom list
       let initialAddons = [];
       if (quote.addons?.customList && quote.addons.customList.items) {
           initialAddons = quote.addons.customList.items;
+      } else if (quote.addons?.trims && quote.addons.trims.details) {
+          if (quote.addons.trims.details.standard > 0) initialAddons.push({ name: 'Standard Transitions', qty: quote.addons.trims.details.standard, cost: 25.00 });
+          if (quote.addons.trims.details.stairnose > 0) initialAddons.push({ name: 'Stair Noses', qty: quote.addons.trims.details.stairnose, cost: 45.00 });
+          if (quote.addons.trims.details.quarterRound > 0) initialAddons.push({ name: 'Quarter Round', qty: quote.addons.trims.details.quarterRound, cost: 10.00 });
       }
       setSelectedAddons(initialAddons);
 
@@ -217,6 +232,7 @@ Thank you!`;
 
       setBuilderMargin(quote.totals?.margin || 20);
       
+      // Load their previously selected brand for this quote
       setEditProposalBrand(quote.brandOverride || (quote.useCustomBranding ? 'custom' : 'f55'));
       
       setEditingQuote(quote);
@@ -256,11 +272,14 @@ Thank you!`;
       ? (requiredPadRolls * padRollSqft * (parseFloat(padCost) || 0)) 
       : 0;
 
+  // New Dynamic Addons Cost
   const totalAddonsCost = selectedAddons.reduce((sum, item) => sum + ((parseFloat(item.cost) || 0) * (parseInt(item.qty) || 0)), 0);
+
   const totalLaborCost = (parseFloat(laborPrep) || 0) + (netSqftNum * (parseFloat(laborInstallPerSqft) || 0)) + (parseFloat(laborDelivery) || 0) + (parseFloat(customLabor1Cost) || 0) + (parseFloat(customLabor2Cost) || 0);
 
   const totalWholesaleProjectCost = totalMaterialCost + totalPadCost + totalAddonsCost + totalLaborCost;
   const turnkeyRetailPrice = totalWholesaleProjectCost * (1 + (builderMargin / 100));
+  
   const currentMarginVal = builderMargin > 0 ? ((builderMargin / (100 + builderMargin)) * 100).toFixed(1) : 0;
 
   useEffect(() => {
@@ -341,54 +360,23 @@ Thank you!`;
                   const markupVal = quote.totals?.margin || 20;
                   const marginVal = markupVal > 0 ? ((markupVal / (100 + markupVal)) * 100).toFixed(1) : 0;
                   
-                  // Dynamic Logo and Branding Badge
-                  let displayLogo = F55_LOGO_URL;
-                  let displayBrandName = "Floors 55 Pro";
-                  let brandBadgeClass = "bg-gray-100 text-gray-800 border border-gray-200";
-
-                  if (quote.brandOverride === 'abbey') {
-                      displayLogo = ABBEY_LOGO_URL;
-                      displayBrandName = "Abbey Carpet";
-                      brandBadgeClass = "bg-blue-50 text-blue-800 border border-blue-200";
-                  } else if (quote.brandOverride === 'custom' || quote.useCustomBranding) {
-                      displayLogo = null;
-                      displayBrandName = "Custom Brand";
-                      brandBadgeClass = "bg-emerald-50 text-emerald-800 border border-emerald-200";
-                  }
-
                   return (
                   <div key={quote.id} className="flex flex-col md:flex-row md:items-center justify-between p-5 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md transition-all gap-4 group">
-                      <div className="flex items-start gap-4">
-                          {/* Logo Thumbnail */}
-                          {displayLogo ? (
-                              <div className="w-12 h-12 rounded-lg bg-white border border-gray-200 flex items-center justify-center p-1 shrink-0 mt-1">
-                                  <img src={displayLogo} alt={displayBrandName} className="max-w-full max-h-full object-contain" />
-                              </div>
-                          ) : (
-                              <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0 mt-1">
-                                  <span className="text-[10px] font-black text-gray-400 uppercase">Logo</span>
-                              </div>
-                          )}
-
-                          <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                  <h3 className="font-bold text-gray-900 text-lg">{quote.clientName}</h3>
-                                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-gray-200 px-2 py-0.5 rounded-full">{new Date(quote.createdAt).toLocaleDateString()}</span>
-                              </div>
-                              <div className="flex flex-col gap-1">
-                                  <p className="text-xs font-bold text-gray-500">{quote.projectName || 'Flooring Project'} &bull; {quote.productName} ({quote.colorName})</p>
-                                  <div className="flex flex-wrap items-center gap-2 mt-1">
-                                      <span className="text-sm font-black text-gray-900 font-mono">${quote.totals?.turnkeyRetail?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</span>
-                                      <span className="text-[10px] text-gold font-black uppercase tracking-widest border border-gold/30 bg-gold/10 px-1.5 py-0.5 rounded">{markupVal}% Markup</span>
-                                      <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${brandBadgeClass}`}>
-                                          {displayBrandName}
-                                      </span>
-                                  </div>
+                      <div>
+                          <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-bold text-gray-900 text-lg">{quote.clientName}</h3>
+                              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest bg-gray-200 px-2 py-0.5 rounded-full">{new Date(quote.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                              <p className="text-xs font-bold text-gray-500">{quote.projectName || 'Flooring Project'} &bull; {quote.productName} ({quote.colorName})</p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-sm font-black text-gray-900 font-mono">${quote.totals?.turnkeyRetail?.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) || '0.00'}</span>
+                                  <span className="text-[10px] text-gold font-black uppercase tracking-widest border border-gold/30 bg-gold/10 px-1.5 py-0.5 rounded">{markupVal}% Markup ({marginVal}% Margin)</span>
                               </div>
                           </div>
                       </div>
                       
-                      <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Link href={`/proposal/${quote.id}`} target="_blank" className="flex-1 md:flex-none bg-white border border-gray-200 hover:border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors text-center shadow-sm" style={{ textDecoration: 'none' }}>
                             Preview
                         </Link>
@@ -461,6 +449,14 @@ Thank you!`;
                                       <span className="font-mono font-bold">${(item.cost * item.qty).toFixed(2)}</span>
                                   </div>
                               ))}
+                              
+                              {/* Legacy Support for old trims */}
+                              {!viewingCostsQuote.addons?.customList && viewingCostsQuote.addons?.trims && (
+                                  <div className="flex justify-between items-start gap-4">
+                                      <span>Transitions & Trims</span>
+                                      <span className="font-mono font-bold">${viewingCostsQuote.addons.trims.cost?.toFixed(2) || '0.00'}</span>
+                                  </div>
+                              )}
                           </div>
                       </div>
 

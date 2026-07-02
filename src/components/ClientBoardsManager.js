@@ -14,8 +14,12 @@ export default function ClientBoardsManager({ proId }) {
   const [boardBrand, setBoardBrand] = useState('custom');
   
   const [boardMargin, setBoardMargin] = useState(20);
+  const [proProfile, setProProfile] = useState(null);
 
   const [showToast, setShowToast] = useState(false);
+
+  const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+  const F55_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media";
 
   useEffect(() => {
     if (!proId || !db) return;
@@ -28,8 +32,11 @@ export default function ClientBoardsManager({ proId }) {
           }
 
           const proSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', proId));
-          if (proSnap.exists() && proSnap.data().clientMargin !== undefined) {
-              setBoardMargin(Number(proSnap.data().clientMargin));
+          if (proSnap.exists()) {
+              setProProfile(proSnap.data());
+              if (proSnap.data().clientMargin !== undefined) {
+                  setBoardMargin(Number(proSnap.data().clientMargin));
+              }
           }
 
           const q = query(collection(db, "artifacts", appId, "public", "data", "client_boards"), where("proId", "==", proId));
@@ -56,28 +63,23 @@ export default function ClientBoardsManager({ proId }) {
     let lockedLogo = "";
     let lockedBgColor = "#ffffff";
     let lockedTextColor = "#000000";
-
-    const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+    let brandIdentifier = "custom";
 
     try {
-        const proRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', proId);
-        const proSnap = await getDoc(proRef);
-
         if (boardBrand === 'abbey') {
             lockedBusiness = "Abbey Carpet & Floor";
             lockedLogo = ABBEY_LOGO_URL;
-            lockedBgColor = "#ffffff"; 
-            lockedTextColor = "#000000";
+            brandIdentifier = "abbey";
         } else if (boardBrand === 'f55') {
             lockedBusiness = "Floors 55";
-            lockedBgColor = "#ffffff";
-            lockedTextColor = "#000000";
-        } else if (proSnap.exists()) {
-            const data = proSnap.data();
-            if (data.business) lockedBusiness = data.business;
-            if (data.logoUrl) lockedLogo = data.logoUrl;
-            if (data.brandBgColor) lockedBgColor = data.brandBgColor;
-            if (data.brandTextColor) lockedTextColor = data.brandTextColor;
+            lockedLogo = F55_LOGO_URL;
+            brandIdentifier = "f55";
+        } else if (proProfile) {
+            if (proProfile.business) lockedBusiness = proProfile.business;
+            if (proProfile.logoUrl) lockedLogo = proProfile.logoUrl;
+            if (proProfile.brandBgColor) lockedBgColor = proProfile.brandBgColor;
+            if (proProfile.brandTextColor) lockedTextColor = proProfile.brandTextColor;
+            brandIdentifier = "custom";
         }
     } catch(err) {
         console.error("Could not fetch pro profile for branding lock:", err);
@@ -93,6 +95,7 @@ export default function ClientBoardsManager({ proId }) {
       logoUrl: lockedLogo,
       brandBgColor: lockedBgColor,
       brandTextColor: lockedTextColor,
+      brandIdentifier: brandIdentifier,
       createdAt: serverTimestamp(),
     };
 
@@ -179,7 +182,7 @@ export default function ClientBoardsManager({ proId }) {
                 className="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-gold text-sm bg-white text-gray-700 font-bold shrink-0"
             >
                 {!isStaff && <option value="custom">My Brand</option>}
-                <option value="f55">Floors 55</option>
+                <option value="f55">Floors 55 Pro</option>
                 {isStaff && <option value="abbey">Abbey Carpet & Floor</option>}
             </select>
         </div>
@@ -216,26 +219,52 @@ export default function ClientBoardsManager({ proId }) {
             const markupVal = board.margin !== undefined ? Number(board.margin) : 0;
             const marginVal = markupVal > 0 ? Math.round((markupVal / (100 + markupVal)) * 100) : 0;
 
+            let displayLogo = F55_LOGO_URL;
+            let displayBrandName = "Floors 55 Pro";
+            let brandBadgeClass = "bg-gray-100 text-gray-800 border border-gray-200";
+
+            if (board.brandIdentifier === 'abbey' || board.businessName === "Abbey Carpet & Floor") {
+                displayLogo = ABBEY_LOGO_URL;
+                displayBrandName = "Abbey Carpet";
+                brandBadgeClass = "bg-blue-50 text-blue-800 border border-blue-200";
+            } else if (board.brandIdentifier === 'custom' || (!board.brandIdentifier && board.logoUrl && board.logoUrl !== ABBEY_LOGO_URL && board.logoUrl !== F55_LOGO_URL)) {
+                displayLogo = board.logoUrl || null;
+                displayBrandName = board.businessName || "Custom Brand";
+                brandBadgeClass = "bg-emerald-50 text-emerald-800 border border-emerald-200";
+            }
+
             return (
               <div key={board.id} className="flex flex-col md:flex-row md:items-center justify-between p-5 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md transition-all gap-4">
-                <div>
-                  <h3 className="font-bold text-gray-900 text-lg mb-1">{board.name}</h3>
-                  <div className="flex flex-wrap items-center gap-3">
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                      {board.products?.length || 0} Products
-                      </p>
-                      {board.margin !== undefined && (
-                          <span className="text-[10px] font-black bg-gold/10 text-gold px-2 py-0.5 rounded uppercase tracking-widest border border-gold/20">
-                              Locked @ {markupVal}% Markup / {marginVal}% Margin
-                          </span>
-                      )}
-                      {board.businessName === "Abbey Carpet & Floor" && (
-                          <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2 py-0.5 rounded uppercase tracking-widest border border-blue-200">
-                              Abbey Brand
-                          </span>
-                      )}
+                <div className="flex items-center gap-4">
+                  {/* Dynamic Logo Thumbnail */}
+                  {displayLogo ? (
+                      <div className="w-12 h-12 rounded-lg bg-white border border-gray-200 flex items-center justify-center p-1 shrink-0">
+                          <img src={displayLogo} alt={displayBrandName} className="max-w-full max-h-full object-contain" />
+                      </div>
+                  ) : (
+                      <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
+                          <span className="text-[10px] font-black text-gray-400 uppercase">Logo</span>
+                      </div>
+                  )}
+
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-lg mb-1">{board.name}</h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-white border border-gray-200 px-2 py-0.5 rounded">
+                        {board.products?.length || 0} Products
+                        </p>
+                        {board.margin !== undefined && (
+                            <span className="text-[10px] font-black bg-gold/10 text-gold px-2 py-0.5 rounded uppercase tracking-widest border border-gold/20">
+                                {markupVal}% Markup
+                            </span>
+                        )}
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${brandBadgeClass}`}>
+                            {displayBrandName}
+                        </span>
+                    </div>
                   </div>
                 </div>
+
                 <div className="flex items-center gap-2">
                   <button onClick={() => copyToClipboard(board)} className="flex-1 md:flex-none bg-white border border-gray-200 hover:border-gold hover:text-gold text-black px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors text-center cursor-pointer outline-none">
                       Copy Link
