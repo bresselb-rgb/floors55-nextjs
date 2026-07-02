@@ -78,8 +78,8 @@ export default function ProposalPage({ params }) {
             
             // Revert colors to standard Floors 55 White/Black scheme
             const lUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? "" : (proProfile.logoUrl || ""));
-            const bBg = isAbbey ? "#ffffff" : (isF55 ? "#ffffff" : (proProfile.brandBgColor || "#ffffff"));
-            const bText = isAbbey ? "#000000" : (isF55 ? "#000000" : (proProfile.brandTextColor || "#000000"));
+            const bBg = proProfile.brandBgColor || "#ffffff";
+            const bText = proProfile.brandTextColor || "#000000";
 
             sessionStorage.setItem('client_brand', bName);
             if (lUrl) sessionStorage.setItem('client_logo', lUrl);
@@ -117,8 +117,8 @@ export default function ProposalPage({ params }) {
 
     const businessName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55" : (proProfile?.business || "Your Flooring Professional"));
     const logoUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? "" : (proProfile?.logoUrl || ""));
-    const brandBgColor = isAbbey ? "#ffffff" : (isF55 ? "#ffffff" : (proProfile?.brandBgColor || "#ffffff"));
-    const brandTextColor = isAbbey ? "#000000" : (isF55 ? "#000000" : (proProfile?.brandTextColor || "#000000"));
+    const brandBgColor = proProfile?.brandBgColor || "#ffffff";
+    const brandTextColor = proProfile?.brandTextColor || "#000000";
     
     // Add a gold accent if the background is white, otherwise use the brand background
     const accentColor = brandBgColor.toLowerCase() === '#ffffff' ? '#c5a059' : brandBgColor;

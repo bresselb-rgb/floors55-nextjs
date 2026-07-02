@@ -82,16 +82,20 @@ export default function ClientBoardPage({ params }) {
 
     useEffect(() => {
         if (board) {
-            const isAbbey = board?.brand === "Abbey Carpet & Floor" || board?.businessName === "Abbey Carpet & Floor";
-            const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+            const isAbbey = board?.brandIdentifier === 'abbey' || board?.businessName === "Abbey Carpet & Floor";
+            const isF55 = board?.brandIdentifier === 'f55' || board?.businessName === "Floors 55";
 
-            const bName = isAbbey ? "Abbey Carpet & Floor" : (board.businessName || proProfile?.business || "Your Flooring Professional");
+            const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+            const F55_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media";
+
+            const bName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55 Pro" : (board?.businessName || proProfile?.business || "Your Flooring Professional"));
             const mgn = board.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
             
-            // Clean Floors 55 brand colors with Abbey Logo
-            const lUrl = isAbbey ? ABBEY_LOGO_URL : (board.logoUrl || proProfile?.logoUrl || "");
-            const bBg = board.brandBgColor || proProfile?.brandBgColor || "#ffffff";
-            const bText = board.brandTextColor || proProfile?.brandTextColor || "#000000";
+            // Explicitly force the F55 Logo if the F55 brand is selected
+            const lUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? F55_LOGO_URL : (board?.logoUrl || proProfile?.logoUrl || ""));
+            
+            const bBg = isAbbey || isF55 ? "#ffffff" : (board.brandBgColor || proProfile?.brandBgColor || "#ffffff");
+            const bText = isAbbey || isF55 ? "#000000" : (board.brandTextColor || proProfile?.brandTextColor || "#000000");
 
             sessionStorage.setItem('client_brand', bName);
             if (lUrl) sessionStorage.setItem('client_logo', lUrl);
@@ -122,14 +126,20 @@ export default function ClientBoardPage({ params }) {
         );
     }
 
-    const isAbbey = board?.brand === "Abbey Carpet & Floor" || board?.businessName === "Abbey Carpet & Floor";
-    const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+    const isAbbey = board?.brandIdentifier === 'abbey' || board?.businessName === "Abbey Carpet & Floor";
+    const isF55 = board?.brandIdentifier === 'f55' || board?.businessName === "Floors 55";
 
-    const businessName = isAbbey ? "Abbey Carpet & Floor" : (board?.businessName || proProfile?.business || "Your Flooring Professional");
+    const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+    const F55_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media";
+
+    const businessName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55 Pro" : (board?.businessName || proProfile?.business || "Your Flooring Professional"));
     const margin = board?.margin !== undefined ? board.margin : (proProfile?.clientMargin || 20);
-    const logoUrl = isAbbey ? ABBEY_LOGO_URL : (board?.logoUrl || proProfile?.logoUrl || "");
-    const brandBgColor = board?.brandBgColor || proProfile?.brandBgColor || "#ffffff";
-    const brandTextColor = board?.brandTextColor || proProfile?.brandTextColor || "#000000";
+    
+    // Explicitly force the F55 Logo if the F55 brand is selected
+    const logoUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? F55_LOGO_URL : (board?.logoUrl || proProfile?.logoUrl || ""));
+    
+    const brandBgColor = isAbbey || isF55 ? "#ffffff" : (board?.brandBgColor || proProfile?.brandBgColor || "#ffffff");
+    const brandTextColor = isAbbey || isF55 ? "#000000" : (board?.brandTextColor || proProfile?.brandTextColor || "#000000");
     
     let cmToken = '';
     let cbToken = '';
