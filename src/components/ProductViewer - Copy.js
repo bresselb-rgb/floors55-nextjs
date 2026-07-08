@@ -293,13 +293,14 @@ function ProductViewerContent({ initialProduct }) {
         const prefix = productData.imgPrefix || '';
         let path = '';
         
+        // FIX: Removed leading slash to ensure correct Firebase storage path generation!
         if (view === 'ROOM' && productData.roomPrefix) {
             const suffix = productData.roomSuffix || '_room.jpg';
-            path = `/images/${folderName}/${productData.roomPrefix}${activeColor.sku}${suffix}`;
+            path = `images/${folderName}/${productData.roomPrefix}${activeColor.sku}${suffix}`;
         } else if (view === 'VIDEO') {
-            path = `/images/${folderName}/${prefix}${activeColor.sku}_video.mp4`;
+            path = `images/${folderName}/${prefix}${activeColor.sku}_video.mp4`;
         } else {
-            path = `/images/${folderName}/${prefix}${activeColor.sku}_${view}.jpg`;
+            path = `images/${folderName}/${prefix}${activeColor.sku}_${view}.jpg`;
         }
         return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path.toLowerCase())}?alt=media`;
     };
