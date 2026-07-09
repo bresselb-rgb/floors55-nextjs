@@ -75,6 +75,7 @@ export default function ClientBoardsManager({ proId }) {
             lockedLogo = F55_LOGO_URL;
             brandIdentifier = "f55";
         } else if (boardBrand === 'private') {
+            // If private label is selected, use the Pro's custom colors/logos but set the identifier to 'private'
             if (proProfile) {
                 if (proProfile.business) lockedBusiness = proProfile.business;
                 if (proProfile.logoUrl) lockedLogo = proProfile.logoUrl;
@@ -236,6 +237,10 @@ export default function ClientBoardsManager({ proId }) {
                 displayLogo = ABBEY_LOGO_URL;
                 displayBrandName = "Abbey Carpet";
                 brandBadgeClass = "bg-blue-50 text-blue-800 border border-blue-200";
+            } else if (board.brandIdentifier === 'private') {
+                displayLogo = null;
+                displayBrandName = "Private Label";
+                brandBadgeClass = "bg-purple-50 text-purple-800 border border-purple-200";
             } else if (board.brandIdentifier === 'custom' || (!board.brandIdentifier && board.logoUrl && board.logoUrl !== ABBEY_LOGO_URL && board.logoUrl !== F55_LOGO_URL)) {
                 displayLogo = board.logoUrl || null;
                 displayBrandName = board.businessName || "Custom Brand";

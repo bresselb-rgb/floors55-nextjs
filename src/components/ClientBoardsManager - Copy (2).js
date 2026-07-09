@@ -74,6 +74,14 @@ export default function ClientBoardsManager({ proId }) {
             lockedBusiness = "Floors 55";
             lockedLogo = F55_LOGO_URL;
             brandIdentifier = "f55";
+        } else if (boardBrand === 'private') {
+            if (proProfile) {
+                if (proProfile.business) lockedBusiness = proProfile.business;
+                if (proProfile.logoUrl) lockedLogo = proProfile.logoUrl;
+                if (proProfile.brandBgColor) lockedBgColor = proProfile.brandBgColor;
+                if (proProfile.brandTextColor) lockedTextColor = proProfile.brandTextColor;
+            }
+            brandIdentifier = "private";
         } else if (proProfile) {
             if (proProfile.business) lockedBusiness = proProfile.business;
             if (proProfile.logoUrl) lockedLogo = proProfile.logoUrl;
@@ -184,6 +192,7 @@ export default function ClientBoardsManager({ proId }) {
                 {!isStaff && <option value="custom">My Brand</option>}
                 <option value="f55">Floors 55 Pro</option>
                 {isStaff && <option value="abbey">Abbey Carpet & Floor</option>}
+                <option value="private">Private Label (Hide Brands)</option>
             </select>
         </div>
 
