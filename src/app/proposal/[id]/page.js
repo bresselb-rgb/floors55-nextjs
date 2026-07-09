@@ -22,7 +22,7 @@ export default function ProposalPage({ params }) {
 
         const fetchProposalData = async () => {
             try {
-                //                const quoteRef = doc(db, 'artifacts', appId, 'public', 'data', 'pro_quotes', proposalId);
+                const quoteRef = doc(db, 'artifacts', appId, 'public', 'data', 'pro_quotes', proposalId);
                 const quoteSnap = await getDoc(quoteRef);
 
                 if (!quoteSnap.exists()) {
@@ -33,13 +33,13 @@ export default function ProposalPage({ params }) {
                 const quoteData = quoteSnap.data();
                 if (isMounted) setQuote(quoteData);
 
-                //                if (quoteData.proId) {
+                if (quoteData.proId) {
                     const proRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', quoteData.proId);
                     const proSnap = await getDoc(proRef);
                     if (proSnap.exists() && isMounted) setProProfile(proSnap.data());
                 }
 
-                //                if (quoteData.productId) {
+                if (quoteData.productId) {
                     const pDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', quoteData.productId));
                     if (pDoc.exists() && isMounted) {
                         let pData = pDoc.data();
@@ -89,7 +89,7 @@ export default function ProposalPage({ params }) {
 
     useEffect(() => {
         if (proProfile && quote) {
-            //            const isAbbey = quote?.brand === 'Abbey Carpet & Floor' || quote?.brandOverride === 'abbey' || quote?.isPrivateLabel;
+            const isAbbey = quote?.brand === 'Abbey Carpet & Floor' || quote?.brandOverride === 'abbey' || quote?.isPrivateLabel;
             const isF55 = quote?.brand === 'Floors 55' || quote?.brandOverride === 'f55' || quote?.useCustomBranding === false;
 
             const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
@@ -132,7 +132,7 @@ export default function ProposalPage({ params }) {
         );
     }
 
-    //    const isAbbey = quote?.brand === 'Abbey Carpet & Floor' || quote?.brandOverride === 'abbey' || quote?.isPrivateLabel;
+    const isAbbey = quote?.brand === 'Abbey Carpet & Floor' || quote?.brandOverride === 'abbey' || quote?.isPrivateLabel;
     const isF55 = quote?.brand === 'Floors 55' || quote?.brandOverride === 'f55' || quote?.useCustomBranding === false;
 
     const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
@@ -144,7 +144,7 @@ export default function ProposalPage({ params }) {
     const brandTextColor = isAbbey || isF55 ? "#000000" : (proProfile?.brandTextColor || "#000000");
     const accentColor = brandBgColor.toLowerCase() === '#ffffff' ? '#c5a059' : brandBgColor;
 
-    //    const safePrefix = quote.imgPrefix || productDetails?.imgPrefix || '';
+    const safePrefix = quote.imgPrefix || productDetails?.imgPrefix || '';
     const displaySku = quote.colorSku || '01';
     const safeName = (quote.productName || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const safeSku = (productDetails?.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -166,7 +166,7 @@ export default function ProposalPage({ params }) {
     }
     const trimText = trimParts.length > 0 ? `Matching ${trimParts.join(', ').replace(/, ([^,]*)$/, ' and $1')}` : 'Matching transition moldings';
 
-    //    let cmToken = '';
+    let cmToken = '';
     try { cmToken = btoa((quote.totals.margin).toString()); } catch(e) {}
     
     // ✅ URL INJECTION: Carry the ?m=abbey tag backward so the product page STAYS private!
@@ -177,7 +177,7 @@ export default function ProposalPage({ params }) {
         productLink += `&pro=${quote.proId}`;
     }
 
-    //    return (
+    return (
         <div className="min-h-screen bg-gray-50 font-sans flex flex-col print:bg-white">
             {/* ✅ SEO PROTECTION: Dynamically inject noindex for private label quotes */}
             {isAbbey && <title>Your Flooring Proposal | Abbey Carpet & Floor</title>}
