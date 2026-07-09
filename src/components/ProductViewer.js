@@ -973,6 +973,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                                   {!isStaff && <option value="custom">My White-Label Brand</option>}
                                   <option value="f55">Floors 55 Pro</option>
                                   {isStaff && <option value="abbey">Abbey Carpet & Floor</option>}
+                                  <option value="private">Private Label (Hide Brands)</option>
                               </select>
                           </div>
 

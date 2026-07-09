@@ -84,6 +84,7 @@ export default function ClientBoardPage({ params }) {
         if (board) {
             const isAbbey = board?.brandIdentifier === 'abbey' || board?.businessName === "Abbey Carpet & Floor";
             const isF55 = board?.brandIdentifier === 'f55' || board?.businessName === "Floors 55";
+            const isPrivateLabel = board?.brandIdentifier === 'private';
 
             const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
             const F55_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media";
@@ -105,6 +106,9 @@ export default function ClientBoardPage({ params }) {
             sessionStorage.setItem('client_text', bText);
             sessionStorage.setItem('client_margin', mgn);
             sessionStorage.setItem('magic_link_client', 'true');
+            
+            if (isPrivateLabel) sessionStorage.setItem('private_label', 'true');
+            else sessionStorage.removeItem('private_label');
         }
     }, [board, proProfile]);
 
@@ -128,6 +132,7 @@ export default function ClientBoardPage({ params }) {
 
     const isAbbey = board?.brandIdentifier === 'abbey' || board?.businessName === "Abbey Carpet & Floor";
     const isF55 = board?.brandIdentifier === 'f55' || board?.businessName === "Floors 55";
+    const isPrivateLabel = board?.brandIdentifier === 'private';
 
     const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
     const F55_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media";
@@ -170,7 +175,7 @@ export default function ClientBoardPage({ params }) {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {products.map(p => {
-                            const displayTitle = (p.usePrivateName && p.privateName) ? p.privateName : (p.name || 'Unnamed Product');
+                            const displayTitle = (isPrivateLabel && p.privateName) ? p.privateName : (p.displayTitle || p.name || 'Unnamed Product');
                             const safePrefix = p.imgPrefix || '';
                             const displaySku = p.savedColorSku || (p.colors?.[0]?.sku || '01');
                             
@@ -186,7 +191,7 @@ export default function ClientBoardPage({ params }) {
                             const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
                             const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
-                            const productLink = `/product/${p.id}?color=${displaySku}&pro=${board.proId || ''}&cm=${cmToken}${isAbbey ? '&cb=' + cbToken : ''}`;
+                            const productLink = `/product/${p.id}?color=${displaySku}&pro=${board.proId || ''}&cm=${cmToken}${isAbbey ? '&cb=' + cbToken : ''}${isPrivateLabel ? '&pl=1' : ''}`;
 
                             const hasQuote = p.quote && p.quote.totals;
 

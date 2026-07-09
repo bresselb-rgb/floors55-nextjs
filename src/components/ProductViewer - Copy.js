@@ -9,7 +9,7 @@ import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "fi
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc, setDoc } from "firebase/firestore";
 import { auth, db, appId } from "../lib/firebase";
 
-function ProductViewerContent({ initialProduct }) {
+function ProductViewerContent({ initialProduct, hideBadges }) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const urlColorSku = searchParams.get('color');
@@ -17,6 +17,7 @@ function ProductViewerContent({ initialProduct }) {
     const [user, setUser] = useState(null);
     const [isStaff, setIsStaff] = useState(false);
     const [productData, setProductData] = useState(initialProduct);
+    const [isPrivateLabel, setIsPrivateLabel] = useState(false);
 
     const [activeColor, setActiveColor] = useState(() => {
         if (initialProduct?.colors && initialProduct.colors.length > 0) {
@@ -78,6 +79,17 @@ function ProductViewerContent({ initialProduct }) {
             const cmParam = searchParams.get('cm');
             const proParam = searchParams.get('pro');
             const cbParam = searchParams.get('cb'); 
+            const plParam = searchParams.get('pl');
+
+            if (plParam === '1') {
+                sessionStorage.setItem('private_label', 'true');
+            }
+
+            if (sessionStorage.getItem('private_label') === 'true') {
+                setIsPrivateLabel(true);
+            } else {
+                setIsPrivateLabel(false);
+            }
 
             const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
 
@@ -131,6 +143,8 @@ function ProductViewerContent({ initialProduct }) {
                 fetchProBranding();
             } else {
                 let updated = false;
+                if (plParam === '1') updated = true;
+                
                 if (cmParam) {
                     try {
                         const decoded = parseInt(atob(cmParam), 10);
@@ -141,7 +155,7 @@ function ProductViewerContent({ initialProduct }) {
                         }
                     } catch(e) {}
                 }
-                if (cbParam) {
+                if (cbParam && !isAbbey) {
                     try {
                         const decodedBrand = atob(cbParam);
                         sessionStorage.setItem('client_brand', decodedBrand);
@@ -281,6 +295,8 @@ function ProductViewerContent({ initialProduct }) {
         }
     }, [padSelection, availablePads]);
 
+    const activeTitle = isPrivateLabel && productData?.privateName ? productData.privateName : productData?.displayTitle;
+
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
         const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -293,7 +309,6 @@ function ProductViewerContent({ initialProduct }) {
         const prefix = productData.imgPrefix || '';
         let path = '';
         
-        // FIX: Removed leading slash to ensure correct Firebase storage path generation!
         if (view === 'ROOM' && productData.roomPrefix) {
             const suffix = productData.roomSuffix || '_room.jpg';
             path = `images/${folderName}/${productData.roomPrefix}${activeColor.sku}${suffix}`;
@@ -323,6 +338,14 @@ function ProductViewerContent({ initialProduct }) {
     const shareProduct = async () => {
         let targetPath = `/product/${productData.id}?color=${activeColor?.sku || ''}`;
         
+        if (isPrivateLabel) {
+            targetPath += '&pl=1';
+        }
+
+        if (searchParams.get('private') === 'true') {
+            targetPath += '&private=true';
+        }
+
         if (clientMargin !== null) {
             const encodedMargin = btoa(clientMargin.toString());
             targetPath += `&cm=${encodedMargin}`;
@@ -349,7 +372,7 @@ function ProductViewerContent({ initialProduct }) {
             finalUrl = `${window.location.origin}${targetPath}`;
         }
 
-        const title = productData.displayTitle;
+        const title = activeTitle;
         const plainText = `${title}\n${finalUrl}`;
         
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -464,7 +487,7 @@ function ProductViewerContent({ initialProduct }) {
         try {
             const productToSave = {
                 productId: productData.id,
-                name: productData.displayTitle,
+                name: activeTitle,
                 colorSku: activeColor?.sku || '',
                 colorName: activeColor?.name || '',
                 category: productData.category || '',
@@ -506,7 +529,7 @@ function ProductViewerContent({ initialProduct }) {
                 brandOverride: proposalBrand, // 'custom', 'f55', or 'abbey'
                 useCustomBranding: proposalBrand === 'custom', // Legacy fallback support
                 productId: productData.id,
-                productName: productData.displayTitle,
+                productName: activeTitle,
                 colorSku: activeColor?.sku || '',
                 colorName: activeColor?.name || '',
                 imgPrefix: productData.imgPrefix || '',
@@ -576,11 +599,11 @@ function ProductViewerContent({ initialProduct }) {
     const renderTitleBlock = (isDesktop) => (
         <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 lg:mb-2 gap-4 ${isDesktop ? 'hidden lg:flex' : 'flex lg:hidden'}`}>
             <div className="flex-1 min-w-0">
-                <h1 className="text-3xl font-bold m-0 leading-tight text-gray-900">{productData.displayTitle}</h1>
+                <h1 className="text-3xl font-bold m-0 leading-tight text-gray-900">{activeTitle}</h1>
                 <div className="flex flex-wrap items-center gap-2 mt-2 mb-2 sm:mb-4">
                     <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0">{productData.category}</span>
                     
-                    {!isClientMode && user && !user.isAnonymous && productData.manufacturer && (
+                    {!isClientMode && !hideBadges && !isPrivateLabel && user && !user.isAnonymous && productData.manufacturer && (
                         <span className="inline-block px-3 py-1 bg-[#fdfdfd] border border-gray-200 text-gray-700 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm shrink-0">
                             <span className="text-gray-400 font-normal mr-1">Mfg:</span> {productData.manufacturer} {productData.sku ? `(${productData.sku})` : ''}
                         </span>
@@ -629,7 +652,7 @@ function ProductViewerContent({ initialProduct }) {
 
                     return (
                         <div key={c.sku} className={`cursor-pointer text-center group ${!isDesktop ? 'snap-start shrink-0 w-[85px]' : ''}`} onClick={() => {
-                            router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
+                            router.replace(`/product/${productData.id}?color=${c.sku}${isPrivateLabel ? '&pl=1' : ''}`, { scroll: false });
                             setActiveColor(c);
                         }}>
                             <div className={`relative w-full aspect-square border-2 rounded-md transition duration-200 bg-gray-100 overflow-hidden ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`}>
@@ -671,9 +694,9 @@ function ProductViewerContent({ initialProduct }) {
 
             <div className="flex gap-4 mt-6">
                 {!isClientMode && (
-                    <Link href={`/quote?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-black text-white text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-gold transition-colors border-2 border-black hover:border-gold" style={{ textDecoration: 'none' }}>Get A Quote</Link>
+                    <Link href={`/quote?product=${encodeURIComponent(activeTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-black text-white text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-gold transition-colors border-2 border-black hover:border-gold" style={{ textDecoration: 'none' }}>Get A Quote</Link>
                 )}
-                <Link href={`/order-sample?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
+                <Link href={`/order-sample?product=${encodeURIComponent(activeTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
             </div>
 
             {renderColorSwatches(false)}
@@ -772,7 +795,7 @@ function ProductViewerContent({ initialProduct }) {
                       <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center sticky top-0 z-20">
                           <div>
                               <h3 className="text-lg font-black uppercase tracking-tight text-gray-900">Proposal Builder</h3>
-                              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{productData.displayTitle}</p>
+                              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{activeTitle}</p>
                           </div>
                           <button onClick={() => setIsBuilderOpen(false)} className="text-gray-400 hover:text-black text-2xl font-bold bg-transparent border-none cursor-pointer outline-none p-2">✕</button>
                       </div>
@@ -992,10 +1015,10 @@ function ProductViewerContent({ initialProduct }) {
     );
 }
 
-export default function ProductViewer({ initialProduct }) {
+export default function ProductViewer({ initialProduct, hideBadges }) {
     return (
         <Suspense fallback={<div className="flex-1 flex items-center justify-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold border-t-transparent"></div></div>}>
-            <ProductViewerContent initialProduct={initialProduct} />
+            <ProductViewerContent initialProduct={initialProduct} hideBadges={hideBadges} />
         </Suspense>
     );
 }

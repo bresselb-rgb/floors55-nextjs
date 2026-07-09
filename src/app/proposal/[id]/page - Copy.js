@@ -70,7 +70,6 @@ export default function ProposalPage({ params }) {
         if (proProfile && quote) {
             const isAbbey = quote?.brand === 'Abbey Carpet & Floor' || quote?.brandOverride === 'abbey';
             const isF55 = quote?.brand === 'Floors 55' || quote?.brandOverride === 'f55' || quote?.useCustomBranding === false;
-            const isPrivateLabel = quote?.brandOverride === 'private';
 
             const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
             const F55_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media";
@@ -92,9 +91,6 @@ export default function ProposalPage({ params }) {
             sessionStorage.setItem('client_text', bText);
             sessionStorage.setItem('client_margin', mgn);
             sessionStorage.setItem('magic_link_client', 'true');
-            
-            if (isPrivateLabel) sessionStorage.setItem('private_label', 'true');
-            else sessionStorage.removeItem('private_label');
         }
     }, [proProfile, quote]);
 
@@ -118,7 +114,6 @@ export default function ProposalPage({ params }) {
 
     const isAbbey = quote?.brand === 'Abbey Carpet & Floor' || quote?.brandOverride === 'abbey';
     const isF55 = quote?.brand === 'Floors 55' || quote?.brandOverride === 'f55' || quote?.useCustomBranding === false;
-    const isPrivateLabel = quote?.brandOverride === 'private';
 
     const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
     const F55_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media";
@@ -169,11 +164,6 @@ export default function ProposalPage({ params }) {
     } else if (isAbbey) {
         productLink += `&cb=${btoa('Abbey Carpet & Floor')}`;
     }
-    if (isPrivateLabel) {
-        productLink += `&pl=1`;
-    }
-
-    const displayProductName = (isPrivateLabel && productDetails?.privateName) ? productDetails.privateName : quote.productName;
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans flex flex-col print:bg-white">
@@ -223,14 +213,14 @@ export default function ProposalPage({ params }) {
                 {/* THE SELECTED PRODUCT - Squashed for print */}
                 <div className="bg-white rounded-3xl print:rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8 print:mb-3 flex flex-col md:flex-row group print:border-gray-300 print:shadow-none print:break-inside-avoid">
                     <Link href={productLink} className="md:w-2/5 print:w-1/4 h-64 md:h-auto print:h-24 relative overflow-hidden bg-gray-100 block print:pointer-events-none" style={{ textDecoration: 'none' }}>
-                        <img src={fbPath} className="w-full h-full object-cover transition duration-500 group-hover:scale-105" onError={e => e.target.src=TBD_IMG} alt={displayProductName} />
+                        <img src={fbPath} className="w-full h-full object-cover transition duration-500 group-hover:scale-105" onError={e => e.target.src=TBD_IMG} alt={quote.productName} />
                         <div className="absolute bottom-4 left-4 print:bottom-1 print:left-1 bg-black/50 backdrop-blur-md px-3 py-1 print:px-1.5 print:py-0.5 rounded-full border border-white/20 shadow-sm print:bg-black/70">
                             <span className="text-white font-bold text-xs print:text-[7px]">Color: {quote.colorName}</span>
                         </div>
                     </Link>
                     <div className="p-8 print:p-4 flex-1 flex flex-col justify-center">
                         <div className="text-[10px] print:text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-2 print:mb-0.5">{quote.category}</div>
-                        <h3 className="text-2xl print:text-sm font-black text-gray-900 mb-4 print:mb-1">{displayProductName}</h3>
+                        <h3 className="text-2xl print:text-sm font-black text-gray-900 mb-4 print:mb-1">{quote.productName}</h3>
                         <p className="text-gray-500 text-sm print:text-[9px] print:leading-tight mb-6 print:mb-0 line-clamp-3 print:line-clamp-2">{productDetails?.desc || 'Premium flooring collection.'}</p>
                         <Link href={productLink} className="inline-block text-center font-black uppercase py-3 px-6 rounded-xl transition text-xs tracking-widest w-full md:w-auto print:hidden" style={{ textDecoration: 'none', backgroundColor: brandBgColor, color: brandTextColor, border: `1px solid ${brandTextColor}` }}>
                             View Photos & Specs
@@ -248,7 +238,7 @@ export default function ProposalPage({ params }) {
                             <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
                             <div>
                                 <span className="font-bold text-gray-900 block print:leading-tight">Premium Flooring Material</span>
-                                <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">{Math.ceil(quote.measurements.netSqft)} net sqft of {displayProductName} in {quote.colorName}.</span>
+                                <span className="text-sm print:text-[9px] text-gray-500 print:leading-tight">{Math.ceil(quote.measurements.netSqft)} net sqft of {quote.productName} in {quote.colorName}.</span>
                             </div>
                         </li>
                         
