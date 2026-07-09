@@ -1,3 +1,4 @@
+// src/app/my-account/page.js
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -47,7 +48,10 @@ export default function MyAccountPage() {
                 
                 // Check if they are internal Staff (House Account)
                 const staffSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'staff', currentUser.uid));
-                if (staffSnap.exists()) setIsStaff(true);
+                if (staffSnap.exists()) {
+                    setIsStaff(true);
+                    setLinkBranding('f55'); // Default staff to f55 branding instead of custom
+                }
 
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
                 const docSnap = await getDoc(docRef);
@@ -159,8 +163,8 @@ export default function MyAccountPage() {
         if (linkBranding === 'abbey') {
             sessionStorage.setItem('client_brand', 'Abbey Carpet & Floor');
             sessionStorage.setItem('client_logo', ABBEY_LOGO_URL);
-            sessionStorage.setItem('client_bg', '#003366'); // Abbey Navy
-            sessionStorage.setItem('client_text', '#ffffff');
+            sessionStorage.removeItem('client_bg'); // Clean White Background
+            sessionStorage.removeItem('client_text'); // Black text
         } else if (isWhiteLabelActive && linkBranding === 'custom') {
             sessionStorage.setItem('client_brand', profile.business);
             if (profile.logoUrl) sessionStorage.setItem('client_logo', profile.logoUrl);
@@ -168,6 +172,7 @@ export default function MyAccountPage() {
             sessionStorage.setItem('client_bg', profile.brandBgColor || '#ffffff');
             sessionStorage.setItem('client_text', profile.brandTextColor || '#000000');
         } else {
+            // Standard Floors 55 brand
             sessionStorage.removeItem('client_brand');
             sessionStorage.removeItem('client_logo');
             sessionStorage.removeItem('client_bg');
@@ -247,12 +252,16 @@ export default function MyAccountPage() {
                     >
                         Client Boards
                     </button>
-                    <button 
-                        onClick={() => setActiveTab('branding')} 
-                        className={`py-3 px-2 md:px-4 font-black text-[10px] md:text-xs uppercase tracking-widest whitespace-nowrap border-b-2 transition-all outline-none cursor-pointer ${activeTab === 'branding' ? 'border-gold text-black' : 'border-transparent text-gray-400 hover:text-gray-800'}`}
-                    >
-                        White-Label Setup
-                    </button>
+                    
+                    {/* Hide Branding Tab if User is Staff */}
+                    {!isStaff && (
+                        <button 
+                            onClick={() => setActiveTab('branding')} 
+                            className={`py-3 px-2 md:px-4 font-black text-[10px] md:text-xs uppercase tracking-widest whitespace-nowrap border-b-2 transition-all outline-none cursor-pointer ${activeTab === 'branding' ? 'border-gold text-black' : 'border-transparent text-gray-400 hover:text-gray-800'}`}
+                        >
+                            White-Label Setup
+                        </button>
+                    )}
                 </div>
 
                 {/* TAB 1: OVERVIEW & PRICING */}
@@ -327,10 +336,10 @@ export default function MyAccountPage() {
                             <h3 className="text-sm font-bold uppercase tracking-widest text-gray-900 mb-2">Your Master Catalog Link</h3>
                             <p className="text-xs text-gray-500 mb-4">Share this link to let clients browse the entire catalog with your pricing applied.</p>
                             
-                            {/* ABBEY BRANDING INJECTION */}
+                            {/* BRANDING INJECTION OPTIONS */}
                             {(isWhiteLabelActive || isStaff) && (
                                 <div className="flex flex-wrap gap-4 mb-4">
-                                    {isWhiteLabelActive && (
+                                    {isWhiteLabelActive && !isStaff && (
                                         <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
                                             <input type="radio" name="linkBrand" checked={linkBranding === 'custom'} onChange={() => setLinkBranding('custom')} className="accent-black w-4 h-4" />
                                             My White-Label Brand
@@ -408,7 +417,7 @@ export default function MyAccountPage() {
                         </ul>
                     </div>
 
-                    <ProposalsManager proId={user.uid} />
+                    <ProposalsManager proId={user?.uid} />
                 </div>
 
                 {/* TAB 3: CLIENT BOARDS */}
@@ -426,99 +435,100 @@ export default function MyAccountPage() {
                         </ul>
                     </div>
 
-                    <ClientBoardsManager proId={user.uid} />
+                    <ClientBoardsManager proId={user?.uid} />
                 </div>
 
-                {/* TAB 4: BRANDING & SETTINGS */}
-                <div className={activeTab === 'branding' ? 'block space-y-6 animate-in fade-in duration-300' : 'hidden'}>
-                    
-                    {/* INLINE QUICK GUIDE: BRANDING */}
-                    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 shadow-inner">
-                        <h4 className="text-blue-900 font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
-                            <span className="text-base">📘</span> Quick Guide: White-Label Setup
-                        </h4>
-                        <ul className="text-blue-800 text-xs space-y-1.5 list-disc pl-5 leading-relaxed font-medium m-0">
-                            <li><strong>Make it Yours:</strong> Upload your company logo and brand colors to replace the Floors 55 brand on all shared links and proposals.</li>
-                            <li><strong>Temporary Disable:</strong> You can toggle the master switch off at any time to temporarily use the established Floors 55 brand for trust, without losing your saved logo or hex colors!</li>
-                        </ul>
-                    </div>
-
-                    <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
-                        <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6 gap-4 border-b border-gray-100 pb-6">
-                            <div>
-                                <h2 className="text-xl font-black mb-1 uppercase tracking-tight">White-Label Branding</h2>
-                                <p className="text-sm text-gray-500 max-w-lg">Customize the portal to look exactly like your own website when sharing presentation links and catalogs with your clients.</p>
-                            </div>
-                            <div className="shrink-0 bg-gray-50 p-4 rounded-xl border border-gray-200 w-full md:w-auto flex items-center justify-between gap-4">
-                                <span className="text-sm font-bold text-gray-900">Enable White-Label</span>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                  <input type="checkbox" checked={isWhiteLabelActive} onChange={(e) => handleToggleWhiteLabel(e.target.checked)} className="sr-only peer" />
-                                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold"></div>
-                                </label>
-                            </div>
-                        </div>
+                {/* TAB 4: BRANDING & SETTINGS (Hidden for Staff) */}
+                {!isStaff && (
+                    <div className={activeTab === 'branding' ? 'block space-y-6 animate-in fade-in duration-300' : 'hidden'}>
                         
-                        {isWhiteLabelActive ? (
-                            <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-                                    <div>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500">Company Logo</label>
-                                            <button 
-                                                type="button"
-                                                onClick={() => setIsLogoInfoOpen(true)}
-                                                className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gold transition-colors flex items-center gap-1 bg-gray-50 hover:bg-gold/10 px-2 py-1 rounded-full border border-gray-200 outline-none cursor-pointer"
-                                            >
-                                                <span>❓</span> Tips
-                                            </button>
-                                        </div>
-                                        {profile.logoUrl ? (
-                                            <div className="mt-2 bg-gray-50 border border-gray-200 p-4 rounded-xl flex items-center justify-center min-h-[100px] relative group">
-                                                <img src={profile.logoUrl} alt="Your Logo" className="h-16 object-contain" />
-                                                <button onClick={() => { setProfile({...profile, logoUrl: ""}) }} className="absolute top-2 right-2 bg-white text-red-500 hover:text-red-700 border border-gray-200 rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity outline-none cursor-pointer text-xs">✕</button>
-                                            </div>
-                                        ) : (
-                                            <div className="mt-2 relative">
-                                                <input type="file" accept="image/png, image/jpeg" onChange={handleLogoUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer" disabled={isUploading}/>
-                                                {isUploading && <p className="text-xs text-gold font-bold mt-2 animate-pulse">Uploading...</p>}
-                                            </div>
-                                        )}
-                                    </div>
-                                    
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Header & Footer Background</label>
-                                            <div className="flex items-center gap-3">
-                                                <input type="color" value={profile.brandBgColor} onChange={e => setProfile({...profile, brandBgColor: e.target.value})} className="h-12 w-24 cursor-pointer rounded-lg border border-gray-200" />
-                                                <span className="text-sm font-mono text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">{profile.brandBgColor}</span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Header & Footer Text</label>
-                                            <div className="flex items-center gap-3">
-                                                <input type="color" value={profile.brandTextColor} onChange={e => setProfile({...profile, brandTextColor: e.target.value})} className="h-12 w-24 cursor-pointer rounded-lg border border-gray-200" />
-                                                <span className="text-sm font-mono text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">{profile.brandTextColor}</span>
-                                            </div>
-                                        </div>
-                                    </div>
+                        {/* INLINE QUICK GUIDE: BRANDING */}
+                        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 shadow-inner">
+                            <h4 className="text-blue-900 font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <span className="text-base">📘</span> Quick Guide: White-Label Setup
+                            </h4>
+                            <ul className="text-blue-800 text-xs space-y-1.5 list-disc pl-5 leading-relaxed font-medium m-0">
+                                <li><strong>Make it Yours:</strong> Upload your company logo and brand colors to replace the Floors 55 brand on all shared links and proposals.</li>
+                                <li><strong>Temporary Disable:</strong> You can toggle the master switch off at any time to temporarily use the established Floors 55 brand for trust, without losing your saved logo or hex colors!</li>
+                            </ul>
+                        </div>
+
+                        <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
+                            <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6 gap-4 border-b border-gray-100 pb-6">
+                                <div>
+                                    <h2 className="text-xl font-black mb-1 uppercase tracking-tight">White-Label Branding</h2>
+                                    <p className="text-sm text-gray-500 max-w-lg">Customize the portal to look exactly like your own website when sharing presentation links and catalogs with your clients.</p>
                                 </div>
-                                <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50 cursor-pointer outline-none">
-                                    {isSaving ? "Saving..." : "Save Brand Settings"}
-                                </button>
+                                <div className="shrink-0 bg-gray-50 p-4 rounded-xl border border-gray-200 w-full md:w-auto flex items-center justify-between gap-4">
+                                    <span className="text-sm font-bold text-gray-900">Enable White-Label</span>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                      <input type="checkbox" checked={isWhiteLabelActive} onChange={(e) => handleToggleWhiteLabel(e.target.checked)} className="sr-only peer" />
+                                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gold"></div>
+                                    </label>
+                                </div>
                             </div>
-                        ) : (
-                            <div className="text-center py-10 bg-gray-50 rounded-2xl border border-gray-100">
-                                <div className="text-4xl mb-3 opacity-20">🎨</div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-1">Branding is currently disabled.</h3>
-                                <p className="text-sm text-gray-500">Your clients will see the standard Floors 55 design when they view your shared links.</p>
-                            </div>
-                        )}
+                            
+                            {isWhiteLabelActive ? (
+                                <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500">Company Logo</label>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setIsLogoInfoOpen(true)}
+                                                    className="text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gold transition-colors flex items-center gap-1 bg-gray-50 hover:bg-gold/10 px-2 py-1 rounded-full border border-gray-200 outline-none cursor-pointer"
+                                                >
+                                                    <span>❓</span> Tips
+                                                </button>
+                                            </div>
+                                            {profile.logoUrl ? (
+                                                <div className="mt-2 bg-gray-50 border border-gray-200 p-4 rounded-xl flex items-center justify-center min-h-[100px] relative group">
+                                                    <img src={profile.logoUrl} alt="Your Logo" className="h-16 object-contain" />
+                                                    <button onClick={() => { setProfile({...profile, logoUrl: ""}) }} className="absolute top-2 right-2 bg-white text-red-500 hover:text-red-700 border border-gray-200 rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity outline-none cursor-pointer text-xs">✕</button>
+                                                </div>
+                                            ) : (
+                                                <div className="mt-2 relative">
+                                                    <input type="file" accept="image/png, image/jpeg" onChange={handleLogoUpload} className="w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 cursor-pointer" disabled={isUploading}/>
+                                                    {isUploading && <p className="text-xs text-gold font-bold mt-2 animate-pulse">Uploading...</p>}
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Header & Footer Background</label>
+                                                <div className="flex items-center gap-3">
+                                                    <input type="color" value={profile.brandBgColor} onChange={e => setProfile({...profile, brandBgColor: e.target.value})} className="h-12 w-24 cursor-pointer rounded-lg border border-gray-200" />
+                                                    <span className="text-sm font-mono text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">{profile.brandBgColor}</span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Header & Footer Text</label>
+                                                <div className="flex items-center gap-3">
+                                                    <input type="color" value={profile.brandTextColor} onChange={e => setProfile({...profile, brandTextColor: e.target.value})} className="h-12 w-24 cursor-pointer rounded-lg border border-gray-200" />
+                                                    <span className="text-sm font-mono text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">{profile.brandTextColor}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-8 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50 cursor-pointer outline-none">
+                                        {isSaving ? "Saving..." : "Save Brand Settings"}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="text-center py-10 bg-gray-50 rounded-2xl border border-gray-100">
+                                    <div className="text-4xl mb-3 opacity-20">🎨</div>
+                                    <h3 className="text-lg font-bold text-gray-900 mb-1">Branding is currently disabled.</h3>
+                                    <p className="text-sm text-gray-500">Your clients will see the standard Floors 55 design when they view your shared links.</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
 
             </div>
 
-            {}
             {/* Logo Info Modal */}
             {isLogoInfoOpen && (
                 <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">

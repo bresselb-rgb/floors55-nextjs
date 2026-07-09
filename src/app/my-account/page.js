@@ -163,20 +163,27 @@ export default function MyAccountPage() {
         if (linkBranding === 'abbey') {
             sessionStorage.setItem('client_brand', 'Abbey Carpet & Floor');
             sessionStorage.setItem('client_logo', ABBEY_LOGO_URL);
-            sessionStorage.removeItem('client_bg'); // Clean White Background
-            sessionStorage.removeItem('client_text'); // Black text
-        } else if (isWhiteLabelActive && linkBranding === 'custom') {
+            sessionStorage.removeItem('client_bg'); 
+            sessionStorage.removeItem('client_text'); 
+            sessionStorage.removeItem('private_label');
+        } else if (isWhiteLabelActive && (linkBranding === 'custom' || linkBranding === 'private')) {
             sessionStorage.setItem('client_brand', profile.business);
             if (profile.logoUrl) sessionStorage.setItem('client_logo', profile.logoUrl);
             else sessionStorage.removeItem('client_logo');
             sessionStorage.setItem('client_bg', profile.brandBgColor || '#ffffff');
             sessionStorage.setItem('client_text', profile.brandTextColor || '#000000');
+            
+            if (linkBranding === 'private') sessionStorage.setItem('private_label', 'true');
+            else sessionStorage.removeItem('private_label');
         } else {
             // Standard Floors 55 brand
             sessionStorage.removeItem('client_brand');
             sessionStorage.removeItem('client_logo');
             sessionStorage.removeItem('client_bg');
             sessionStorage.removeItem('client_text');
+            
+            if (linkBranding === 'private') sessionStorage.setItem('private_label', 'true');
+            else sessionStorage.removeItem('private_label');
         }
         window.location.href = '/category';
     };
@@ -184,11 +191,18 @@ export default function MyAccountPage() {
     const encodedMargin = btoa((profile.clientMargin !== undefined ? profile.clientMargin : 20).toString());
     
     // Generate link dynamically based on the toggle
-    const portalLink = user 
-        ? (isWhiteLabelActive && linkBranding === 'custom')
-            ? `${typeof window !== 'undefined' ? window.location.origin : ''}/category?pro=${user.uid}&cm=${encodedMargin}` 
-            : `${typeof window !== 'undefined' ? window.location.origin : ''}/category?cm=${encodedMargin}${linkBranding === 'abbey' ? '&cb=' + btoa('Abbey Carpet & Floor') : ''}`
-        : '';
+    let portalLink = '';
+    if (user && typeof window !== 'undefined') {
+        portalLink = `${window.location.origin}/category?cm=${encodedMargin}`;
+        if (linkBranding === 'abbey') {
+            portalLink += `&cb=${btoa('Abbey Carpet & Floor')}`;
+        } else if (linkBranding === 'custom' && isWhiteLabelActive) {
+            portalLink += `&pro=${user.uid}`;
+        } else if (linkBranding === 'private') {
+            portalLink += `&pl=1`;
+            if (isWhiteLabelActive) portalLink += `&pro=${user.uid}`;
+        }
+    }
 
     const copyMagicLink = () => {
         if (navigator.clipboard && window.isSecureContext) {
@@ -355,6 +369,10 @@ export default function MyAccountPage() {
                                             <span className="text-blue-900">Abbey Carpet & Floor</span>
                                         </label>
                                     )}
+                                    <label className="flex items-center gap-2 text-xs font-bold text-purple-700 cursor-pointer border border-purple-200 bg-purple-50 px-3 py-1.5 rounded-lg shadow-sm">
+                                        <input type="radio" name="linkBrand" checked={linkBranding === 'private'} onChange={() => setLinkBranding('private')} className="accent-purple-800 w-4 h-4 cursor-pointer" />
+                                        <span className="text-purple-900">Private Label (Hide Brands)</span>
+                                    </label>
                                 </div>
                             )}
 

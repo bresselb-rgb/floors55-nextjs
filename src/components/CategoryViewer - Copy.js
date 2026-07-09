@@ -61,6 +61,7 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     const val = rawValue.trim();
     const lowerVal = val.toLowerCase();
 
+    // 1. Thickness Bucketing
     if (key.toLowerCase() === "thickness") {
         const match = val.match(/[\d.]+/);
         if (match) {
@@ -72,37 +73,48 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
         }
     }
 
+    // 2. Construction / Core Type Extraction
     if (key.toLowerCase() === "construction / core") {
+        // LVP manufacturers often use "Solid Polymer Core" for SPC
         if (category === 'Luxury Vinyl (LVP)' && lowerVal.includes("solid")) return "SPC";
+        
         if (lowerVal.includes("solid")) return "Solid";
         if (lowerVal.includes("wpc")) return "WPC";
         if (lowerVal.includes("spc") || lowerVal.includes("rigid")) return "SPC";
+        
+        // Catch anything that implies engineered hardwood (HDF, Multi-ply, veneer)
         if (lowerVal.includes("engineered") || lowerVal.includes("ply") || lowerVal.includes("hdf") || lowerVal.includes("veneer") || lowerVal.includes("multi")) return "Engineered";
+        
         return val;
     }
 
+    // 3. Attached Pad Extraction
     if (key.toLowerCase() === "attached pad" || key.toLowerCase() === "pad") {
         if (lowerVal.includes("cork")) return "Attached Cork";
         if (lowerVal.includes("no") || lowerVal === "none" || lowerVal === "n/a" || lowerVal === "false") return "None";
         return "Attached Pad"; 
     }
 
+    // 4. Carpet Style Type Bucketing
     if (key.toLowerCase() === "style type") {
         if ((lowerVal.includes("texture") || lowerVal.includes("cut pile")) && !lowerVal.includes("loop")) return "Texture / Cut Pile";
         if (lowerVal.includes("pattern") || (lowerVal.includes("cut") && lowerVal.includes("loop"))) return "Pattern / Cut & Loop";
         if (lowerVal.includes("loop") || lowerVal.includes("berber")) return "Loop";
     }
 
+    // 5. Wear Layer Cleanup
     if (key.toLowerCase() === "wear layer") {
          const match = val.match(/(\d+)/);
          if (match) return `${match[1]} mil`;
     }
     
+    // 6. Waterproof Normalization
     if (key.toLowerCase() === "waterproof") {
         if (lowerVal.includes("no") || lowerVal === "false") return "None";
         return "100% Waterproof";
     }
 
+    // 7. Fiber Type Normalization
     if (key.toLowerCase() === "fiber type") {
         if (lowerVal.includes("nylon")) return "Nylon";
         if (lowerVal.includes("triexta") || lowerVal.includes("smartstrand") || lowerVal.includes("sorona")) return "Triexta";
@@ -111,6 +123,7 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
         return val;
     }
 
+    // 8. Face Weight Bucketing
     if (key.toLowerCase() === "face weight") {
         const match = val.match(/[\d.]+/);
         if (match) {
@@ -126,6 +139,7 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     return val;
 };
 
+// Hardcoded sort order so custom buckets don't sort alphabetically
 const THICKNESS_ORDER = { "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4 };
 const FACE_WEIGHT_ORDER = { "< 30 oz": 1, "30 - 40 oz": 2, "40 - 50 oz": 3, "50 - 60 oz": 4, "60+ oz": 5 };
 
@@ -137,7 +151,6 @@ function CategoryViewerContent({ initialCategory }) {
   
   const [clientMargin, setClientMargin] = useState(null);
   const [isMagicLink, setIsMagicLink] = useState(false);
-  const [isPrivateLabel, setIsPrivateLabel] = useState(false);
 
   const [liveProductsRaw, setLiveProductsRaw] = useState([]);
   const [activeCategory, setActiveCategory] = useState(initialCategory);
@@ -163,9 +176,8 @@ function CategoryViewerContent({ initialCategory }) {
       e.preventDefault();
       const displaySku = activePreviews[p.id] || (p.colors?.[0]?.sku || '01');
       
+      // Calculate the internal path (without the domain)
       let targetPath = `/product/${p.id}?color=${displaySku}`;
-      
-      if (isPrivateLabel) targetPath += `&pl=1`;
       
       if (clientMargin !== null) {
           const encodedMargin = btoa(clientMargin.toString());
@@ -173,6 +185,7 @@ function CategoryViewerContent({ initialCategory }) {
           
           if (user && !user.isAnonymous) {
               targetPath += `&pro=${user.uid}`;
+              // Force Abbey Override in the URL if it's active
               const storedBrand = sessionStorage.getItem('client_brand');
               if (storedBrand && storedBrand.includes('Abbey')) {
                   targetPath += `&cb=${btoa('Abbey Carpet & Floor')}`;
@@ -183,6 +196,7 @@ function CategoryViewerContent({ initialCategory }) {
           }
       }
 
+      // Generate Native Short Link
       const shortCode = Math.random().toString(36).substring(2, 8);
       let finalUrl = `${window.location.origin}/s/${shortCode}`;
       
@@ -196,9 +210,9 @@ function CategoryViewerContent({ initialCategory }) {
           finalUrl = `${window.location.origin}${targetPath}`;
       }
 
-      const displayTitle = isPrivateLabel && p.privateName ? p.privateName : p.displayTitle;
-      const title = displayTitle;
+      const title = p.displayTitle;
       const plainText = `${title}\n${finalUrl}`;
+      const htmlText = `<a href="${finalUrl}">${title}</a>`;
       
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       const isDesktop = !isMobile;
@@ -233,20 +247,11 @@ function CategoryViewerContent({ initialCategory }) {
           const cmParam = searchParams.get('cm');
           const proParam = searchParams.get('pro');
           const cbParam = searchParams.get('cb'); 
-          const plParam = searchParams.get('pl');
 
-          if (plParam === '1') {
-              sessionStorage.setItem('private_label', 'true');
-          }
-
-          if (sessionStorage.getItem('private_label') === 'true') {
-              setIsPrivateLabel(true);
-          } else {
-              setIsPrivateLabel(false);
-          }
-
+          // HARDCODED ABBEY LOGO CONSTANT
           const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
 
+          // CHECK FOR ABBEY OVERRIDE FIRST TO PREVENT PRO ID FROM OVERWRITING IT
           let isAbbey = false;
           if (cbParam) {
               try {
@@ -298,8 +303,6 @@ function CategoryViewerContent({ initialCategory }) {
                 fetchProBranding();
           } else {
               let shouldReplace = false;
-              if (plParam === '1') shouldReplace = true;
-              
               if (cmParam) {
                   try {
                       const decoded = parseInt(atob(cmParam), 10);
@@ -383,9 +386,11 @@ function CategoryViewerContent({ initialCategory }) {
               data.category = cat || 'Uncategorized';
           }
 
+          // SMART AUTO-TAGGER: Fills in the blanks if manufacturers forgot specs!
           const fullDesc = (data.desc || '').toLowerCase();
           let existingSpecs = data.specs || [];
           
+          // Helper to safely check if a normalized spec exists
           const hasSpec = (targetKey) => {
               return existingSpecs.some(s => {
                   const parts = s.split(':');
@@ -394,16 +399,24 @@ function CategoryViewerContent({ initialCategory }) {
           };
           
           if (data.category === 'Luxury Vinyl (LVP)') {
-              if (!hasSpec('Waterproof')) existingSpecs.push('Waterproof: 100% Waterproof');
+              // Ensure Waterproof exists
+              if (!hasSpec('Waterproof')) {
+                  existingSpecs.push('Waterproof: 100% Waterproof');
+              }
+              
+              // Ensure Pad exists
               if (!hasSpec('Attached Pad')) {
                   if (fullDesc.includes('cork')) existingSpecs.push('Attached Pad: Attached Cork');
                   else existingSpecs.push('Attached Pad: Attached Pad');
               }
+
+              // Ensure Core exists
               if (!hasSpec('Construction / Core')) {
                   if (fullDesc.includes('wpc')) existingSpecs.push('Construction / Core: WPC');
                   else if (fullDesc.includes('spc') || fullDesc.includes('rigid') || fullDesc.includes('solid')) existingSpecs.push('Construction / Core: SPC');
               }
           } else if (data.category === 'Hardwood') {
+              // Ensure Core exists for Hardwood (Engineered vs Solid)
               if (!hasSpec('Construction / Core')) {
                   if (fullDesc.includes('solid') || data.displayTitle.toLowerCase().includes('solid')) {
                       existingSpecs.push('Construction / Core: Solid');
@@ -412,6 +425,7 @@ function CategoryViewerContent({ initialCategory }) {
                   }
               }
           } else if (data.category === 'Carpet') {
+              // Ensure Fiber Type exists for Carpet
               if (!hasSpec('Fiber Type')) {
                   if (fullDesc.includes('nylon')) existingSpecs.push('Fiber Type: Nylon');
                   else if (fullDesc.includes('triexta') || fullDesc.includes('smartstrand') || fullDesc.includes('sorona')) existingSpecs.push('Fiber Type: Triexta');
@@ -419,9 +433,11 @@ function CategoryViewerContent({ initialCategory }) {
                   else if (fullDesc.includes('polyester') || fullDesc.includes(' pet ')) existingSpecs.push('Fiber Type: Polyester');
               }
           } else {
+              // Non-LVP/Hardwood auto-tags just in case
               if (fullDesc.includes('cork') && !hasSpec('Attached Pad')) {
                   existingSpecs.push('Attached Pad: Attached Cork');
               }
+              
               if (!hasSpec('Construction / Core')) {
                   if (fullDesc.includes('wpc')) existingSpecs.push('Construction / Core: WPC');
                   else if (fullDesc.includes('spc') || fullDesc.includes('rigid') || fullDesc.includes('solid')) existingSpecs.push('Construction / Core: SPC');
@@ -490,14 +506,13 @@ function CategoryViewerContent({ initialCategory }) {
       );
       
       relevantProducts.forEach(p => {
-          const targetBrand = isPrivateLabel && p.privateManufacturer ? p.privateManufacturer : p.manufacturer;
-          if (targetBrand) {
-              brands.add(targetBrand.trim());
+          if (p.manufacturer) {
+              brands.add(p.manufacturer.trim());
           }
       });
 
       return [...brands].sort();
-  }, [liveProductsRaw, activeCategory, isPrivateLabel]);
+  }, [liveProductsRaw, activeCategory]);
 
   const dynamicSpecs = useMemo(() => {
       let TARGET_SPECS = [
@@ -512,6 +527,7 @@ function CategoryViewerContent({ initialCategory }) {
           "Face Weight"
       ];
 
+      // Dynamically remove hard surface filters if the user is looking at Carpet
       if (activeCategory === 'Carpet' || activeCategory === 'Carpet Cushion') {
           TARGET_SPECS = TARGET_SPECS.filter(s => 
               s !== "Construction / Core" && 
@@ -540,6 +556,7 @@ function CategoryViewerContent({ initialCategory }) {
                   const matchedSpec = TARGET_SPECS.find(t => t.toLowerCase() === key.toLowerCase());
                   
                   if (matchedSpec && val.length > 0 && val.length < 40) {
+                      // Pass the product category into the normalization engine so it knows context
                       const normalizedVal = normalizeSpecValue(matchedSpec, val, p.category);
                       
                       if (normalizedVal !== "None") {
@@ -601,18 +618,17 @@ function CategoryViewerContent({ initialCategory }) {
     return liveProductsRaw.filter(p => {
         const priceValue = isClientMode ? p.price * (1 + clientMargin / 100) : (isWholesale ? p.price : (p.retailPrice ? parseFloat(p.retailPrice) : (p.price * 2.2)));
 
-        const activeTitle = isPrivateLabel && p.privateName ? p.privateName : p.displayTitle;
-        const nameLower = (activeTitle || '').toLowerCase();
-        
-        const skuLower = isPrivateLabel ? (p.privateSku || '').toLowerCase() : (p.sku || '').toLowerCase();
-        const mfgLower = isPrivateLabel ? (p.privateManufacturer || '').toLowerCase() : (p.manufacturer || '').toLowerCase();
-        
+        const nameLower = (p.displayTitle || '').toLowerCase();
+        const skuLower = (p.sku || '').toLowerCase();
+        const mfgLower = (p.manufacturer || '').toLowerCase();
         const descLower = (p.desc || '').toLowerCase();
         const specTextCombined = (p.specs || []).join(' ').toLowerCase();
         const catLower = (p.category || '').toLowerCase();
         
+        // Map through the colors array and combine names/skus into a searchable string
         const colorsTextCombined = (p.colors || []).map(c => `${c.name || ''} ${c.sku || ''}`).join(' ').toLowerCase();
 
+        // Inject hidden keywords so people searching "pad" find cushions
         const hiddenKeywords = catLower === 'carpet cushion' ? 'pad pads underlayment' : '';
 
         const matchesSearch = !searchVal || 
@@ -642,7 +658,7 @@ function CategoryViewerContent({ initialCategory }) {
 
         let matchesBrands = true;
         if (selectedBrands.length > 0) {
-            matchesBrands = selectedBrands.includes(isPrivateLabel && p.privateManufacturer ? p.privateManufacturer.trim() : p.manufacturer?.trim());
+            matchesBrands = selectedBrands.includes(p.manufacturer?.trim());
         }
 
         let matchesSpecs = true;
@@ -657,6 +673,7 @@ function CategoryViewerContent({ initialCategory }) {
                         const pKey = normalizeSpecKey(rawKey);
                         
                         if (pKey.toLowerCase() === key.toLowerCase()) {
+                            // Pass the category dynamically to correctly map things like Solid hardwood vs SPC LVP
                             const normalizedPVal = normalizeSpecValue(key, pVal, p.category);
                             return vals.includes(normalizedPVal);
                         }
@@ -672,9 +689,6 @@ function CategoryViewerContent({ initialCategory }) {
         const pA = isClientMode ? a.price * (1 + clientMargin / 100) : (isWholesale ? a.price : (a.retailPrice ? parseFloat(a.retailPrice) : (a.price * 2.2)));
         const pB = isClientMode ? b.price * (1 + clientMargin / 100) : (isWholesale ? b.price : (b.retailPrice ? parseFloat(b.retailPrice) : (b.price * 2.2)));
 
-        const aTitle = isPrivateLabel && a.privateName ? a.privateName : a.displayTitle;
-        const bTitle = isPrivateLabel && b.privateName ? b.privateName : b.displayTitle;
-
         if (sortMode === 'propmgt') {
             if (a.isPropMgt && !b.isPropMgt) return -1;
             if (!a.isPropMgt && b.isPropMgt) return 1;
@@ -685,13 +699,13 @@ function CategoryViewerContent({ initialCategory }) {
         }
         if (sortMode === 'price-asc') return pA - pB;
         if (sortMode === 'price-desc') return pB - pA;
-        if (sortMode === 'name-asc') return (aTitle || '').localeCompare(bTitle || '');
+        if (sortMode === 'name-asc') return (a.displayTitle || '').localeCompare(b.displayTitle || '');
         
         const catCompare = (a.category || '').localeCompare(b.category || '');
         if (catCompare !== 0) return catCompare;
-        return (aTitle || '').localeCompare(bTitle || '');
+        return (a.displayTitle || '').localeCompare(b.displayTitle || '');
     });
-  }, [liveProductsRaw, activeCategory, searchQuery, maxPrice, selectedPrograms, selectedBrands, selectedSpecs, sortMode, isWholesale, isClientMode, clientMargin, isPrivateLabel]);
+  }, [liveProductsRaw, activeCategory, searchQuery, maxPrice, selectedPrograms, selectedBrands, selectedSpecs, sortMode, isWholesale, isClientMode, clientMargin]);
 
   const resetAllFilters = () => {
       setSearchQuery('');
@@ -718,7 +732,7 @@ function CategoryViewerContent({ initialCategory }) {
   const renderSpecFilters = () => {
       return (
           <>
-            {dynamicBrands.length > 0 && !isPrivateLabel && (
+            {dynamicBrands.length > 0 && (
                 <div className="pt-4 mt-4 border-t border-gray-100">
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-3">Brands & Manufacturers</label>
                     <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
@@ -789,7 +803,6 @@ function CategoryViewerContent({ initialCategory }) {
                   sessionStorage.removeItem('client_bg');
                   sessionStorage.removeItem('client_text');
                   sessionStorage.removeItem('magic_link_client');
-                  sessionStorage.removeItem('private_label');
                   window.location.reload(); 
               }} 
               className="fixed bottom-6 left-6 px-5 py-3 rounded-full font-bold text-xs uppercase tracking-widest shadow-2xl z-[200] transition-opacity hover:opacity-80 flex items-center gap-2 border border-black/10 cursor-pointer"
@@ -931,7 +944,6 @@ function CategoryViewerContent({ initialCategory }) {
                             const retailPriceFormatted = !isNaN(retailPriceValue) ? retailPriceValue.toFixed(2) : '--';
                             const wholesalePriceFormatted = p.price ? p.price.toFixed(2) : '--';
                             
-                            const displayTitle = isPrivateLabel && p.privateName ? p.privateName : p.displayTitle;
                             const safeDesc = p.desc || 'Premium flooring collection.';
                             const safePrefix = p.imgPrefix || '';
                             const colors = Array.isArray(p.colors) ? p.colors : [{ sku: '01', name: 'Default' }];
@@ -951,7 +963,7 @@ function CategoryViewerContent({ initialCategory }) {
                             return (
                                 <div key={p.id} className={isListView ? "bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col sm:flex-row items-center p-4 gap-6 hover:shadow-md transition relative" : "bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition relative"}>
                                     
-                                    {!isClientMode && !isPrivateLabel && (
+                                    {!isClientMode && (
                                         <div className={`absolute z-10 flex flex-col items-start ${isListView ? 'top-2 left-2 gap-1' : 'top-4 left-4 gap-1.5'}`}>
                                             {p.isSale && <div className={`bg-red-600 text-white font-black rounded-full uppercase tracking-widest shadow-md ${isListView ? 'text-[9px] px-2.5 py-1' : 'text-[9px] px-3 py-1.5 flex items-center gap-1 animate-pulse'}`}><span>🔥</span> HOT BUY</div>}
                                             {p.isPropMgt && <div className={`bg-black text-gold font-black rounded-full uppercase tracking-widest shadow-md flex items-center border border-gold/30 ${isListView ? 'text-[9px] px-2.5 py-1 gap-1.5' : 'text-[9px] px-3 py-1.5 gap-1.5'}`}><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</div>}
@@ -959,7 +971,7 @@ function CategoryViewerContent({ initialCategory }) {
                                         </div>
                                     )}
 
-                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
+                                    <Link href={`/product/${p.id}`} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
                                         <img src={fbPath} className="w-full h-full object-cover transition duration-300 hover:scale-105" onError={e => e.target.src=TBD_IMG} />
                                     </Link>
 
@@ -983,11 +995,11 @@ function CategoryViewerContent({ initialCategory }) {
                                         <div className={isListView ? "flex items-center justify-center sm:justify-start gap-2 mt-4 sm:mt-0" : "space-y-1 mb-4"}>
                                             <div className={isListView ? "flex items-center gap-2" : "flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider"}>
                                                 <span className={isListView ? "text-[10px] font-black text-gold uppercase tracking-widest" : ""}>{p.category}</span>
-                                                {!isClientMode && !isPrivateLabel && <span className={isListView ? "text-[10px] text-gray-400 font-bold uppercase font-mono" : ""}>{p.sku}</span>}
+                                                {!isClientMode && <span className={isListView ? "text-[10px] text-gray-400 font-bold uppercase font-mono" : ""}>{p.sku}</span>}
                                             </div>
                                             {!isListView && (
                                                 <>
-                                                <h3 className="text-lg font-bold text-gray-900 truncate"><Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} style={{ textDecoration: 'none', color: 'inherit' }}>{displayTitle}</Link></h3>
+                                                <h3 className="text-lg font-bold text-gray-900 truncate"><Link href={`/product/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{p.displayTitle}</Link></h3>
                                                 <p className="text-gray-500 text-xs line-clamp-2">{safeDesc}</p>
                                                 </>
                                             )}
@@ -995,7 +1007,7 @@ function CategoryViewerContent({ initialCategory }) {
 
                                         {isListView && (
                                             <>
-                                                <h3 className="text-lg font-bold text-gray-900 truncate"><Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} style={{ textDecoration: 'none', color: 'inherit' }}>{displayTitle}</Link></h3>
+                                                <h3 className="text-lg font-bold text-gray-900 truncate"><Link href={`/product/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>{p.displayTitle}</Link></h3>
                                                 <p className="text-gray-500 text-xs line-clamp-2">{safeDesc}</p>
                                                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1.5">
                                                     {colors.slice(0, 6).map(c => {
@@ -1058,7 +1070,7 @@ function CategoryViewerContent({ initialCategory }) {
                                             )}
 
                                             <div className={`flex gap-2 w-full ${isListView ? 'mt-2' : ''}`}>
-                                                <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} className={isListView ? "flex-1 w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-2 rounded-lg transition text-[10px] tracking-widest" : "flex-1 w-full block text-center border border-black hover:bg-black text-black hover:text-white font-black uppercase py-2.5 rounded-xl transition text-[10px] tracking-widest"} style={{ textDecoration: 'none' }}>View Details</Link>
+                                                <Link href={`/product/${p.id}`} className={isListView ? "flex-1 w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-2 rounded-lg transition text-[10px] tracking-widest" : "flex-1 w-full block text-center border border-black hover:bg-black text-black hover:text-white font-black uppercase py-2.5 rounded-xl transition text-[10px] tracking-widest"} style={{ textDecoration: 'none' }}>View Details</Link>
                                                 <button onClick={(e) => handleShare(e, p)} className={`shrink-0 flex items-center justify-center border border-gray-200 text-gray-500 hover:text-gold hover:border-gold transition-colors cursor-pointer outline-none ${isListView ? 'w-9 rounded-lg' : 'w-10 rounded-xl'}`} title="Share Product">
                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316M15 12a3 3 0 100 6 3 3 0 000-6zm0-6a3 3 0 100 6 3 3 0 000-6z"></path></svg>
                                                 </button>
