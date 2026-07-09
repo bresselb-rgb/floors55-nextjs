@@ -1,4 +1,3 @@
-// src/app/product/[id]/page.js
 import { doc, getDoc } from "firebase/firestore";
 import { signInAnonymously } from "firebase/auth";
 import { db, auth, appId } from "../../../lib/firebase";
@@ -13,17 +12,12 @@ const authenticateServer = async () => {
 };
 
 // 1. Next.js Magic: This injects the precise meta data into the <head> for Google!
-export async function generateMetadata(props) {
+export async function generateMetadata({ params, searchParams }) {
   await authenticateServer();
   
-  // ✅ CRITICAL NEXT.JS 15+ FIX: await the entire params and searchParams objects
-  const params = await props.params;
-  const searchParams = await props.searchParams;
-  
-  const id = params?.id;
-  const isPrivateMode = searchParams?.m === 'abbey';
-
-  if (!id) return { title: 'Product Not Found | Floors 55' };
+  const { id } = await params;
+  const resolvedParams = await searchParams;
+  const isPrivate = resolvedParams?.private === 'true';
 
   const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'pricing', id);
   const docSnap = await getDoc(docRef);
@@ -34,10 +28,10 @@ export async function generateMetadata(props) {
 
   const data = docSnap.data();
   
-  // Force the private name if in private mode, otherwise use normal logic
-  const title = isPrivateMode 
-      ? (data.privateName || 'Custom Collection') 
-      : ((data.usePrivateName && data.privateName) ? data.privateName : (data.name || 'Unnamed Product'));
+  // Use private name if URL param is true, OR if the DB flag is checked
+  const title = (isPrivate || data.usePrivateName) 
+    ? (data.privateName || 'Custom Collection') 
+    : (data.name || 'Unnamed Product');
 
   // Format image URL so it renders in text message previews when shared directly
   const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -51,7 +45,7 @@ export async function generateMetadata(props) {
   const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
   const imageUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
 
-  const metadata = {
+  return {
     title: `${title} | Floors 55`,
     description: data.desc || `View the ${title} premium flooring collection at Floors 55.`,
     openGraph: {
@@ -66,42 +60,20 @@ export async function generateMetadata(props) {
         description: data.desc || `View the ${title} premium flooring collection at Floors 55.`,
         images: [imageUrl]
     },
+    // ✅ Canonical URLs tell Google to ignore any tracking parameters in the URL
     alternates: {
       canonical: `https://www.floors55pro.com/product/${id}`,
     }
   };
-
-  // ✅ SEO PROTECTION: If this is a private link, tell Google NOT to index it
-  // We also remove the canonical tag so it doesn't accidentally link back to the public page
-  if (isPrivateMode) {
-      metadata.robots = { index: false, follow: false };
-      delete metadata.alternates;
-  }
-
-  return metadata;
 }
 
 // 2. The Server Page: Fetches data purely on the server before sending HTML to the browser
-export default async function ProductPageServer(props) {
+export default async function ProductPageServer({ params, searchParams }) {
   await authenticateServer();
   
-  // ✅ CRITICAL NEXT.JS 15+ FIX: await the entire params and searchParams objects
-  const params = await props.params;
-  const searchParams = await props.searchParams;
-  
-  const id = params?.id;
-  const isPrivateMode = searchParams?.m === 'abbey';
-
-  if (!id) {
-     return (
-      <main className="bg-white flex-1 flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
-        <h2 className="text-2xl font-bold mb-4">Invalid Product URL</h2>
-        <Link href="/category" className="bg-black text-white px-6 py-3 rounded-full font-bold uppercase text-xs hover:bg-gold hover:text-black transition-colors" style={{ textDecoration: 'none' }}>
-            Return to Collections
-        </Link>
-      </main>
-    );
-  }
+  const { id } = await params;
+  const resolvedParams = await searchParams;
+  const isPrivate = resolvedParams?.private === 'true';
 
   const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'pricing', id);
   const docSnap = await getDoc(docRef);
@@ -121,35 +93,12 @@ export default async function ProductPageServer(props) {
 
   // Prep the data
   const data = docSnap.data();
-  let productData = { id: docSnap.id, ...data };
-
-  // --- 🛡️ THE ANTI-SHOWROOMING SCRUBBER 🛡️ ---
-  if (isPrivateMode) {
-      // 1. Overwrite public fields with private ones
-      productData.name = data.privateName || 'Custom Collection';
-      productData.manufacturer = data.privateManufacturer || 'Private Label';
-      productData.sku = data.privateSku || 'N/A';
-      productData.displayTitle = productData.name;
-      
-      // 2. Scrub color/variant SKUs if they exist
-      if (productData.colors && Array.isArray(productData.colors)) {
-          productData.colors = productData.colors.map(color => ({
-              ...color,
-              sku: color.privateSku || 'N/A' // Hide public color SKUs
-          }));
-      }
-
-      // 3. DELETE the original private fields so they are completely removed 
-      // from the JSON payload sent to the client. A user inspecting the React
-      // source code will only see the generic info.
-      delete productData.usePrivateName;
-      delete productData.privateName;
-      delete productData.privateManufacturer;
-      delete productData.privateSku;
-  } else {
-      // Standard Public View Logic
-      productData.displayTitle = (data.usePrivateName && data.privateName) ? data.privateName : (data.name || 'Unnamed Product');
-  }
+  const productData = { id: docSnap.id, ...data };
+  
+  // ✅ The exact logic you requested: Use Private Name if URL param is present or DB flag is checked
+  productData.displayTitle = (isPrivate || data.usePrivateName) 
+    ? (data.privateName || 'Custom Collection') 
+    : (data.name || 'Unnamed Product');
 
   const retailPrice = data.retailPrice ? parseFloat(data.retailPrice).toFixed(2) : ((data.price || 0) * 2.2).toFixed(2);
   
@@ -174,32 +123,32 @@ export default async function ProductPageServer(props) {
   };
   const catSlug = getCategorySlug(data.category);
 
-  // ✅ Updated Product Schema: Now uses the SCRUBBED productData to prevent data leaks!
+  // ✅ Product Schema (Rich Snippets for Google)
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": productData.displayTitle,
     "image": imageUrl,
-    "description": productData.desc || `View the ${productData.displayTitle} premium flooring collection.`,
-    "sku": productData.sku, 
+    "description": data.desc || `View the ${productData.displayTitle} premium flooring collection.`,
+    "sku": data.sku || data.id,
     "brand": {
       "@type": "Brand",
-      "name": productData.manufacturer || "Floors 55"
+      "name": data.manufacturer || "Floors 55"
     },
     "offers": {
       "@type": "Offer",
-      "url": `${baseUrl}/product/${id}${isPrivateMode ? '?m=abbey' : ''}`,
+      "url": `${baseUrl}/product/${id}`,
       "priceCurrency": "USD",
       "price": retailPrice,
       "availability": "https://schema.org/InStock",
       "seller": {
         "@type": "Organization",
-        "name": isPrivateMode ? "Abbey Carpet" : "Floors 55"
+        "name": "Floors 55"
       }
     }
   };
 
-  // ✅ Updated Breadcrumb Schema: Prevents linking back to the manufacturer
+  // ✅ Breadcrumb Schema (Creates the clean trail in Google Search results)
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -213,14 +162,14 @@ export default async function ProductPageServer(props) {
       {
         "@type": "ListItem",
         "position": 2,
-        "name": productData.category || "Products",
+        "name": data.category || "Products",
         "item": `${baseUrl}${catSlug}`
       },
       {
         "@type": "ListItem",
         "position": 3,
         "name": productData.displayTitle,
-        "item": `${baseUrl}/product/${id}${isPrivateMode ? '?m=abbey' : ''}`
+        "item": `${baseUrl}/product/${id}`
       }
     ]
   };
@@ -230,19 +179,18 @@ export default async function ProductPageServer(props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       
-      {/* The Visual Breadcrumb Trail for Users */}
+      {/* ✅ The Visual Breadcrumb Trail for Users */}
       <div className="bg-white pt-6 pb-2">
         <div className="max-w-[1400px] mx-auto px-4 flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-gray-400">
             <Link href="/" className="hover:text-gold transition-colors" style={{ textDecoration: 'none' }}>Home</Link>
             <span>/</span>
-            <Link href={catSlug} className="hover:text-gold transition-colors" style={{ textDecoration: 'none' }}>{productData.category || 'Collections'}</Link>
+            <Link href={catSlug} className="hover:text-gold transition-colors" style={{ textDecoration: 'none' }}>{data.category || 'Collections'}</Link>
             <span>/</span>
             <span className="text-gray-900 truncate max-w-[200px] sm:max-w-none">{productData.displayTitle}</span>
         </div>
       </div>
 
-      {/* ✅ Pass the scrubbed data down to the client component */}
-      <ProductViewer initialProduct={productData} isPrivateMode={isPrivateMode} />
+      <ProductViewer initialProduct={productData} hideBadges={isPrivate} />
     </>
   );
 }

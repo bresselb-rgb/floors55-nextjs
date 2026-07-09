@@ -41,28 +41,7 @@ export default function ProposalPage({ params }) {
 
                 if (quoteData.productId) {
                     const pDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', quoteData.productId));
-                    if (pDoc.exists() && isMounted) {
-                        let pData = pDoc.data();
-
-                        // --- 🛡️ THE ANTI-SHOWROOMING SCRUBBER (CLIENT-SIDE) 🛡️ ---
-                        // If this quote is flagged as private, we must scrub the underlying product data 
-                        // immediately so it doesn't accidentally leak into the React State or DevTools.
-                        const isPrivate = quoteData.isPrivateLabel || quoteData.brandOverride === 'abbey' || quoteData.brand === 'Abbey Carpet & Floor';
-                        
-                        if (isPrivate) {
-                            pData.name = pData.privateName || 'Custom Collection';
-                            pData.manufacturer = pData.privateManufacturer || 'Private Label';
-                            pData.sku = pData.privateSku || 'N/A';
-                            
-                            // Delete the original fields from the object payload
-                            delete pData.usePrivateName;
-                            delete pData.privateName;
-                            delete pData.privateManufacturer;
-                            delete pData.privateSku;
-                        }
-
-                        setProductDetails(pData);
-                    }
+                    if (pDoc.exists() && isMounted) setProductDetails(pDoc.data());
                 }
 
             } catch (err) {
@@ -89,7 +68,7 @@ export default function ProposalPage({ params }) {
 
     useEffect(() => {
         if (proProfile && quote) {
-            const isAbbey = quote?.brand === 'Abbey Carpet & Floor' || quote?.brandOverride === 'abbey' || quote?.isPrivateLabel;
+            const isAbbey = quote?.brand === 'Abbey Carpet & Floor' || quote?.brandOverride === 'abbey';
             const isF55 = quote?.brand === 'Floors 55' || quote?.brandOverride === 'f55' || quote?.useCustomBranding === false;
 
             const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
@@ -98,6 +77,7 @@ export default function ProposalPage({ params }) {
             const bName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55 Pro" : (proProfile.business || "Your Flooring Professional"));
             const mgn = quote?.totals?.margin || proProfile.clientMargin || 20;
             
+            // Explicitly force the F55 Logo if the F55 brand is selected
             const lUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? F55_LOGO_URL : (proProfile.logoUrl || ""));
             
             const bBg = isAbbey || isF55 ? "#ffffff" : (proProfile.brandBgColor || "#ffffff");
@@ -132,18 +112,24 @@ export default function ProposalPage({ params }) {
         );
     }
 
-    const isAbbey = quote?.brand === 'Abbey Carpet & Floor' || quote?.brandOverride === 'abbey' || quote?.isPrivateLabel;
+    const isAbbey = quote?.brand === 'Abbey Carpet & Floor' || quote?.brandOverride === 'abbey';
     const isF55 = quote?.brand === 'Floors 55' || quote?.brandOverride === 'f55' || quote?.useCustomBranding === false;
 
     const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
     const F55_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media";
 
     const businessName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55 Pro" : (proProfile?.business || "Your Flooring Professional"));
+    
+    // Explicitly force the F55 Logo if the F55 brand is selected
     const logoUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? F55_LOGO_URL : (proProfile?.logoUrl || ""));
+    
     const brandBgColor = isAbbey || isF55 ? "#ffffff" : (proProfile?.brandBgColor || "#ffffff");
     const brandTextColor = isAbbey || isF55 ? "#000000" : (proProfile?.brandTextColor || "#000000");
+    
+    // Add a gold accent if the background is white, otherwise use the brand background
     const accentColor = brandBgColor.toLowerCase() === '#ffffff' ? '#c5a059' : brandBgColor;
 
+    // Product Image Logic
     const safePrefix = quote.imgPrefix || productDetails?.imgPrefix || '';
     const displaySku = quote.colorSku || '01';
     const safeName = (quote.productName || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -158,6 +144,7 @@ export default function ProposalPage({ params }) {
     const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
     const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
+    // Dynamic Trim Text
     let trimParts = [];
     if (quote.addons?.trims?.details) {
         if (quote.addons.trims.details.standard > 0) trimParts.push('Transitions');
@@ -166,23 +153,21 @@ export default function ProposalPage({ params }) {
     }
     const trimText = trimParts.length > 0 ? `Matching ${trimParts.join(', ').replace(/, ([^,]*)$/, ' and $1')}` : 'Matching transition moldings';
 
+    // Magic Link Generation for Product Image
     let cmToken = '';
     try { cmToken = btoa((quote.totals.margin).toString()); } catch(e) {}
     
-    // ✅ URL INJECTION: Carry the ?m=abbey tag backward so the product page STAYS private!
+    // Generate clean link (drops the proID if they disabled custom branding so product page loads cleanly)
     let productLink = `/product/${quote.productId}?color=${displaySku}&cm=${cmToken}`;
-    if (isAbbey) {
-        productLink += `&m=abbey`;
-    } else if (!isF55 && quote.proId) {
+    if (!isF55 && !isAbbey && quote.proId) {
         productLink += `&pro=${quote.proId}`;
+    } else if (isAbbey) {
+        productLink += `&cb=${btoa('Abbey Carpet & Floor')}`;
     }
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans flex flex-col print:bg-white">
-            {/* ✅ SEO PROTECTION: Dynamically inject noindex for private label quotes */}
-            {isAbbey && <title>Your Flooring Proposal | Abbey Carpet & Floor</title>}
-            {isAbbey && <meta name="robots" content="noindex, nofollow" />}
-            
+            {/* Force tight page margins for printing so everything fits on one page */}
             <style dangerouslySetInnerHTML={{__html: `
                 @media print {
                     @page { margin: 0.4in; }
@@ -190,6 +175,7 @@ export default function ProposalPage({ params }) {
                 }
             `}} />
 
+            {/* BRANDED HEADER - Squashed for print */}
             <header className="border-b border-gray-200 py-6 px-6 print:py-3 print:px-2 text-center shadow-sm print:shadow-none" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
                 {logoUrl ? (
                     <img src={logoUrl} alt={businessName} className="h-16 md:h-20 print:h-10 w-auto mx-auto object-contain" />
@@ -201,12 +187,14 @@ export default function ProposalPage({ params }) {
 
             <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-12 print:py-4 print:px-0">
                 
+                {/* ACTION BAR (Hidden on PDF) */}
                 <div className="flex justify-end mb-6 print:hidden">
                     <button onClick={() => window.print()} className="bg-gray-900 text-white px-6 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors flex items-center gap-2 outline-none cursor-pointer shadow-md">
                         <span>📄</span> Download PDF / Print
                     </button>
                 </div>
 
+                {/* PROPOSAL TITLE BLOCK - Squashed for print */}
                 <div className="bg-white p-8 md:p-10 print:p-4 rounded-3xl print:rounded-xl shadow-sm border border-gray-100 mb-8 print:mb-3 relative overflow-hidden print:border-gray-300 print:shadow-none">
                     <div className="absolute top-0 left-0 w-2 h-full print:w-1" style={{ backgroundColor: accentColor }}></div>
                     <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6 print:gap-2">
@@ -222,6 +210,7 @@ export default function ProposalPage({ params }) {
                     </div>
                 </div>
 
+                {/* THE SELECTED PRODUCT - Squashed for print */}
                 <div className="bg-white rounded-3xl print:rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8 print:mb-3 flex flex-col md:flex-row group print:border-gray-300 print:shadow-none print:break-inside-avoid">
                     <Link href={productLink} className="md:w-2/5 print:w-1/4 h-64 md:h-auto print:h-24 relative overflow-hidden bg-gray-100 block print:pointer-events-none" style={{ textDecoration: 'none' }}>
                         <img src={fbPath} className="w-full h-full object-cover transition duration-500 group-hover:scale-105" onError={e => e.target.src=TBD_IMG} alt={quote.productName} />
@@ -233,18 +222,18 @@ export default function ProposalPage({ params }) {
                         <div className="text-[10px] print:text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-2 print:mb-0.5">{quote.category}</div>
                         <h3 className="text-2xl print:text-sm font-black text-gray-900 mb-4 print:mb-1">{quote.productName}</h3>
                         <p className="text-gray-500 text-sm print:text-[9px] print:leading-tight mb-6 print:mb-0 line-clamp-3 print:line-clamp-2">{productDetails?.desc || 'Premium flooring collection.'}</p>
-                        
-                        {/* ✅ The generated dynamic link ensures the user stays in Abbey mode */}
                         <Link href={productLink} className="inline-block text-center font-black uppercase py-3 px-6 rounded-xl transition text-xs tracking-widest w-full md:w-auto print:hidden" style={{ textDecoration: 'none', backgroundColor: brandBgColor, color: brandTextColor, border: `1px solid ${brandTextColor}` }}>
                             View Photos & Specs
                         </Link>
                     </div>
                 </div>
 
+                {/* THE INCLUSIONS CHECKLIST - Squashed for print */}
                 <div className="bg-white p-8 md:p-10 print:p-4 rounded-3xl print:rounded-xl shadow-sm border border-gray-100 mb-8 print:mb-3 print:border-gray-300 print:shadow-none print:break-inside-avoid">
                     <h3 className="text-xl print:text-sm font-black text-gray-900 mb-6 print:mb-2 border-b border-gray-100 pb-4 print:pb-1">Project Inclusions</h3>
                     
                     <ul className="space-y-4 print:space-y-1.5 text-base print:text-[10px] text-gray-700">
+                        {/* Material */}
                         <li className="flex gap-4 print:gap-2 items-start">
                             <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
                             <div>
@@ -253,6 +242,7 @@ export default function ProposalPage({ params }) {
                             </div>
                         </li>
                         
+                        {/* Pad */}
                         {quote.addons?.pad && (
                             <li className="flex gap-4 print:gap-2 items-start">
                                 <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
@@ -263,6 +253,7 @@ export default function ProposalPage({ params }) {
                             </li>
                         )}
 
+                        {/* Custom Addons / Trims */}
                         {quote.addons?.customList?.items?.map((item, idx) => (
                             <li key={idx} className="flex gap-4 print:gap-2 items-start">
                                 <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
@@ -273,6 +264,7 @@ export default function ProposalPage({ params }) {
                             </li>
                         ))}
 
+                        {/* Legacy Trims */}
                         {!quote.addons?.customList && quote.addons?.trims && (
                             <li className="flex gap-4 print:gap-2 items-start">
                                 <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
@@ -283,6 +275,7 @@ export default function ProposalPage({ params }) {
                             </li>
                         )}
 
+                        {/* Prep */}
                         {quote.services?.prep > 0 && (
                             <li className="flex gap-4 print:gap-2 items-start">
                                 <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
@@ -293,6 +286,7 @@ export default function ProposalPage({ params }) {
                             </li>
                         )}
 
+                        {/* Install */}
                         {quote.services?.installTotal > 0 && (
                             <li className="flex gap-4 print:gap-2 items-start">
                                 <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
@@ -303,6 +297,7 @@ export default function ProposalPage({ params }) {
                             </li>
                         )}
 
+                        {/* Delivery */}
                         {quote.services?.delivery > 0 && (
                             <li className="flex gap-4 print:gap-2 items-start">
                                 <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
@@ -313,6 +308,7 @@ export default function ProposalPage({ params }) {
                             </li>
                         )}
 
+                        {/* Custom Lines */}
                         {quote.services?.custom1 && (
                             <li className="flex gap-4 print:gap-2 items-start">
                                 <span className="w-6 h-6 print:w-4 print:h-4 rounded-full flex items-center justify-center font-bold shrink-0 mt-0.5 print:mt-0 print:border print:text-[8px] bg-gray-100 text-gray-600 border-gray-300">✓</span> 
@@ -332,6 +328,7 @@ export default function ProposalPage({ params }) {
                     </ul>
                 </div>
 
+                {/* THE GRAND TOTAL - Squashed for print */}
                 <div className="bg-gray-900 p-8 md:p-12 print:p-4 rounded-3xl print:rounded-xl shadow-2xl text-center md:text-right text-white mb-12 print:mb-3 print:shadow-none print:bg-gray-100 print:text-black print:border print:border-gray-300 print:break-inside-avoid">
                     <p className="text-xs md:text-sm print:text-[9px] font-bold text-gray-400 print:text-gray-500 uppercase tracking-widest mb-2 print:mb-0.5">Turnkey Project Total</p>
                     <p className="text-4xl md:text-6xl print:text-2xl font-black font-mono text-white print:text-black tracking-tight mb-2 print:mb-0.5">
@@ -340,6 +337,7 @@ export default function ProposalPage({ params }) {
                     <p className="text-[10px] print:text-[7px] text-gray-500 uppercase tracking-widest font-bold m-0">Includes materials, accessories, and labor as detailed above.</p>
                 </div>
 
+                {/* TERMS AND CONDITIONS - Squashed for print */}
                 <div className="bg-white p-8 md:p-10 print:p-4 rounded-3xl print:rounded-xl shadow-sm border border-gray-100 print:border-gray-300 print:shadow-none print:break-inside-avoid">
                     <h3 className="text-lg print:text-xs font-black text-gray-900 mb-4 print:mb-1.5 border-b border-gray-100 print:border-gray-200 pb-2 print:pb-1">Terms & Conditions</h3>
                     <ul className="text-xs print:text-[8px] text-gray-600 space-y-3 print:space-y-1 list-disc pl-4 leading-relaxed print:leading-tight m-0 mb-8 print:mb-4">
@@ -350,6 +348,7 @@ export default function ProposalPage({ params }) {
                         <li><strong>Payment Terms:</strong> A standard project deposit is required to order materials and reserve your installation date. The remaining balance is due upon project completion.</li>
                     </ul>
 
+                    {/* SIGNATURE BLOCK */}
                     <div className="pt-8 print:pt-4 border-t-2 border-dashed border-gray-200 print:border-gray-300 mt-8 print:mt-4">
                         <h3 className="text-sm print:text-[10px] font-black uppercase tracking-widest text-gray-900 mb-6 print:mb-4">Proposal Acceptance</h3>
                         <p className="text-xs print:text-[8px] text-gray-600 mb-8 print:mb-6">The prices, specifications, and conditions are satisfactory and are hereby accepted. You are authorized to do the work as specified.</p>
@@ -367,6 +366,7 @@ export default function ProposalPage({ params }) {
 
             </main>
 
+            {/* BRANDED FOOTER */}
             <footer className="py-12 print:py-2 text-center mt-auto border-t border-gray-200 print:hidden" style={{ backgroundColor: brandBgColor, color: brandTextColor }}>
                 {logoUrl && (
                     <img src={logoUrl} alt={businessName} className="h-12 w-auto mx-auto object-contain mb-4 opacity-80" />

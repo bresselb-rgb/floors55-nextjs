@@ -2,52 +2,12 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { initializeApp } from "firebase/app";
-import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
-import { getFirestore, doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc, setDoc } from "firebase/firestore";
-
-// Safe dynamic imports for Canvas Environment
-let Link;
-let Image;
-let useRouter = () => ({ push: () => {}, replace: () => {} });
-let useSearchParams = () => {
-    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-    return { get: (key) => params.get(key) };
-};
-
-try {
-    const nextLink = 'next/link';
-    Link = require(nextLink).default || require(nextLink);
-    const nextImage = 'next/image';
-    Image = require(nextImage).default || require(nextImage);
-    const nextNav = 'next/navigation';
-    const nav = require(nextNav);
-    useRouter = nav.useRouter;
-    useSearchParams = nav.useSearchParams;
-} catch (e) {
-    Link = ({ href, children, className, style, onClick }) => <a href={href} className={className} style={style} onClick={onClick}>{children}</a>;
-    Image = ({ src, alt, className, style, onClick, onError, fill, sizes, width, height, ...props }) => {
-        const customStyle = fill ? { position: 'absolute', height: '100%', width: '100%', left: 0, top: 0, right: 0, bottom: 0, color: 'transparent', ...style } : style;
-        return <img src={src} alt={alt} className={className} style={customStyle} onClick={onClick} onError={onError} width={width} height={height} {...props} />;
-    };
-    useRouter = () => ({ push: (url) => { if (typeof window !== 'undefined') window.location.href = url; }, replace: (url) => { if (typeof window !== 'undefined') window.location.href = url; } });
-    useSearchParams = () => {
-        const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
-        return { get: (key) => params.get(key) };
-    };
-}
-
-// Inline Canvas Firebase Initialization
-let auth, db, appId;
-try {
-    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-    const app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-    appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-} catch (e) {
-    console.warn("Firebase config not found. Verify environment variables.");
-}
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
+import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc, setDoc } from "firebase/firestore";
+import { auth, db, appId } from "../lib/firebase";
 
 function ProductViewerContent({ initialProduct }) {
     const router = useRouter();
@@ -86,10 +46,9 @@ function ProductViewerContent({ initialProduct }) {
     const [padSelection, setPadSelection] = useState('none');
     const [padCost, setPadCost] = useState('0.00');
     
+    // Dynamic Addons State
     const [globalAddons, setGlobalAddons] = useState(null);
     const [selectedAddons, setSelectedAddons] = useState([]);
-    
-    const [failedViews, setFailedViews] = useState({});
 
     const [laborPrep, setLaborPrep] = useState(''); 
     const [laborInstallPerSqft, setLaborInstallPerSqft] = useState(''); 
@@ -101,7 +60,7 @@ function ProductViewerContent({ initialProduct }) {
     
     const [clientMargin, setClientMargin] = useState(null);
     const [builderMargin, setBuilderMargin] = useState(20);
-    const [proposalBrand, setProposalBrand] = useState('custom');
+    const [proposalBrand, setProposalBrand] = useState('custom'); // 'custom', 'f55', 'abbey'
     const [copied, setCopied] = useState(false);
     const [isMagicLink, setIsMagicLink] = useState(false);
 
@@ -115,46 +74,7 @@ function ProductViewerContent({ initialProduct }) {
     const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
     useEffect(() => {
-        let isMounted = true;
-        if (!auth) return;
-
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (!isMounted) return;
-            
-            if (currentUser) {
-                // A session exists! Set the user and check if they are staff
-                setUser(currentUser);
-                if (!currentUser.isAnonymous && db) {
-                    try {
-                        const staffRef = doc(db, 'artifacts', appId, 'public', 'data', 'staff', currentUser.uid);
-                        const staffSnap = await getDoc(staffRef);
-                        if (staffSnap.exists() && isMounted) {
-                            setIsStaff(true);
-                            setProposalBrand('f55');
-                        }
-                    } catch (e) {
-                        console.error("Error fetching staff status", e);
-                    }
-                }
-            } else {
-                // No session found. Now it is safe to sign in anonymously.
-                try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                } catch (err) {
-                    console.warn("Auth initialization error", err);
-                }
-            }
-        });
-
-        return () => { isMounted = false; unsubscribe(); };
-    }, []);
-
-    useEffect(() => {
-        if (!initialProduct?.id || !db) return;
+        if (typeof window !== 'undefined') {
             const cmParam = searchParams.get('cm');
             const proParam = searchParams.get('pro');
             const cbParam = searchParams.get('cb'); 
@@ -168,6 +88,7 @@ function ProductViewerContent({ initialProduct }) {
                         if (proDoc.exists()) {
                             const pData = proDoc.data();
                             
+                            // Support Abbey Override if passed alongside a Pro link
                             let isAbbey = false;
                             if (cbParam) {
                                 try {
@@ -246,23 +167,45 @@ function ProductViewerContent({ initialProduct }) {
             }
             if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
         }
-    }, [searchParams, urlColorSku, user]);
+    }, [searchParams, urlColorSku]);
 
     useEffect(() => {
-        if (!user || !initialProduct?.id || !db) return; // Guard for permissions
-        const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', initialProduct.id), 
-        (docSnap) => {
+        let isMounted = true;
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (isMounted) {
+                setUser(currentUser);
+                if (currentUser && !currentUser.isAnonymous) {
+                    // Check if Staff
+                    const staffRef = doc(db, 'artifacts', appId, 'public', 'data', 'staff', currentUser.uid);
+                    const staffSnap = await getDoc(staffRef);
+                    if (staffSnap.exists() && isMounted) {
+                        setIsStaff(true);
+                        setProposalBrand('f55'); // Default staff to Floors 55 instead of custom
+                    }
+                }
+            }
+        });
+
+        if (!auth.currentUser) {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth).catch(() => {}));
+            } else {
+                signInAnonymously(auth).catch(() => {});
+            }
+        }
+        return () => { isMounted = false; unsubscribe(); };
+    }, []);
+
+    useEffect(() => {
+        const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', initialProduct.id), (docSnap) => {
             if (docSnap.exists()) {
                 const dbData = docSnap.data();
                 dbData.displayTitle = (dbData.usePrivateName && dbData.privateName) ? dbData.privateName : (dbData.name || 'Unnamed Product');
                 setProductData({ id: docSnap.id, ...dbData });
             }
-        }, 
-        (error) => {
-            console.error("Error fetching pricing info:", error);
         });
         return () => unsub();
-    }, [initialProduct?.id, user]);
+    }, [initialProduct.id]);
 
     useEffect(() => {
          if (productData && productData.colors) {
@@ -280,42 +223,23 @@ function ProductViewerContent({ initialProduct }) {
     }, [urlColorSku, productData, activeColor]);
 
     useEffect(() => {
-        setFailedViews({});
-    }, [activeColor]);
-
-    const handleViewError = (view) => {
-        if (activeColor) {
-            setFailedViews(prev => ({ ...prev, [`${activeColor.sku}-${view}`]: true }));
+        if (user && !user.isAnonymous) {
+            const fetchBoards = async () => {
+                try {
+                    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'client_boards'), where("proId", "==", user.uid));
+                    const snapshot = await getDocs(q);
+                    const boardsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    setProBoards(boardsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0)));
+                    if (boardsData.length > 0) setSelectedBoardId(boardsData[0].id);
+                } catch (e) {
+                    console.error("Error fetching boards", e);
+                }
+            };
+            fetchBoards();
         }
-        if (activeView === view && view !== 'MAIN') {
-            setActiveView('MAIN');
-        }
-    };
-
-    useEffect(() => {
-        if (!user || user.isAnonymous || !db) return; // Guard for permissions
-        
-        const fetchBoards = async () => {
-            try {
-                // Fetch all and filter in JS memory to avoid missing index or complex rule issues
-                const q = collection(db, 'artifacts', appId, 'public', 'data', 'client_boards');
-                const snapshot = await getDocs(q);
-                const boardsData = snapshot.docs
-                    .map(d => ({ id: d.id, ...d.data() }))
-                    .filter(b => b.proId === user.uid);
-                    
-                setProBoards(boardsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0)));
-                if (boardsData.length > 0) setSelectedBoardId(boardsData[0].id);
-            } catch (e) {
-                console.error("Error fetching boards", e);
-            }
-        };
-        fetchBoards();
     }, [user]);
 
     useEffect(() => {
-        if (!user || !db) return; // Guard for permissions
-
         const isCarpetProd = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
         const isClientModeActual = clientMargin !== null;
         
@@ -323,15 +247,14 @@ function ProductViewerContent({ initialProduct }) {
             const fetchConfig = async () => {
                 try {
                     if (isCarpetProd) {
-                        // Fetch all and filter in JS memory to avoid missing index errors
-                        const padQ = collection(db, 'artifacts', appId, 'public', 'data', 'pricing');
+                        const padQ = query(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'), where("category", "==", "Carpet Cushion"));
                         const padSnap = await getDocs(padQ);
-                        const pads = padSnap.docs
-                            .map(d => ({ id: d.id, ...d.data() }))
-                            .filter(p => p.category === "Carpet Cushion" && p.isVisible !== false);
+                        // Filter for visible pads directly in JavaScript to bypass Firebase Composite Index crash
+                        const pads = padSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.isVisible !== false);
                         setAvailablePads(pads);
                     }
 
+                    // Fetch Addon Rules from Firebase
                     const addonSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'proposal-addons'));
                     if (addonSnap.exists()) {
                         setGlobalAddons(addonSnap.data());
@@ -340,7 +263,7 @@ function ProductViewerContent({ initialProduct }) {
             };
             fetchConfig();
         }
-    }, [productData?.category, clientMargin, user]);
+    }, [productData, clientMargin]);
 
     useEffect(() => {
         if (padSelection === 'none') {
@@ -348,24 +271,15 @@ function ProductViewerContent({ initialProduct }) {
         } else if (padSelection !== 'custom_legacy') {
             const pad = availablePads.find(p => p.id === padSelection);
             if (pad) {
+                // Determine base price based on SF vs SY configurations
                 let basePadPrice = pad.price || 0;
                 if (pad.unit === 'sqyd') {
-                    basePadPrice = basePadPrice / 9; 
+                    basePadPrice = basePadPrice / 9; // Convert to per sqft for the UI input
                 }
                 setPadCost(basePadPrice.toFixed(2));
             }
         }
     }, [padSelection, availablePads]);
-
-    if (!productData) {
-        return (
-            <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
-                <h2 className="text-2xl font-bold mb-4">Product Not Found</h2>
-                <p className="text-gray-500 mb-6">We couldn't locate the requested product details. It may have been removed or updated.</p>
-                <Link href="/category" className="bg-black text-white px-6 py-3 rounded-full font-bold uppercase text-xs hover:bg-gold hover:text-black transition-colors" style={{ textDecoration: 'none' }}>Return to Collections</Link>
-            </div>
-        );
-    }
 
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
@@ -379,6 +293,7 @@ function ProductViewerContent({ initialProduct }) {
         const prefix = productData.imgPrefix || '';
         let path = '';
         
+        // FIX: Removed leading slash to ensure correct Firebase storage path generation!
         if (view === 'ROOM' && productData.roomPrefix) {
             const suffix = productData.roomSuffix || '_room.jpg';
             path = `images/${folderName}/${productData.roomPrefix}${activeColor.sku}${suffix}`;
@@ -420,19 +335,18 @@ function ProductViewerContent({ initialProduct }) {
             }
         }
 
+        // Generate Native Short Link
         const shortCode = Math.random().toString(36).substring(2, 8);
         let finalUrl = `${window.location.origin}/s/${shortCode}`;
         
-        if (db) {
-            try {
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'short_links', shortCode), {
-                    target: targetPath,
-                    createdAt: new Date().toISOString()
-                });
-            } catch(err) {
-                console.warn("Short link generation failed, using long URL.", err);
-                finalUrl = `${window.location.origin}${targetPath}`;
-            }
+        try {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'short_links', shortCode), {
+                target: targetPath,
+                createdAt: new Date().toISOString()
+            });
+        } catch(err) {
+            console.warn("Short link generation failed, using long URL.", err);
+            finalUrl = `${window.location.origin}${targetPath}`;
         }
 
         const title = productData.displayTitle;
@@ -476,7 +390,7 @@ function ProductViewerContent({ initialProduct }) {
         const sqftMatch = specText.match(/([\d.]+)\s*(sq\.?ft\.?|sq\s*ft|sf)/);
         if (sqftMatch && parseFloat(sqftMatch[1]) > 0) cartonSqft = parseFloat(sqftMatch[1]);
     }
-    cartonSqft = cartonSqft || (isCarpetCushionOnly ? 360 : 20); 
+    cartonSqft = cartonSqft || (isCarpetCushionOnly ? 360 : 20); // Default pad roll is often 40 sqyd (360 sqft)
 
     const netSqftNum = parseFloat(calcNetSqft) || 0;
     const totalSqftWithWaste = netSqftNum * parseFloat(calcWaste);
@@ -498,18 +412,20 @@ function ProductViewerContent({ initialProduct }) {
         finalMaterialCoverageSqft = requiredCartons * cartonSqft;
     }
     
+    // Normalize DB Price depending on unit
     let normalizedPerSqftPrice = basePrice;
     if (productData?.unit === 'sqyd') {
         normalizedPerSqftPrice = basePrice / 9;
     }
     const totalMaterialCost = finalMaterialCoverageSqft * normalizedPerSqftPrice;
 
+    // Pad calculations with Roll Rounding
     let totalPadCost = 0;
     let requiredPadSqyd = 0;
     let requiredPadRolls = 0;
     
     if (isCarpet && padSelection !== 'none') {
-        let padRollSqft = 360; 
+        let padRollSqft = 360; // 40 sqyd default
         if (padSelection !== 'custom_legacy') {
             const padDoc = availablePads.find(p => p.id === padSelection);
             if (padDoc && padDoc.cartonSize) {
@@ -524,9 +440,11 @@ function ProductViewerContent({ initialProduct }) {
         const actualPadSqftToPurchase = requiredPadRolls * padRollSqft;
         requiredPadSqyd = actualPadSqftToPurchase / 9;
         
+        // padCost input is in $ per sqft
         totalPadCost = actualPadSqftToPurchase * (parseFloat(padCost) || 0);
     }
 
+    // Dynamic Addons Cost
     const totalAddonsCost = selectedAddons.reduce((sum, item) => sum + ((parseFloat(item.cost) || 0) * (parseInt(item.qty) || 0)), 0);
 
     const totalLaborCost = 
@@ -540,7 +458,7 @@ function ProductViewerContent({ initialProduct }) {
     const turnkeyRetailPrice = totalWholesaleProjectCost * (1 + (builderMargin / 100));
 
     const handleSaveToBoard = async () => {
-        if (!selectedBoardId || !db) return alert("Please select a board to save this product to.");
+        if (!selectedBoardId) return alert("Please select a board to save this product to.");
         setIsSavingToBoard(true);
 
         try {
@@ -570,7 +488,7 @@ function ProductViewerContent({ initialProduct }) {
     };
 
     const handleSaveStandaloneQuote = async () => {
-        if (!quoteClientName.trim() || !db) return alert("Please enter a Client Name for this proposal.");
+        if (!quoteClientName.trim()) return alert("Please enter a Client Name for this proposal.");
         setIsSavingToBoard(true);
 
         try {
@@ -585,8 +503,8 @@ function ProductViewerContent({ initialProduct }) {
                 proId: user.uid,
                 clientName: quoteClientName,
                 projectName: quoteProjectName || 'Flooring Project',
-                brandOverride: proposalBrand,
-                useCustomBranding: proposalBrand === 'custom',
+                brandOverride: proposalBrand, // 'custom', 'f55', or 'abbey'
+                useCustomBranding: proposalBrand === 'custom', // Legacy fallback support
                 productId: productData.id,
                 productName: productData.displayTitle,
                 colorSku: activeColor?.sku || '',
@@ -630,6 +548,7 @@ function ProductViewerContent({ initialProduct }) {
     const finalPrice = isClientMode ? normalizedPerSqftPrice * (1 + clientMargin / 100) : normalizedPerSqftPrice;
     const wsPrice = finalPrice.toFixed(2);
     
+    // Render Pricing correctly whether it's carpet or hardsurface
     const renderPriceBlock = () => {
         if (isCarpet || isCarpetCushionOnly) {
             const priceSy = (finalPrice * 9).toFixed(2);
@@ -744,32 +663,8 @@ function ProductViewerContent({ initialProduct }) {
 
             {productData.views && (
                 <div className="mt-4 flex gap-3">
-                    {/* Hide thumbnails that failed to load */}
-                    {productData.views.filter(v => !failedViews[`${activeColor?.sku}-${v}`]).map(v => (
-                         <div key={v} className="relative shrink-0">
-                             {/* Hidden video tag to test if the video URL is a 404! */}
-                             {v === 'VIDEO' && (
-                                 <video 
-                                    key={activeColor?.sku}
-                                    src={getMediaPath('VIDEO') || ''} 
-                                    className="hidden" 
-                                    preload="metadata"
-                                    onError={() => handleViewError('VIDEO')} 
-                                 />
-                             )}
-                             <Image 
-                                src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)} 
-                                width={75} height={75} 
-                                className={`w-[75px] h-[75px] min-w-[75px] shrink-0 object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} 
-                                onClick={() => setActiveView(v)} 
-                                onError={(e) => { 
-                                    handleViewError(v); // Hide the thumbnail view
-                                    e.currentTarget.srcset = ''; 
-                                    e.currentTarget.src = TBD_IMG; 
-                                }} 
-                                alt={`View ${v}`} 
-                             />
-                         </div>
+                    {productData.views.map(v => (
+                         <Image key={v} src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)} width={75} height={75} className={`w-[75px] h-[75px] min-w-[75px] shrink-0 object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} onClick={() => setActiveView(v)} onError={(e) => { e.currentTarget.srcset = ''; e.currentTarget.src = TBD_IMG; }} alt={`View ${v}`} />
                     ))}
                 </div>
             )}
