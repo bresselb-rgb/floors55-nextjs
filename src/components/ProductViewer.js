@@ -215,10 +215,13 @@ function ProductViewerContent({ initialProduct }) {
 
         const initAuth = async () => {
             try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
+                // BUG FIX: Strictly ensure we don't overwrite an existing login session
+                if (!auth.currentUser) {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth).catch(() => {}));
+                    } else {
+                        await signInAnonymously(auth).catch(() => {});
+                    }
                 }
             } catch (err) {
                 console.warn("Auth initialization error", err);
@@ -725,11 +728,12 @@ function ProductViewerContent({ initialProduct }) {
             {productData.views && (
                 <div className="mt-4 flex gap-3">
                     {/* Hide thumbnails that failed to load */}
-                    {productData.views.filter(v => !failedViews[v]).map(v => (
-                         <div key={`${v}-${activeColor?.sku}`} className="relative shrink-0">
+                    {productData.views.filter(v => !failedViews[`${activeColor?.sku}-${v}`]).map(v => (
+                         <div key={v} className="relative shrink-0">
                              {/* Hidden video tag to test if the video URL is a 404! */}
                              {v === 'VIDEO' && (
                                  <video 
+                                    key={activeColor?.sku}
                                     src={getMediaPath('VIDEO') || ''} 
                                     className="hidden" 
                                     preload="metadata"
