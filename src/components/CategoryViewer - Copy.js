@@ -129,6 +129,20 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
 const THICKNESS_ORDER = { "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4 };
 const FACE_WEIGHT_ORDER = { "< 30 oz": 1, "30 - 40 oz": 2, "40 - 50 oz": 3, "50 - 60 oz": 4, "60+ oz": 5 };
 
+// Custom hook to debounce high-frequency state changes
+function useDebounce(value, delay) {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+    return debouncedValue;
+}
+
 function CategoryViewerContent({ initialCategory }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -143,8 +157,14 @@ function CategoryViewerContent({ initialCategory }) {
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [maxPrice, setMaxPrice] = useState(10000); 
+  // Raw input states (for the UI)
+  const [searchQueryInput, setSearchQueryInput] = useState('');
+  const [maxPriceInput, setMaxPriceInput] = useState(10000); 
+
+  // Debounced states (for the heavy filter logic)
+  const searchQuery = useDebounce(searchQueryInput, 300);
+  const maxPrice = useDebounce(maxPriceInput, 300);
+
   const [selectedPrograms, setSelectedPrograms] = useState([]);
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedSpecs, setSelectedSpecs] = useState({});
@@ -447,13 +467,10 @@ function CategoryViewerContent({ initialCategory }) {
     };
   }, [isAuthReady, user]); 
 
-  const uniqueCategoriesList = useMemo(() => {
-    return [...new Set(liveProductsRaw.map(p => p.category))].sort();
-  }, [liveProductsRaw]);
-
   const isWholesale = user && !user.isAnonymous;
   const isClientMode = clientMargin !== null;
 
+  // Memoize the price bounds so we only recalculate them when the raw data or category changes
   const priceBounds = useMemo(() => {
     let min = 0; let max = 15;
     
@@ -475,9 +492,10 @@ function CategoryViewerContent({ initialCategory }) {
     return { min, max };
   }, [liveProductsRaw, activeCategory, isWholesale, isClientMode, clientMargin]);
 
+  // Synchronize the input and debounced states when category changes
   useEffect(() => {
      if (liveProductsRaw.length > 0) {
-         setMaxPrice(priceBounds.max);
+         setMaxPriceInput(priceBounds.max);
      }
   }, [priceBounds.max, activeCategory]);
 
@@ -595,6 +613,7 @@ function CategoryViewerContent({ initialCategory }) {
       });
   };
 
+  // Uses the debounced searchQuery and maxPrice to prevent rapid re-rendering stutter!
   const filteredProducts = useMemo(() => {
     const searchVal = searchQuery.toLowerCase().trim();
     
@@ -694,8 +713,8 @@ function CategoryViewerContent({ initialCategory }) {
   }, [liveProductsRaw, activeCategory, searchQuery, maxPrice, selectedPrograms, selectedBrands, selectedSpecs, sortMode, isWholesale, isClientMode, clientMargin, isPrivateLabel]);
 
   const resetAllFilters = () => {
-      setSearchQuery('');
-      setMaxPrice(priceBounds.max);
+      setSearchQueryInput('');
+      setMaxPriceInput(priceBounds.max);
       setSelectedPrograms([]);
       setSelectedBrands([]);
       setSelectedSpecs({});
@@ -820,7 +839,7 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Search Catalog</label>
                     <div className="relative">
-                        <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Product, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
+                        <input type="text" value={searchQueryInput} onChange={(e) => setSearchQueryInput(e.target.value)} placeholder="Product, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
                         <span className="absolute right-3 top-3 text-gray-400 text-xs">🔍</span>
                     </div>
                 </div>
@@ -842,9 +861,9 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <div className="flex justify-between items-center mb-2">
                         <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400">Max Price Limit</label>
-                        <span className="text-xs font-bold text-gold font-mono">${maxPrice.toFixed(2)}</span>
+                        <span className="text-xs font-bold text-gold font-mono">${maxPriceInput.toFixed(2)}</span>
                     </div>
-                    <input type="range" min={priceBounds.min} max={priceBounds.max} step="0.5" value={maxPrice} onChange={(e) => setMaxPrice(parseFloat(e.target.value))} className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gold" />
+                    <input type="range" min={priceBounds.min} max={priceBounds.max} step="0.5" value={maxPriceInput} onChange={(e) => setMaxPriceInput(parseFloat(e.target.value))} className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gold" />
                     <div className="flex justify-between text-[9px] text-gray-400 font-bold mt-1">
                         <span>${priceBounds.min.toFixed(2)}</span>
                         <span>${priceBounds.max.toFixed(2)}</span>
@@ -881,12 +900,11 @@ function CategoryViewerContent({ initialCategory }) {
                             <span>⚙️</span> Filters
                         </button>
                         
-                        {/* Mobile-only inline search bar */}
                         <div className="relative flex-1 lg:hidden">
                             <input 
                                 type="text" 
-                                value={searchQuery} 
-                                onChange={(e) => setSearchQuery(e.target.value)} 
+                                value={searchQueryInput} 
+                                onChange={(e) => setSearchQueryInput(e.target.value)} 
                                 placeholder="Search products..." 
                                 className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" 
                             />
@@ -1086,7 +1104,7 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Search Catalog</label>
                     <div className="relative">
-                        <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Product, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
+                        <input type="text" value={searchQueryInput} onChange={(e) => setSearchQueryInput(e.target.value)} placeholder="Product, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
                     </div>
                 </div>
 
@@ -1107,9 +1125,9 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <div className="flex justify-between items-center mb-2">
                         <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400">Max Price Limit</label>
-                        <span className="text-xs font-bold text-gold font-mono">${maxPrice.toFixed(2)}</span>
+                        <span className="text-xs font-bold text-gold font-mono">${maxPriceInput.toFixed(2)}</span>
                     </div>
-                    <input type="range" min={priceBounds.min} max={priceBounds.max} step="0.5" value={maxPrice} onChange={(e) => setMaxPrice(parseFloat(e.target.value))} className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gold" />
+                    <input type="range" min={priceBounds.min} max={priceBounds.max} step="0.5" value={maxPriceInput} onChange={(e) => setMaxPriceInput(parseFloat(e.target.value))} className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-gold" />
                     <div className="flex justify-between text-[9px] text-gray-400 font-bold mt-1">
                         <span>${priceBounds.min.toFixed(2)}</span>
                         <span>${priceBounds.max.toFixed(2)}</span>
