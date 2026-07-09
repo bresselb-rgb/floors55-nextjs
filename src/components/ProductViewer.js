@@ -115,6 +115,45 @@ function ProductViewerContent({ initialProduct }) {
     const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
     useEffect(() => {
+        let isMounted = true;
+        if (!auth) return;
+
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.warn("Auth initialization error", err);
+            }
+        };
+        initAuth();
+
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (!isMounted) return;
+            setUser(currentUser);
+            if (currentUser && !currentUser.isAnonymous && db) {
+                try {
+                    const staffRef = doc(db, 'artifacts', appId, 'public', 'data', 'staff', currentUser.uid);
+                    const staffSnap = await getDoc(staffRef);
+                    if (staffSnap.exists() && isMounted) {
+                        setIsStaff(true);
+                        setProposalBrand('f55');
+                    }
+                } catch (e) {
+                    console.error("Error fetching staff status", e);
+                }
+            }
+        });
+
+        return () => { isMounted = false; unsubscribe(); };
+    }, []);
+
+    useEffect(() => {
+        if (!user || !db) return; // Guard for permissions
+
         if (typeof window !== 'undefined') {
             const cmParam = searchParams.get('cm');
             const proParam = searchParams.get('pro');
@@ -122,7 +161,7 @@ function ProductViewerContent({ initialProduct }) {
 
             const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
 
-            if (proParam && db) {
+            if (proParam) {
                 const fetchProBranding = async () => {
                     try {
                         const proDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', proParam));
@@ -207,56 +246,23 @@ function ProductViewerContent({ initialProduct }) {
             }
             if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
         }
-    }, [searchParams, urlColorSku]);
+    }, [searchParams, urlColorSku, user]);
 
     useEffect(() => {
-        let isMounted = true;
-        if (!auth) return;
-
-        const initAuth = async () => {
-            try {
-                // BUG FIX: Strictly ensure we don't overwrite an existing login session
-                if (!auth.currentUser) {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth).catch(() => {}));
-                    } else {
-                        await signInAnonymously(auth).catch(() => {});
-                    }
-                }
-            } catch (err) {
-                console.warn("Auth initialization error", err);
-            }
-        };
-        initAuth();
-
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (isMounted) {
-                setUser(currentUser);
-                if (currentUser && !currentUser.isAnonymous && db) {
-                    const staffRef = doc(db, 'artifacts', appId, 'public', 'data', 'staff', currentUser.uid);
-                    const staffSnap = await getDoc(staffRef);
-                    if (staffSnap.exists() && isMounted) {
-                        setIsStaff(true);
-                        setProposalBrand('f55');
-                    }
-                }
-            }
-        });
-
-        return () => { isMounted = false; unsubscribe(); };
-    }, []);
-
-    useEffect(() => {
-        if (!initialProduct?.id || !db) return;
-        const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', initialProduct.id), (docSnap) => {
+        if (!user || !initialProduct?.id || !db) return; // Guard for permissions
+        const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', initialProduct.id), 
+        (docSnap) => {
             if (docSnap.exists()) {
                 const dbData = docSnap.data();
                 dbData.displayTitle = (dbData.usePrivateName && dbData.privateName) ? dbData.privateName : (dbData.name || 'Unnamed Product');
                 setProductData({ id: docSnap.id, ...dbData });
             }
+        }, 
+        (error) => {
+            console.error("Error fetching pricing info:", error);
         });
         return () => unsub();
-    }, [initialProduct?.id]);
+    }, [initialProduct?.id, user]);
 
     useEffect(() => {
          if (productData && productData.colors) {
@@ -278,40 +284,51 @@ function ProductViewerContent({ initialProduct }) {
     }, [activeColor]);
 
     const handleViewError = (view) => {
-        setFailedViews(prev => ({ ...prev, [view]: true }));
+        if (activeColor) {
+            setFailedViews(prev => ({ ...prev, [`${activeColor.sku}-${view}`]: true }));
+        }
         if (activeView === view && view !== 'MAIN') {
             setActiveView('MAIN');
         }
     };
 
     useEffect(() => {
-        if (user && !user.isAnonymous && db) {
-            const fetchBoards = async () => {
-                try {
-                    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'client_boards'), where("proId", "==", user.uid));
-                    const snapshot = await getDocs(q);
-                    const boardsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                    setProBoards(boardsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0)));
-                    if (boardsData.length > 0) setSelectedBoardId(boardsData[0].id);
-                } catch (e) {
-                    console.error("Error fetching boards", e);
-                }
-            };
-            fetchBoards();
-        }
+        if (!user || user.isAnonymous || !db) return; // Guard for permissions
+        
+        const fetchBoards = async () => {
+            try {
+                // Fetch all and filter in JS memory to avoid missing index or complex rule issues
+                const q = collection(db, 'artifacts', appId, 'public', 'data', 'client_boards');
+                const snapshot = await getDocs(q);
+                const boardsData = snapshot.docs
+                    .map(d => ({ id: d.id, ...d.data() }))
+                    .filter(b => b.proId === user.uid);
+                    
+                setProBoards(boardsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0)));
+                if (boardsData.length > 0) setSelectedBoardId(boardsData[0].id);
+            } catch (e) {
+                console.error("Error fetching boards", e);
+            }
+        };
+        fetchBoards();
     }, [user]);
 
     useEffect(() => {
+        if (!user || !db) return; // Guard for permissions
+
         const isCarpetProd = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
         const isClientModeActual = clientMargin !== null;
         
-        if (!isClientModeActual && db) {
+        if (!isClientModeActual) {
             const fetchConfig = async () => {
                 try {
                     if (isCarpetProd) {
-                        const padQ = query(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'), where("category", "==", "Carpet Cushion"));
+                        // Fetch all and filter in JS memory to avoid missing index errors
+                        const padQ = collection(db, 'artifacts', appId, 'public', 'data', 'pricing');
                         const padSnap = await getDocs(padQ);
-                        const pads = padSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.isVisible !== false);
+                        const pads = padSnap.docs
+                            .map(d => ({ id: d.id, ...d.data() }))
+                            .filter(p => p.category === "Carpet Cushion" && p.isVisible !== false);
                         setAvailablePads(pads);
                     }
 
@@ -323,7 +340,7 @@ function ProductViewerContent({ initialProduct }) {
             };
             fetchConfig();
         }
-    }, [productData?.category, clientMargin]);
+    }, [productData?.category, clientMargin, user]);
 
     useEffect(() => {
         if (padSelection === 'none') {
