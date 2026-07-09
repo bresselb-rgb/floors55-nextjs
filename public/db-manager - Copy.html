@@ -1,3 +1,4 @@
+<!-- db-manager.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -804,7 +805,6 @@
             6. If the category is "Carpet Cushion", set "cartonSize" to the roll square footage (e.g. 360). If "Carpet", set "cartonSize" to null and do NOT include any carton info in the specs. Otherwise, set it to ${cartonSize !== 'N/A' && cartonSize !== 'Unknown' ? parseFloat(cartonSize) : 1} or the numeric box coverage.
             7. Ensure "views" includes "VIDEO" as a supported view (e.g., ["MAIN", "ROOM", "SWATCH", "VIDEO"]).
             8. You MUST universally set "unit" to "sqft" for ALL products, including Carpet.
-            9. CRITICAL FOR THE "desc" FIELD: Write a 1-2 sentence descriptive, SEO-friendly description based on the specs. However, you MUST NOT use the manufacturer name or the specific product name in the description text. Keep it completely brand-agnostic. Use generic premium phrasing like "this stunning collection" or "this premium flooring".
             
             REQUIRED STRUCTURE (Match this JSON model exactly):
             {
@@ -814,7 +814,7 @@
               "category": "${category}",
               "imgPrefix": "${prefix || 'auto_detected_prefix_here'}",
               "views": ["MAIN", "ROOM", "SWATCH", "VIDEO"],
-              "desc": "Brand agnostic 1-2 sentence description here...",
+              "desc": "Write a 1-2 sentence rich, descriptive e-commerce product description highlighting style, composition, and durability.",
               "price": 0.00,
               "retailPrice": 0.00,
               "calcType": "${category === 'Carpet' || category === 'Carpet Cushion' ? 'carpet' : 'carton'}",
