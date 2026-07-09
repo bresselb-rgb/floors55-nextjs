@@ -1,8 +1,9 @@
 // src/components/ProductViewer.js
 "use client";
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc, setDoc } from "firebase/firestore";
@@ -336,8 +337,10 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path.toLowerCase())}?alt=media`;
     };
 
+    // SAFETY FIX: Prevents React from crashing when the touch event loses coordinate data
     const handleZoomPan = (e) => {
         if (!e.currentTarget) return;
+        
         try {
             const rect = e.currentTarget.getBoundingClientRect();
             let clientX = e.clientX;
@@ -358,6 +361,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         }
     };
 
+    // SAFETY FIX: Wrapping Lightbox toggle to prevent Next.js router crash
     const toggleLightbox = () => {
         if (activeView !== 'VIDEO') {
             try {
@@ -438,85 +442,65 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     const isCarpet = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
     const isCarpetCushionOnly = productData?.category === 'Carpet Cushion';
     
-    // MEMOIZE: Material Quantities to prevent re-calculating on every slider tick
-    const { finalMaterialQty, finalMaterialUnit, finalMaterialCoverageSqft, totalMaterialCost } = useMemo(() => {
-        let cartonSqft = parseFloat(productData?.cartonSize);
-        if (isNaN(cartonSqft) || cartonSqft <= 0) cartonSqft = parseFloat(productData?.boxSqft);
-        if (!cartonSqft && productData?.specs && Array.isArray(productData.specs)) {
-            const specText = productData.specs.join(' ').toLowerCase();
-            const sqftMatch = specText.match(/([\d.]+)\s*(sq\.?ft\.?|sq\s*ft|sf)/);
-            if (sqftMatch && parseFloat(sqftMatch[1]) > 0) cartonSqft = parseFloat(sqftMatch[1]);
-        }
-        cartonSqft = cartonSqft || (isCarpetCushionOnly ? 360 : 20); 
+    let cartonSqft = parseFloat(productData?.cartonSize);
+    if (isNaN(cartonSqft) || cartonSqft <= 0) cartonSqft = parseFloat(productData?.boxSqft);
+    if (!cartonSqft && productData?.specs && Array.isArray(productData.specs)) {
+        const specText = productData.specs.join(' ').toLowerCase();
+        const sqftMatch = specText.match(/([\d.]+)\s*(sq\.?ft\.?|sq\s*ft|sf)/);
+        if (sqftMatch && parseFloat(sqftMatch[1]) > 0) cartonSqft = parseFloat(sqftMatch[1]);
+    }
+    cartonSqft = cartonSqft || (isCarpetCushionOnly ? 360 : 20); 
 
-        const netSqftNum = parseFloat(calcNetSqft) || 0;
-        const totalSqftWithWaste = netSqftNum * parseFloat(calcWaste);
-        
-        const requiredSqYd = Math.ceil(totalSqftWithWaste / 9);
-        const requiredCartons = Math.ceil(totalSqftWithWaste / cartonSqft);
-        
-        let qty = requiredCartons;
-        let unit = 'cartons';
-        let cov = requiredCartons * cartonSqft;
+    const netSqftNum = parseFloat(calcNetSqft) || 0;
+    const totalSqftWithWaste = netSqftNum * parseFloat(calcWaste);
+    
+    const requiredSqYd = Math.ceil(totalSqftWithWaste / 9);
+    const requiredCartons = Math.ceil(totalSqftWithWaste / cartonSqft);
+    
+    let finalMaterialQty = requiredCartons;
+    let finalMaterialUnit = 'cartons';
+    let finalMaterialCoverageSqft = requiredCartons * cartonSqft;
 
-        if (isCarpet) {
-            qty = requiredSqYd;
-            unit = 'sqyd';
-            cov = requiredSqYd * 9;
-        } else if (isCarpetCushionOnly) {
-            qty = requiredCartons; 
-            unit = 'rolls';
-            cov = requiredCartons * cartonSqft;
-        }
-        
-        let normalizedPerSqftPrice = basePrice;
-        if (productData?.unit === 'sqyd') {
-            normalizedPerSqftPrice = basePrice / 9;
-        }
-        const cost = cov * normalizedPerSqftPrice;
+    if (isCarpet) {
+        finalMaterialQty = requiredSqYd;
+        finalMaterialUnit = 'sqyd';
+        finalMaterialCoverageSqft = requiredSqYd * 9;
+    } else if (isCarpetCushionOnly) {
+        finalMaterialQty = requiredCartons; 
+        finalMaterialUnit = 'rolls';
+        finalMaterialCoverageSqft = requiredCartons * cartonSqft;
+    }
+    
+    let normalizedPerSqftPrice = basePrice;
+    if (productData?.unit === 'sqyd') {
+        normalizedPerSqftPrice = basePrice / 9;
+    }
+    const totalMaterialCost = finalMaterialCoverageSqft * normalizedPerSqftPrice;
 
-        return { finalMaterialQty: qty, finalMaterialUnit: unit, finalMaterialCoverageSqft: cov, totalMaterialCost: cost };
-    }, [productData, calcNetSqft, calcWaste, isCarpet, isCarpetCushionOnly, basePrice]);
-
-    // MEMOIZE: Pad and Addon Costs
-    const { totalPadCost, requiredPadSqyd, requiredPadRolls, padName } = useMemo(() => {
-        let cost = 0;
-        let sqyd = 0;
-        let rolls = 0;
-        let name = '';
-        
-        if (isCarpet && padSelection !== 'none') {
-            let padRollSqft = 360; 
-            if (padSelection !== 'custom_legacy') {
-                const padDoc = availablePads.find(p => p.id === padSelection);
-                if (padDoc && padDoc.cartonSize) {
-                    padRollSqft = parseFloat(padDoc.cartonSize);
-                    if (padDoc.unit === 'sqyd') {
-                        padRollSqft = parseFloat(padDoc.cartonSize) * 9;
-                    }
+    let totalPadCost = 0;
+    let requiredPadSqyd = 0;
+    let requiredPadRolls = 0;
+    
+    if (isCarpet && padSelection !== 'none') {
+        let padRollSqft = 360; 
+        if (padSelection !== 'custom_legacy') {
+            const padDoc = availablePads.find(p => p.id === padSelection);
+            if (padDoc && padDoc.cartonSize) {
+                padRollSqft = parseFloat(padDoc.cartonSize);
+                if (padDoc.unit === 'sqyd') {
+                    padRollSqft = parseFloat(padDoc.cartonSize) * 9;
                 }
-                if (padDoc) name = padDoc.name || padDoc.displayTitle;
-            } else {
-                name = "Legacy Pad / Custom";
             }
-            
-            rolls = Math.ceil(finalMaterialCoverageSqft / padRollSqft);
-            const actualPadSqftToPurchase = rolls * padRollSqft;
-            sqyd = actualPadSqftToPurchase / 9;
-            cost = actualPadSqftToPurchase * (parseFloat(padCost) || 0);
         }
-        return { totalPadCost: cost, requiredPadSqyd: sqyd, requiredPadRolls: rolls, padName: name };
-    }, [isCarpet, padSelection, availablePads, finalMaterialCoverageSqft, padCost]);
+        
+        requiredPadRolls = Math.ceil(finalMaterialCoverageSqft / padRollSqft);
+        const actualPadSqftToPurchase = requiredPadRolls * padRollSqft;
+        requiredPadSqyd = actualPadSqftToPurchase / 9;
+        totalPadCost = actualPadSqftToPurchase * (parseFloat(padCost) || 0);
+    }
 
-    const totalAddonsCost = useMemo(() => {
-        return selectedAddons.reduce((sum, item) => sum + ((parseFloat(item.cost) || 0) * (parseInt(item.qty) || 0)), 0);
-    }, [selectedAddons]);
-
-    const totalLaborCost = useMemo(() => {
-        const netSqftNum = parseFloat(calcNetSqft) || 0;
-        return (parseFloat(laborPrep) || 0) + (netSqftNum * (parseFloat(laborInstallPerSqft) || 0)) + (parseFloat(laborDelivery) || 0) + (parseFloat(customLabor1Cost) || 0) + (parseFloat(customLabor2Cost) || 0);
-    }, [laborPrep, calcNetSqft, laborInstallPerSqft, laborDelivery, customLabor1Cost, customLabor2Cost]);
-
+    const totalAddonsCost = selectedAddons.reduce((sum, item) => sum + ((parseFloat(item.cost) || 0) * (parseInt(item.qty) || 0)), 0);
+    const totalLaborCost = (parseFloat(laborPrep) || 0) + (netSqftNum * (parseFloat(laborInstallPerSqft) || 0)) + (parseFloat(laborDelivery) || 0) + (parseFloat(customLabor1Cost) || 0) + (parseFloat(customLabor2Cost) || 0);
     const totalWholesaleProjectCost = totalMaterialCost + totalPadCost + totalAddonsCost + totalLaborCost;
     const turnkeyRetailPrice = totalWholesaleProjectCost * (1 + (builderMargin / 100));
 
@@ -555,7 +539,12 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         setIsSavingToBoard(true);
 
         try {
-            const netSqftNum = parseFloat(calcNetSqft) || 0;
+            let padNameToSave = '';
+            if (padSelection === 'custom_legacy') padNameToSave = "Legacy Pad / Custom";
+            else if (padSelection !== 'none') {
+                const found = availablePads.find(p => p.id === padSelection);
+                if (found) padNameToSave = found.name || found.displayTitle;
+            }
 
             const quoteDoc = {
                 proId: user.uid,
@@ -572,7 +561,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 measurements: { waste: parseFloat(calcWaste), netSqft: netSqftNum, coverageSqft: finalMaterialCoverageSqft },
                 material: { qty: finalMaterialQty, unit: finalMaterialUnit, wholesaleTotal: totalMaterialCost },
                 addons: {
-                    pad: padName ? { name: padName, cost: totalPadCost, sqyd: requiredPadSqyd, rolls: requiredPadRolls } : null,
+                    pad: padNameToSave ? { name: padNameToSave, cost: totalPadCost, sqyd: requiredPadSqyd, rolls: requiredPadRolls } : null,
                     customList: selectedAddons.length > 0 ? { cost: totalAddonsCost, items: selectedAddons } : null
                 },
                 services: {
@@ -602,9 +591,6 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             setIsSavingToBoard(false);
         }
     };
-
-    let normalizedPerSqftPrice = basePrice;
-    if (productData?.unit === 'sqyd') normalizedPerSqftPrice = basePrice / 9;
 
     const finalPrice = isClientMode ? normalizedPerSqftPrice * (1 + clientMargin / 100) : normalizedPerSqftPrice;
     const wsPrice = finalPrice.toFixed(2);
@@ -693,7 +679,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                             setActiveColor(c);
                         }}>
                             <div className={`relative w-full aspect-square border-2 rounded-md transition duration-200 bg-gray-100 overflow-hidden ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`}>
-                                <img src={fbPath} alt={c.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = TBD_IMG; }} />
+                                <Image src={fbPath} alt={c.name} fill sizes="100px" className="object-cover" onError={(e) => { e.currentTarget.srcset = ''; e.currentTarget.src = TBD_IMG; }} />
                             </div>
                             <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
                         </div>
@@ -719,7 +705,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 {activeView === 'VIDEO' ? (
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
-                    <img src={getMediaPath(activeView) || TBD_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = TBD_IMG; }} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
+                    <Image src={getMediaPath(activeView) || TBD_IMG} alt="Product" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.srcset = ''; e.currentTarget.src = TBD_IMG; }} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
                 )}
             </div>
 
@@ -736,12 +722,14 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                                     onError={() => handleViewError('VIDEO')} 
                                  />
                              )}
-                             <img 
+                             <Image 
                                 src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)} 
+                                width={75} height={75} 
                                 className={`w-[75px] h-[75px] min-w-[75px] shrink-0 object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} 
                                 onClick={() => setActiveView(v)} 
                                 onError={(e) => { 
                                     handleViewError(v); 
+                                    e.currentTarget.srcset = ''; 
                                     e.currentTarget.src = TBD_IMG; 
                                 }} 
                                 alt={`View ${v}`} 
@@ -1066,7 +1054,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                           alt="Zoomed Product" 
                           className="w-full h-full object-contain transition-transform duration-150 ease-out hover:scale-[2.2]"
                           style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }}
-                          onError={(e) => { e.currentTarget.src = TBD_IMG; }}
+                          onError={(e) => { e.currentTarget.srcset = ''; e.currentTarget.src = TBD_IMG; }}
                       />
                   </div>
               </div>
