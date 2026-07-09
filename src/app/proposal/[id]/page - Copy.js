@@ -72,14 +72,16 @@ export default function ProposalPage({ params }) {
             const isF55 = quote?.brand === 'Floors 55' || quote?.brandOverride === 'f55' || quote?.useCustomBranding === false;
 
             const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+            const F55_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media";
 
-            const bName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55" : (proProfile.business || "Your Flooring Professional"));
+            const bName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55 Pro" : (proProfile.business || "Your Flooring Professional"));
             const mgn = quote?.totals?.margin || proProfile.clientMargin || 20;
             
-            // Revert colors to standard Floors 55 White/Black scheme
-            const lUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? "" : (proProfile.logoUrl || ""));
-            const bBg = proProfile.brandBgColor || "#ffffff";
-            const bText = proProfile.brandTextColor || "#000000";
+            // Explicitly force the F55 Logo if the F55 brand is selected
+            const lUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? F55_LOGO_URL : (proProfile.logoUrl || ""));
+            
+            const bBg = isAbbey || isF55 ? "#ffffff" : (proProfile.brandBgColor || "#ffffff");
+            const bText = isAbbey || isF55 ? "#000000" : (proProfile.brandTextColor || "#000000");
 
             sessionStorage.setItem('client_brand', bName);
             if (lUrl) sessionStorage.setItem('client_logo', lUrl);
@@ -114,11 +116,15 @@ export default function ProposalPage({ params }) {
     const isF55 = quote?.brand === 'Floors 55' || quote?.brandOverride === 'f55' || quote?.useCustomBranding === false;
 
     const ABBEY_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fabbey-logo.png?alt=media";
+    const F55_LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media";
 
-    const businessName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55" : (proProfile?.business || "Your Flooring Professional"));
-    const logoUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? "" : (proProfile?.logoUrl || ""));
-    const brandBgColor = proProfile?.brandBgColor || "#ffffff";
-    const brandTextColor = proProfile?.brandTextColor || "#000000";
+    const businessName = isAbbey ? "Abbey Carpet & Floor" : (isF55 ? "Floors 55 Pro" : (proProfile?.business || "Your Flooring Professional"));
+    
+    // Explicitly force the F55 Logo if the F55 brand is selected
+    const logoUrl = isAbbey ? ABBEY_LOGO_URL : (isF55 ? F55_LOGO_URL : (proProfile?.logoUrl || ""));
+    
+    const brandBgColor = isAbbey || isF55 ? "#ffffff" : (proProfile?.brandBgColor || "#ffffff");
+    const brandTextColor = isAbbey || isF55 ? "#000000" : (proProfile?.brandTextColor || "#000000");
     
     // Add a gold accent if the background is white, otherwise use the brand background
     const accentColor = brandBgColor.toLowerCase() === '#ffffff' ? '#c5a059' : brandBgColor;

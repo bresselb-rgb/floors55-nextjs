@@ -9,7 +9,7 @@ import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "fi
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc, setDoc } from "firebase/firestore";
 import { auth, db, appId } from "../lib/firebase";
 
-function ProductViewerContent({ initialProduct, isPrivateMode }) {
+function ProductViewerContent({ initialProduct }) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const urlColorSku = searchParams.get('color');
@@ -197,9 +197,6 @@ function ProductViewerContent({ initialProduct, isPrivateMode }) {
     }, []);
 
     useEffect(() => {
-        // Halt the live listener if in private mode to prevent overwriting scrubbed server data
-        if (isPrivateMode) return; 
-
         const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', initialProduct.id), (docSnap) => {
             if (docSnap.exists()) {
                 const dbData = docSnap.data();
@@ -208,7 +205,7 @@ function ProductViewerContent({ initialProduct, isPrivateMode }) {
             }
         });
         return () => unsub();
-    }, [initialProduct.id, isPrivateMode]);
+    }, [initialProduct.id]);
 
     useEffect(() => {
          if (productData && productData.colors) {
@@ -326,11 +323,6 @@ function ProductViewerContent({ initialProduct, isPrivateMode }) {
     const shareProduct = async () => {
         let targetPath = `/product/${productData.id}?color=${activeColor?.sku || ''}`;
         
-        // If a staff member shares the link while in Private Mode, explicitly append ?m=abbey
-        if (isPrivateMode) {
-             targetPath += `&m=abbey`;
-        }
-
         if (clientMargin !== null) {
             const encodedMargin = btoa(clientMargin.toString());
             targetPath += `&cm=${encodedMargin}`;
@@ -513,8 +505,6 @@ function ProductViewerContent({ initialProduct, isPrivateMode }) {
                 projectName: quoteProjectName || 'Flooring Project',
                 brandOverride: proposalBrand, // 'custom', 'f55', or 'abbey'
                 useCustomBranding: proposalBrand === 'custom', // Legacy fallback support
-                // FLAG THE QUOTE AS PRIVATE if they selected the Abbey preset
-                isPrivateLabel: proposalBrand === 'abbey',
                 productId: productData.id,
                 productName: productData.displayTitle,
                 colorSku: activeColor?.sku || '',
@@ -590,16 +580,15 @@ function ProductViewerContent({ initialProduct, isPrivateMode }) {
                 <div className="flex flex-wrap items-center gap-2 mt-2 mb-2 sm:mb-4">
                     <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0">{productData.category}</span>
                     
-                    {/* Hide Manufacturer and Wholesale badges in Private Mode */}
-                    {!isClientMode && !isPrivateMode && user && !user.isAnonymous && productData.manufacturer && (
+                    {!isClientMode && user && !user.isAnonymous && productData.manufacturer && (
                         <span className="inline-block px-3 py-1 bg-[#fdfdfd] border border-gray-200 text-gray-700 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm shrink-0">
                             <span className="text-gray-400 font-normal mr-1">Mfg:</span> {productData.manufacturer} {productData.sku ? `(${productData.sku})` : ''}
                         </span>
                     )}
-                    {!isClientMode && !isPrivateMode && productData.isSale && <span className="inline-block px-3 py-1 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse shrink-0">🔥 HOT BUY</span>}
-                    {!isClientMode && !isPrivateMode && productData.isPropMgt && <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-gold border border-gold/30 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm shrink-0"><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</span>}
-                    {!isClientMode && !isPrivateMode && productData.isContractor && <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm shrink-0"><span>🛠️</span> Pro Select</span>}
-                    {!isClientMode && !isPrivateMode && productData.isVisible === false && <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0">⚠️ Unlisted Draft</span>}
+                    {!isClientMode && productData.isSale && <span className="inline-block px-3 py-1 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse shrink-0">🔥 HOT BUY</span>}
+                    {!isClientMode && productData.isPropMgt && <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-gold border border-gold/30 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm shrink-0"><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</span>}
+                    {!isClientMode && productData.isContractor && <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm shrink-0"><span>🛠️</span> Pro Select</span>}
+                    {!isClientMode && productData.isVisible === false && <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0">⚠️ Unlisted Draft</span>}
                 </div>
             </div>
 
@@ -681,7 +670,7 @@ function ProductViewerContent({ initialProduct, isPrivateMode }) {
             )}
 
             <div className="flex gap-4 mt-6">
-                {!isClientMode && !isPrivateMode && (
+                {!isClientMode && (
                     <Link href={`/quote?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-black text-white text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-gold transition-colors border-2 border-black hover:border-gold" style={{ textDecoration: 'none' }}>Get A Quote</Link>
                 )}
                 <Link href={`/order-sample?product=${encodeURIComponent(productData.displayTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
@@ -697,7 +686,7 @@ function ProductViewerContent({ initialProduct, isPrivateMode }) {
             <p className="text-[1.05rem] text-gray-500 mb-6 italic mt-4 lg:mt-0">{productData.desc || 'Premium flooring collection.'}</p>
 
             <div className="my-5 p-4 border-l-4 border-gold bg-[#fdfdfd] relative overflow-hidden">
-                {isClientMode || isPrivateMode ? (
+                {isClientMode ? (
                     <>
                         <div className="absolute top-0 right-0 bg-gray-900 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-widest shadow-sm">Client Pricing</div>
                         <div className="mt-1">
@@ -729,7 +718,7 @@ function ProductViewerContent({ initialProduct, isPrivateMode }) {
             </div>
 
             {/* QUICK SAVE TO BOARD */}
-            {!isClientMode && !isPrivateMode && user && !user.isAnonymous && (
+            {!isClientMode && user && !user.isAnonymous && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
                      <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Quick Save to Client Presentation</h4>
                      {proBoards.length > 0 ? (
@@ -744,14 +733,6 @@ function ProductViewerContent({ initialProduct, isPrivateMode }) {
                      ) : (
                          <div className="text-xs text-gray-500 italic">Go to <Link href="/my-account" className="text-gold font-bold not-italic hover:underline">My Account</Link> to create a Client Board.</div>
                      )}
-                </div>
-            )}
-
-            {/* Add an indicator for staff so they know Anti-Showrooming is active */}
-            {isPrivateMode && (
-                <div className="mt-4 mb-6 p-4 bg-purple-50 border border-purple-200 rounded-xl text-purple-900 text-sm">
-                    <strong className="block mb-1">🛡️ Anti-Showrooming Active</strong>
-                    You are viewing the <strong>Scrubbed Retail View</strong>. The original manufacturer and SKUs have been stripped from the page.
                 </div>
             )}
 
@@ -772,7 +753,7 @@ function ProductViewerContent({ initialProduct, isPrivateMode }) {
           </div>
 
           {/* THE NEW PROPOSAL BUILDER TRIGGER BUTTON */}
-          {!isClientMode && !isPrivateMode && user && !user.isAnonymous && !isCarpetCushionOnly && (
+          {!isClientMode && user && !user.isAnonymous && !isCarpetCushionOnly && (
               <button 
                   className="fixed bottom-5 right-5 md:bottom-8 md:right-8 bg-black text-white px-6 py-4 rounded-full cursor-pointer font-bold shadow-2xl z-40 transition-all border-2 border-black hover:bg-gold hover:text-black hover:border-gold flex items-center gap-2 text-sm md:text-base hover:scale-105" 
                   onClick={() => setIsBuilderOpen(true)}
@@ -1011,11 +992,10 @@ function ProductViewerContent({ initialProduct, isPrivateMode }) {
     );
 }
 
-// Ensure the default export expects the new isPrivateMode prop!
-export default function ProductViewer({ initialProduct, isPrivateMode }) {
+export default function ProductViewer({ initialProduct }) {
     return (
         <Suspense fallback={<div className="flex-1 flex items-center justify-center min-h-[50vh]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold border-t-transparent"></div></div>}>
-            <ProductViewerContent initialProduct={initialProduct} isPrivateMode={isPrivateMode} />
+            <ProductViewerContent initialProduct={initialProduct} />
         </Suspense>
     );
 }

@@ -1,35 +1,8 @@
-// src/app/product/[id]/page.js
 import { doc, getDoc } from "firebase/firestore";
 import { signInAnonymously } from "firebase/auth";
-
-// --- MOCKED DEPENDENCIES FOR CANVAS COMPILATION ---
-// In your actual Next.js app, keep your original imports:
-// import { db, auth, appId } from "../../../lib/firebase";
-// import ProductViewer from "../../../components/ProductViewer";
-// import Link from "next/link";
-
-const db = {};
-const auth = { currentUser: true };
-const appId = "mockAppId";
-
-// Mocking Next/Link to prevent compilation errors in Canvas
-const Link = ({ children, href, className, style }) => (
-  <a href={href} className={className} style={style}>{children}</a>
-);
-
-// Mocking the ProductViewer to prevent compilation errors
-const ProductViewer = ({ initialProduct, isPrivateMode }) => (
-  <div className="max-w-[1400px] mx-auto px-4 py-12">
-    <div className="p-8 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 text-center">
-       <h2 className="text-xl font-bold mb-4">Client-Side Component Placeholder</h2>
-       <p className="text-gray-600 mb-2">This mocks your <code>&lt;ProductViewer /&gt;</code> component.</p>
-       <p className="text-sm text-blue-600 font-mono">
-         Receiving Private Mode: {isPrivateMode ? 'TRUE (Scrubbed Data)' : 'FALSE (Public Data)'}
-       </p>
-    </div>
-  </div>
-);
-// --- END MOCKED DEPENDENCIES ---
+import { db, auth, appId } from "../../../lib/firebase";
+import ProductViewer from "../../../components/ProductViewer";
+import Link from "next/link";
 
 // Helper to ensure the server is authenticated before asking Firebase for data
 const authenticateServer = async () => {
@@ -39,16 +12,10 @@ const authenticateServer = async () => {
 };
 
 // 1. Next.js Magic: This injects the precise meta data into the <head> for Google!
-export async function generateMetadata({ params, searchParams }) {
+export async function generateMetadata({ params }) {
   await authenticateServer();
   
   const { id } = await params;
-  
-  // ✅ Detect Private Mode from URL (e.g., ?m=abbey)
-  // Note: in Next.js 15+, searchParams must be awaited. In 14, it's synchronous but awaiting is safe.
-  const resolvedSearchParams = await searchParams;
-  const isPrivateMode = resolvedSearchParams?.m === 'abbey';
-
   const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'pricing', id);
   const docSnap = await getDoc(docRef);
 
@@ -57,11 +24,7 @@ export async function generateMetadata({ params, searchParams }) {
   }
 
   const data = docSnap.data();
-  
-  // Force the private name if in private mode, otherwise use normal logic
-  const title = isPrivateMode 
-      ? (data.privateName || 'Custom Collection') 
-      : ((data.usePrivateName && data.privateName) ? data.privateName : (data.name || 'Unnamed Product'));
+  const title = (data.usePrivateName && data.privateName) ? data.privateName : (data.name || 'Unnamed Product');
 
   // Format image URL so it renders in text message previews when shared directly
   const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -75,7 +38,7 @@ export async function generateMetadata({ params, searchParams }) {
   const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
   const imageUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
 
-  const metadata = {
+  return {
     title: `${title} | Floors 55`,
     description: data.desc || `View the ${title} premium flooring collection at Floors 55.`,
     openGraph: {
@@ -90,31 +53,18 @@ export async function generateMetadata({ params, searchParams }) {
         description: data.desc || `View the ${title} premium flooring collection at Floors 55.`,
         images: [imageUrl]
     },
+    // ✅ Canonical URLs tell Google to ignore any tracking parameters in the URL
     alternates: {
       canonical: `https://www.floors55pro.com/product/${id}`,
     }
   };
-
-  // ✅ SEO PROTECTION: If this is a private link, tell Google NOT to index it
-  // We also remove the canonical tag so it doesn't accidentally link back to the public page
-  if (isPrivateMode) {
-      metadata.robots = { index: false, follow: false };
-      delete metadata.alternates;
-  }
-
-  return metadata;
 }
 
 // 2. The Server Page: Fetches data purely on the server before sending HTML to the browser
-export default async function ProductPageServer({ params, searchParams }) {
+export default async function ProductPageServer({ params }) {
   await authenticateServer();
   
   const { id } = await params;
-  
-  // ✅ Detect Private Mode
-  const resolvedSearchParams = await searchParams;
-  const isPrivateMode = resolvedSearchParams?.m === 'abbey';
-
   const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'pricing', id);
   const docSnap = await getDoc(docRef);
 
@@ -133,35 +83,8 @@ export default async function ProductPageServer({ params, searchParams }) {
 
   // Prep the data
   const data = docSnap.data();
-  let productData = { id: docSnap.id, ...data };
-
-  // --- 🛡️ THE ANTI-SHOWROOMING SCRUBBER 🛡️ ---
-  if (isPrivateMode) {
-      // 1. Overwrite public fields with private ones
-      productData.name = data.privateName || 'Custom Collection';
-      productData.manufacturer = data.privateManufacturer || 'Private Label';
-      productData.sku = data.privateSku || 'N/A';
-      productData.displayTitle = productData.name;
-      
-      // 2. Scrub color/variant SKUs if they exist
-      if (productData.colors && Array.isArray(productData.colors)) {
-          productData.colors = productData.colors.map(color => ({
-              ...color,
-              sku: color.privateSku || 'N/A' // Hide public color SKUs
-          }));
-      }
-
-      // 3. DELETE the original private fields so they are completely removed 
-      // from the JSON payload sent to the client. A user inspecting the React
-      // source code will only see the generic info.
-      delete productData.usePrivateName;
-      delete productData.privateName;
-      delete productData.privateManufacturer;
-      delete productData.privateSku;
-  } else {
-      // Standard Public View Logic
-      productData.displayTitle = (data.usePrivateName && data.privateName) ? data.privateName : (data.name || 'Unnamed Product');
-  }
+  const productData = { id: docSnap.id, ...data };
+  productData.displayTitle = (data.usePrivateName && data.privateName) ? data.privateName : (data.name || 'Unnamed Product');
 
   const retailPrice = data.retailPrice ? parseFloat(data.retailPrice).toFixed(2) : ((data.price || 0) * 2.2).toFixed(2);
   
@@ -186,32 +109,32 @@ export default async function ProductPageServer({ params, searchParams }) {
   };
   const catSlug = getCategorySlug(data.category);
 
-  // ✅ Updated Product Schema: Now uses the SCRUBBED productData to prevent data leaks!
+  // ✅ Product Schema (Rich Snippets for Google)
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": productData.displayTitle,
     "image": imageUrl,
-    "description": productData.desc || `View the ${productData.displayTitle} premium flooring collection.`,
-    "sku": productData.sku, 
+    "description": data.desc || `View the ${productData.displayTitle} premium flooring collection.`,
+    "sku": data.sku || data.id,
     "brand": {
       "@type": "Brand",
-      "name": productData.manufacturer || "Floors 55"
+      "name": data.manufacturer || "Floors 55"
     },
     "offers": {
       "@type": "Offer",
-      "url": `${baseUrl}/product/${id}${isPrivateMode ? '?m=abbey' : ''}`,
+      "url": `${baseUrl}/product/${id}`,
       "priceCurrency": "USD",
       "price": retailPrice,
       "availability": "https://schema.org/InStock",
       "seller": {
         "@type": "Organization",
-        "name": isPrivateMode ? "Abbey Carpet" : "Floors 55"
+        "name": "Floors 55"
       }
     }
   };
 
-  // ✅ Updated Breadcrumb Schema: Prevents linking back to the manufacturer
+  // ✅ Breadcrumb Schema (Creates the clean trail in Google Search results)
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -225,14 +148,14 @@ export default async function ProductPageServer({ params, searchParams }) {
       {
         "@type": "ListItem",
         "position": 2,
-        "name": productData.category || "Products",
+        "name": data.category || "Products",
         "item": `${baseUrl}${catSlug}`
       },
       {
         "@type": "ListItem",
         "position": 3,
         "name": productData.displayTitle,
-        "item": `${baseUrl}/product/${id}${isPrivateMode ? '?m=abbey' : ''}`
+        "item": `${baseUrl}/product/${id}`
       }
     ]
   };
@@ -242,19 +165,18 @@ export default async function ProductPageServer({ params, searchParams }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       
-      {/* The Visual Breadcrumb Trail for Users */}
+      {/* ✅ The Visual Breadcrumb Trail for Users */}
       <div className="bg-white pt-6 pb-2">
         <div className="max-w-[1400px] mx-auto px-4 flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-gray-400">
             <Link href="/" className="hover:text-gold transition-colors" style={{ textDecoration: 'none' }}>Home</Link>
             <span>/</span>
-            <Link href={catSlug} className="hover:text-gold transition-colors" style={{ textDecoration: 'none' }}>{productData.category || 'Collections'}</Link>
+            <Link href={catSlug} className="hover:text-gold transition-colors" style={{ textDecoration: 'none' }}>{data.category || 'Collections'}</Link>
             <span>/</span>
             <span className="text-gray-900 truncate max-w-[200px] sm:max-w-none">{productData.displayTitle}</span>
         </div>
       </div>
 
-      {/* ✅ Pass the scrubbed data down to the client component */}
-      <ProductViewer initialProduct={productData} isPrivateMode={isPrivateMode} />
+      <ProductViewer initialProduct={productData} />
     </>
   );
 }
