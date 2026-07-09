@@ -341,7 +341,7 @@ Thank you!`;
                   const markupVal = quote.totals?.margin || 20;
                   const marginVal = markupVal > 0 ? ((markupVal / (100 + markupVal)) * 100).toFixed(1) : 0;
                   
-                  // Dynamic Logo and Branding Badge
+                  // Dynamic Logo and Branding Badge with strict support for Private Label
                   let displayLogo = F55_LOGO_URL;
                   let displayBrandName = "Floors 55 Pro";
                   let brandBadgeClass = "bg-gray-100 text-gray-800 border border-gray-200";
@@ -354,6 +354,10 @@ Thank you!`;
                       displayLogo = null;
                       displayBrandName = "Custom Brand";
                       brandBadgeClass = "bg-emerald-50 text-emerald-800 border border-emerald-200";
+                  } else if (quote.brandOverride === 'private') {
+                      displayLogo = null;
+                      displayBrandName = "Private Label";
+                      brandBadgeClass = "bg-purple-50 text-purple-800 border border-purple-200";
                   }
 
                   return (
@@ -552,20 +556,19 @@ Thank you!`;
           <div className="fixed inset-0 z-50 flex justify-end">
               <div className="absolute inset-0 bg-black/60 transition-opacity" onClick={() => { setEditingQuote(null); setEditingProduct(null); }}></div>
               <div className="w-full max-w-md bg-white h-full overflow-y-auto shadow-2xl relative z-10 animate-in slide-in-from-right flex flex-col">
-                          <div className="mb-6">
-                              <label className="block text-[10px] font-bold uppercase text-gray-400 mb-2">Presentation Branding</label>
-                              <select 
-                                  value={editProposalBrand} 
-                                  onChange={e => setEditProposalBrand(e.target.value)} 
-                                  className="w-full p-3 border border-gray-700 rounded-xl text-sm font-bold bg-gray-800 text-white focus:border-gold outline-none cursor-pointer"
-                              >
-                                  {!isStaff && <option value="custom">My White-Label Brand</option>}
-                                  <option value="f55">Floors 55 Pro</option>
-                                  {isStaff && <option value="abbey">Abbey Carpet & Floor</option>}
-                                  <option value="private">Private Label (Hide Brands)</option>
-                              </select>
-                          </div>
+                  
+                  <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center sticky top-0 z-20">
+                      <div>
+                          <h3 className="text-lg font-black uppercase tracking-tight text-gray-900">Edit Proposal</h3>
+                          <p className="text-[10px] font-bold text-gold uppercase tracking-widest">{editingQuote.productName} ({editingQuote.colorName})</p>
+                      </div>
+                      <button onClick={() => { setEditingQuote(null); setEditingProduct(null); }} className="text-gray-400 hover:text-black text-2xl font-bold bg-transparent border-none cursor-pointer outline-none p-2">✕</button>
+                  </div>
 
+                  <div className="p-6 space-y-8 flex-1">
+                      {/* PROPOSAL DETAILS */}
+                      <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Proposal Details</h4>
                           <div className="space-y-3">
                               <div>
                                   <input type="text" placeholder="Client Name *" value={editClientName} onChange={e => setEditClientName(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-lg focus:border-gold outline-none text-sm bg-white" />
@@ -590,7 +593,7 @@ Thank you!`;
                                       <option value="1.00">Exact Net (0%)</option>
                                       <option value="1.05">Standard (5%)</option>
                                       <option value="1.10">Safe (10%)</option>
-                                      <option value="1.15">Complex (15%)</option>
+                                      <option value="1.15">Complex / Diagonal (15%)</option>
                                   </select>
                               </div>
                           </div>
@@ -654,10 +657,10 @@ Thank you!`;
                                       }} className="w-12 p-1 text-xs border border-gray-200 rounded text-center outline-none focus:border-gold" min="1" placeholder="Qty" />
                                       <div className="flex items-center gap-1 text-xs text-gray-400">
                                           $<input type="number" value={addon.cost} onChange={e => {
-                                              const newAddons = [...selectedAddons];
-                                              newAddons[index].cost = parseFloat(e.target.value) || 0;
-                                              setSelectedAddons(newAddons);
-                                          }} className="w-14 p-1 text-xs border border-gray-200 rounded text-right outline-none focus:border-gold" step="0.01" />
+                                                  const newAddons = [...selectedAddons];
+                                                  newAddons[index].cost = parseFloat(e.target.value) || 0;
+                                                  setSelectedAddons(newAddons);
+                                              }} className="w-14 p-1 text-xs border border-gray-200 rounded text-right outline-none focus:border-gold" step="0.01" />
                                       </div>
                                       <button onClick={() => {
                                           setSelectedAddons(selectedAddons.filter((_, i) => i !== index));
@@ -750,6 +753,7 @@ Thank you!`;
                               {!isStaff && <option value="custom">My White-Label Brand</option>}
                               <option value="f55">Floors 55 Pro</option>
                               {isStaff && <option value="abbey">Abbey Carpet & Floor</option>}
+                              <option value="private">Private Label (Hide Brands)</option>
                           </select>
                       </div>
 
