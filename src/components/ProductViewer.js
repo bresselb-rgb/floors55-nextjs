@@ -118,32 +118,34 @@ function ProductViewerContent({ initialProduct }) {
         let isMounted = true;
         if (!auth) return;
 
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) {
-                console.warn("Auth initialization error", err);
-            }
-        };
-        initAuth();
-
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             if (!isMounted) return;
-            setUser(currentUser);
-            if (currentUser && !currentUser.isAnonymous && db) {
-                try {
-                    const staffRef = doc(db, 'artifacts', appId, 'public', 'data', 'staff', currentUser.uid);
-                    const staffSnap = await getDoc(staffRef);
-                    if (staffSnap.exists() && isMounted) {
-                        setIsStaff(true);
-                        setProposalBrand('f55');
+            
+            if (currentUser) {
+                // A session exists! Set the user and check if they are staff
+                setUser(currentUser);
+                if (!currentUser.isAnonymous && db) {
+                    try {
+                        const staffRef = doc(db, 'artifacts', appId, 'public', 'data', 'staff', currentUser.uid);
+                        const staffSnap = await getDoc(staffRef);
+                        if (staffSnap.exists() && isMounted) {
+                            setIsStaff(true);
+                            setProposalBrand('f55');
+                        }
+                    } catch (e) {
+                        console.error("Error fetching staff status", e);
                     }
-                } catch (e) {
-                    console.error("Error fetching staff status", e);
+                }
+            } else {
+                // No session found. Now it is safe to sign in anonymously.
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (err) {
+                    console.warn("Auth initialization error", err);
                 }
             }
         });
@@ -152,9 +154,7 @@ function ProductViewerContent({ initialProduct }) {
     }, []);
 
     useEffect(() => {
-        if (!user || !db) return; // Guard for permissions
-
-        if (typeof window !== 'undefined') {
+        if (!initialProduct?.id || !db) return;
             const cmParam = searchParams.get('cm');
             const proParam = searchParams.get('pro');
             const cbParam = searchParams.get('cb'); 
