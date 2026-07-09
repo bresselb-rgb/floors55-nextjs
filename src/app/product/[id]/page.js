@@ -1,35 +1,9 @@
 // src/app/product/[id]/page.js
 import { doc, getDoc } from "firebase/firestore";
 import { signInAnonymously } from "firebase/auth";
-
-// --- MOCKED DEPENDENCIES FOR CANVAS COMPILATION ---
-// In your actual Next.js app, keep your original imports:
-// import { db, auth, appId } from "../../../lib/firebase";
-// import ProductViewer from "../../../components/ProductViewer";
-// import Link from "next/link";
-
-const db = {};
-const auth = { currentUser: true };
-const appId = "mockAppId";
-
-// Mocking Next/Link to prevent compilation errors in Canvas
-const Link = ({ children, href, className, style }) => (
-  <a href={href} className={className} style={style}>{children}</a>
-);
-
-// Mocking the ProductViewer to prevent compilation errors
-const ProductViewer = ({ initialProduct, isPrivateMode }) => (
-  <div className="max-w-[1400px] mx-auto px-4 py-12">
-    <div className="p-8 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 text-center">
-       <h2 className="text-xl font-bold mb-4">Client-Side Component Placeholder</h2>
-       <p className="text-gray-600 mb-2">This mocks your <code>&lt;ProductViewer /&gt;</code> component.</p>
-       <p className="text-sm text-blue-600 font-mono">
-         Receiving Private Mode: {isPrivateMode ? 'TRUE (Scrubbed Data)' : 'FALSE (Public Data)'}
-       </p>
-    </div>
-  </div>
-);
-// --- END MOCKED DEPENDENCIES ---
+import { db, auth, appId } from "../../../lib/firebase";
+import ProductViewer from "../../../components/ProductViewer";
+import Link from "next/link";
 
 // Helper to ensure the server is authenticated before asking Firebase for data
 const authenticateServer = async () => {
@@ -39,15 +13,17 @@ const authenticateServer = async () => {
 };
 
 // 1. Next.js Magic: This injects the precise meta data into the <head> for Google!
-export async function generateMetadata({ params, searchParams }) {
+export async function generateMetadata(props) {
   await authenticateServer();
   
-  const { id } = await params;
+  // ✅ CRITICAL NEXT.JS 15+ FIX: await the entire params and searchParams objects
+  const params = await props.params;
+  const searchParams = await props.searchParams;
   
-  // ✅ Detect Private Mode from URL (e.g., ?m=abbey)
-  // Note: in Next.js 15+, searchParams must be awaited. In 14, it's synchronous but awaiting is safe.
-  const resolvedSearchParams = await searchParams;
-  const isPrivateMode = resolvedSearchParams?.m === 'abbey';
+  const id = params?.id;
+  const isPrivateMode = searchParams?.m === 'abbey';
+
+  if (!id) return { title: 'Product Not Found | Floors 55' };
 
   const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'pricing', id);
   const docSnap = await getDoc(docRef);
@@ -106,14 +82,26 @@ export async function generateMetadata({ params, searchParams }) {
 }
 
 // 2. The Server Page: Fetches data purely on the server before sending HTML to the browser
-export default async function ProductPageServer({ params, searchParams }) {
+export default async function ProductPageServer(props) {
   await authenticateServer();
   
-  const { id } = await params;
+  // ✅ CRITICAL NEXT.JS 15+ FIX: await the entire params and searchParams objects
+  const params = await props.params;
+  const searchParams = await props.searchParams;
   
-  // ✅ Detect Private Mode
-  const resolvedSearchParams = await searchParams;
-  const isPrivateMode = resolvedSearchParams?.m === 'abbey';
+  const id = params?.id;
+  const isPrivateMode = searchParams?.m === 'abbey';
+
+  if (!id) {
+     return (
+      <main className="bg-white flex-1 flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
+        <h2 className="text-2xl font-bold mb-4">Invalid Product URL</h2>
+        <Link href="/category" className="bg-black text-white px-6 py-3 rounded-full font-bold uppercase text-xs hover:bg-gold hover:text-black transition-colors" style={{ textDecoration: 'none' }}>
+            Return to Collections
+        </Link>
+      </main>
+    );
+  }
 
   const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'pricing', id);
   const docSnap = await getDoc(docRef);
