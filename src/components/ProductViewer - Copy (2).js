@@ -2,12 +2,51 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc, setDoc } from "firebase/firestore";
-import { auth, db, appId } from "../lib/firebase";
+
+// Safe dynamic imports for Canvas Environment
+let Link;
+let Image;
+let useRouter = () => ({ push: () => {}, replace: () => {} });
+let useSearchParams = () => {
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+    return { get: (key) => params.get(key) };
+};
+
+try {
+    const nextLink = 'next/link';
+    Link = require(nextLink).default || require(nextLink);
+    const nextImage = 'next/image';
+    Image = require(nextImage).default || require(nextImage);
+    const nextNav = 'next/navigation';
+    const nav = require(nextNav);
+    useRouter = nav.useRouter;
+    useSearchParams = nav.useSearchParams;
+} catch (e) {
+    Link = ({ href, children, className, style, onClick }) => <a href={href} className={className} style={style} onClick={onClick}>{children}</a>;
+    Image = ({ src, alt, className, style, onClick, onError, fill, sizes, width, height, ...props }) => {
+        const customStyle = fill ? { position: 'absolute', height: '100%', width: '100%', left: 0, top: 0, right: 0, bottom: 0, color: 'transparent', ...style } : style;
+        return <img src={src} alt={alt} className={className} style={customStyle} onClick={onClick} onError={onError} width={width} height={height} {...props} />;
+    };
+    useRouter = () => ({ push: (url) => { if (typeof window !== 'undefined') window.location.href = url; }, replace: (url) => { if (typeof window !== 'undefined') window.location.href = url; } });
+    useSearchParams = () => {
+        const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+        return { get: (key) => params.get(key) };
+    };
+}
+
+// RESTORED: Safely import the established Firestore connection across Vercel builds
+let auth, db, appId;
+try {
+    const fbPath = '../lib/firebase';
+    const fb = require(fbPath);
+    auth = fb.auth;
+    db = fb.db;
+    appId = fb.appId;
+} catch (e) {
+    console.warn("Firebase lib not found in current environment context.");
+}
 
 function ProductViewerContent({ initialProduct, hideBadges }) {
     const router = useRouter();
@@ -34,8 +73,6 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         return (initialProduct?.views && initialProduct.views[0]) || 'MAIN';
     });
 
-    const [failedViews, setFailedViews] = useState({});
-
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     const [isBuilderOpen, setIsBuilderOpen] = useState(false);
     const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
@@ -51,6 +88,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     
     const [globalAddons, setGlobalAddons] = useState(null);
     const [selectedAddons, setSelectedAddons] = useState([]);
+    
+    const [failedViews, setFailedViews] = useState({});
 
     const [laborPrep, setLaborPrep] = useState(''); 
     const [laborInstallPerSqft, setLaborInstallPerSqft] = useState(''); 
@@ -62,7 +101,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     
     const [clientMargin, setClientMargin] = useState(null);
     const [builderMargin, setBuilderMargin] = useState(20);
-    const [proposalBrand, setProposalBrand] = useState('custom'); 
+    const [proposalBrand, setProposalBrand] = useState('custom');
     const [copied, setCopied] = useState(false);
     const [isMagicLink, setIsMagicLink] = useState(false);
 
@@ -76,6 +115,45 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
     useEffect(() => {
+        let isMounted = true;
+        if (!auth) return;
+
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (!isMounted) return;
+            
+            if (currentUser) {
+                setUser(currentUser);
+                if (!currentUser.isAnonymous && db) {
+                    try {
+                        const staffRef = doc(db, 'artifacts', appId, 'public', 'data', 'staff', currentUser.uid);
+                        const staffSnap = await getDoc(staffRef);
+                        if (staffSnap.exists() && isMounted) {
+                            setIsStaff(true);
+                            setProposalBrand('f55');
+                        }
+                    } catch (e) {
+                        console.error("Error fetching staff status", e);
+                    }
+                }
+            } else {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (err) {
+                    console.warn("Auth initialization error", err);
+                }
+            }
+        });
+
+        return () => { isMounted = false; unsubscribe(); };
+    }, []);
+
+    useEffect(() => {
+        if (!user || !db) return;
+
         if (typeof window !== 'undefined') {
             const cmParam = searchParams.get('cm');
             const proParam = searchParams.get('pro');
@@ -181,49 +259,23 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             }
             if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
         }
-    }, [searchParams, urlColorSku]);
+    }, [searchParams, urlColorSku, user]);
 
     useEffect(() => {
-        let isMounted = true;
-        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (isMounted) {
-                setUser(currentUser);
-                if (currentUser && !currentUser.isAnonymous) {
-                    try {
-                        const staffRef = doc(db, 'artifacts', appId, 'public', 'data', 'staff', currentUser.uid);
-                        const staffSnap = await getDoc(staffRef);
-                        if (staffSnap.exists() && isMounted) {
-                            setIsStaff(true);
-                            setProposalBrand('f55'); 
-                        }
-                    } catch(err) {
-                        console.error("Staff check failed", err);
-                    }
-                }
-            }
-        });
-
-        if (!auth.currentUser) {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth).catch(() => {}));
-            } else {
-                signInAnonymously(auth).catch(() => {});
-            }
-        }
-        return () => { isMounted = false; unsubscribe(); };
-    }, []);
-
-    useEffect(() => {
-        if (!initialProduct?.id || !db) return;
-        const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', initialProduct.id), (docSnap) => {
+        if (!user || !initialProduct?.id || !db) return;
+        const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', initialProduct.id), 
+        (docSnap) => {
             if (docSnap.exists()) {
                 const dbData = docSnap.data();
                 dbData.displayTitle = (dbData.usePrivateName && dbData.privateName) ? dbData.privateName : (dbData.name || 'Unnamed Product');
                 setProductData({ id: docSnap.id, ...dbData });
             }
+        }, 
+        (error) => {
+            console.error("Error fetching pricing info:", error);
         });
         return () => unsub();
-    }, [initialProduct?.id]);
+    }, [initialProduct?.id, user]);
 
     useEffect(() => {
          if (productData && productData.colors) {
@@ -231,9 +283,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                  const found = productData.colors.find(c => c.sku === urlColorSku);
                  if (found) {
                      setActiveColor(found);
-                     if (activeColor?.sku !== urlColorSku) {
-                         setActiveView(productData.views?.[0] || 'MAIN');
-                     }
+                     if (activeColor?.sku !== urlColorSku) setActiveView(productData.views?.[0] || 'MAIN');
                  }
              } else if (!activeColor) {
                  setActiveColor(productData.colors[0] || { sku: '01', name: 'Default Colorway' });
@@ -256,24 +306,26 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     };
 
     useEffect(() => {
-        if (user && !user.isAnonymous && db) {
-            const fetchBoards = async () => {
-                try {
-                    const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'client_boards'), where("proId", "==", user.uid));
-                    const snapshot = await getDocs(q);
-                    const boardsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                    setProBoards(boardsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0)));
-                    if (boardsData.length > 0) setSelectedBoardId(boardsData[0].id);
-                } catch (e) {
-                    console.error("Error fetching boards", e);
-                }
-            };
-            fetchBoards();
-        }
+        if (!user || user.isAnonymous || !db) return;
+        
+        const fetchBoards = async () => {
+            try {
+                const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'client_boards'), where("proId", "==", user.uid));
+                const snapshot = await getDocs(q);
+                const boardsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                    
+                setProBoards(boardsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0)));
+                if (boardsData.length > 0) setSelectedBoardId(boardsData[0].id);
+            } catch (e) {
+                console.error("Error fetching boards", e);
+            }
+        };
+        fetchBoards();
     }, [user]);
 
     useEffect(() => {
-        if (!productData || !db) return;
+        if (!user || !db) return;
+
         const isCarpetProd = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
         const isClientModeActual = clientMargin !== null;
         
@@ -295,7 +347,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             };
             fetchConfig();
         }
-    }, [productData?.category, clientMargin]);
+    }, [productData?.category, clientMargin, user]);
 
     useEffect(() => {
         if (padSelection === 'none') {
@@ -311,6 +363,16 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             }
         }
     }, [padSelection, availablePads]);
+
+    if (!productData) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
+                <h2 className="text-2xl font-bold mb-4">Product Not Found</h2>
+                <p className="text-gray-500 mb-6">We couldn't locate the requested product details. It may have been removed or updated.</p>
+                <Link href="/category" className="bg-black text-white px-6 py-3 rounded-full font-bold uppercase text-xs hover:bg-gold hover:text-black transition-colors" style={{ textDecoration: 'none' }}>Return to Collections</Link>
+            </div>
+        );
+    }
 
     const activeTitle = isPrivateLabel && productData?.privateName ? productData.privateName : productData?.displayTitle;
 
@@ -337,46 +399,15 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path.toLowerCase())}?alt=media`;
     };
 
-    // SAFETY FIX: Prevents React from crashing when the touch event loses coordinate data
-    const handleZoomPan = (e) => {
-        if (!e.currentTarget) return;
-        
-        try {
-            const rect = e.currentTarget.getBoundingClientRect();
-            let clientX = e.clientX;
-            let clientY = e.clientY;
-            
-            if (e.touches && e.touches.length > 0) {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-            }
-
-            if (clientX !== undefined && clientY !== undefined) {
-                const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
-                const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
-                setZoomPos({ x, y });
-            }
-        } catch(err) {
-            console.warn("Zoom pan error swallowed", err);
-        }
-    };
-
-    // SAFETY FIX: Wrapping Lightbox toggle to prevent Next.js router crash
-    const toggleLightbox = () => {
-        if (activeView !== 'VIDEO') {
-            try {
-                setIsLightboxOpen(true);
-            } catch(err) {
-                console.error("Failed to open lightbox", err);
-            }
-        }
-    };
-
     const shareProduct = async () => {
-        let targetPath = `/product/${productData?.id}?color=${activeColor?.sku || ''}`;
+        let targetPath = `/product/${productData.id}?color=${activeColor?.sku || ''}`;
         
         if (isPrivateLabel) {
             targetPath += '&pl=1';
+        }
+
+        if (searchParams.get('private') === 'true') {
+            targetPath += '&private=true';
         }
 
         if (clientMargin !== null) {
@@ -401,39 +432,37 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                     createdAt: new Date().toISOString()
                 });
             } catch(err) {
-                console.warn("Short link generation failed", err);
+                console.warn("Short link generation failed, using long URL.", err);
                 finalUrl = `${window.location.origin}${targetPath}`;
             }
         }
 
-        const title = activeTitle || 'Floors 55 Product';
+        const title = activeTitle;
         const plainText = `${title}\n${finalUrl}`;
         
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const isDesktop = !isMobile;
 
         if (navigator.share && isMobile) {
             navigator.share({ title: title, text: title, url: finalUrl }).catch(console.error);
         } else {
-            if (navigator.clipboard && window.isSecureContext) {
-                try {
-                    await navigator.clipboard.writeText(plainText);
+            const copyRichLink = async () => {
+                if (navigator.clipboard && window.ClipboardItem && isDesktop) {
+                    try {
+                        await navigator.clipboard.writeText(plainText);
+                    } catch (e) {
+                        const textArea = document.createElement("textarea");
+                        textArea.value = plainText;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                    }
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
-                } catch (e) {
-                    console.error("Clipboard write failed", e);
                 }
-            } else {
-                try {
-                    const textArea = document.createElement("textarea");
-                    textArea.value = plainText;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                } catch(e) {}
-            }
+            };
+            copyRichLink();
         }
     };
 
@@ -496,11 +525,19 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         requiredPadRolls = Math.ceil(finalMaterialCoverageSqft / padRollSqft);
         const actualPadSqftToPurchase = requiredPadRolls * padRollSqft;
         requiredPadSqyd = actualPadSqftToPurchase / 9;
+        
         totalPadCost = actualPadSqftToPurchase * (parseFloat(padCost) || 0);
     }
 
     const totalAddonsCost = selectedAddons.reduce((sum, item) => sum + ((parseFloat(item.cost) || 0) * (parseInt(item.qty) || 0)), 0);
-    const totalLaborCost = (parseFloat(laborPrep) || 0) + (netSqftNum * (parseFloat(laborInstallPerSqft) || 0)) + (parseFloat(laborDelivery) || 0) + (parseFloat(customLabor1Cost) || 0) + (parseFloat(customLabor2Cost) || 0);
+
+    const totalLaborCost = 
+        (parseFloat(laborPrep) || 0) + 
+        (netSqftNum * (parseFloat(laborInstallPerSqft) || 0)) + 
+        (parseFloat(laborDelivery) || 0) + 
+        (parseFloat(customLabor1Cost) || 0) + 
+        (parseFloat(customLabor2Cost) || 0);
+
     const totalWholesaleProjectCost = totalMaterialCost + totalPadCost + totalAddonsCost + totalLaborCost;
     const turnkeyRetailPrice = totalWholesaleProjectCost * (1 + (builderMargin / 100));
 
@@ -511,7 +548,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         try {
             const productToSave = {
                 productId: productData.id,
-                name: activeTitle || 'Product',
+                name: activeTitle,
                 colorSku: activeColor?.sku || '',
                 colorName: activeColor?.name || '',
                 category: productData.category || '',
@@ -553,7 +590,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 brandOverride: proposalBrand,
                 useCustomBranding: proposalBrand === 'custom',
                 productId: productData.id,
-                productName: activeTitle || 'Product',
+                productName: activeTitle,
                 colorSku: activeColor?.sku || '',
                 colorName: activeColor?.name || '',
                 imgPrefix: productData.imgPrefix || '',
@@ -603,7 +640,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             );
         }
         return (
-            <span className="text-[2.2rem] text-gray-900 font-black leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/{productData?.unit || 'sqft'}</span></span>
+            <span className="text-[2.2rem] text-gray-900 font-black leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
         );
     };
 
@@ -615,26 +652,26 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             );
         }
         return (
-            <span className="text-[2rem] text-red-700 font-bold leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/{productData?.unit || 'sqft'}</span></span>
+            <span className="text-[2rem] text-red-700 font-bold leading-none">${wsPrice} <span className="text-sm font-normal text-gray-500">/{productData.unit || 'sqft'}</span></span>
         );
     };
 
     const renderTitleBlock = (isDesktop) => (
         <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 lg:mb-2 gap-4 ${isDesktop ? 'hidden lg:flex' : 'flex lg:hidden'}`}>
             <div className="flex-1 min-w-0">
-                <h1 className="text-3xl font-bold m-0 leading-tight text-gray-900">{activeTitle || 'Loading...'}</h1>
+                <h1 className="text-3xl font-bold m-0 leading-tight text-gray-900">{activeTitle}</h1>
                 <div className="flex flex-wrap items-center gap-2 mt-2 mb-2 sm:mb-4">
-                    <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0">{productData?.category || 'Collection'}</span>
+                    <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0">{productData.category}</span>
                     
-                    {!isClientMode && !hideBadges && !isPrivateLabel && user && !user.isAnonymous && productData?.manufacturer && (
+                    {!isClientMode && !hideBadges && !isPrivateLabel && user && !user.isAnonymous && productData.manufacturer && (
                         <span className="inline-block px-3 py-1 bg-[#fdfdfd] border border-gray-200 text-gray-700 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm shrink-0">
                             <span className="text-gray-400 font-normal mr-1">Mfg:</span> {productData.manufacturer} {productData.sku ? `(${productData.sku})` : ''}
                         </span>
                     )}
-                    {!isClientMode && productData?.isSale && <span className="inline-block px-3 py-1 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse shrink-0">🔥 HOT BUY</span>}
-                    {!isClientMode && productData?.isPropMgt && <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-gold border border-gold/30 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm shrink-0"><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</span>}
-                    {!isClientMode && productData?.isContractor && <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm shrink-0"><span>🛠️</span> Pro Select</span>}
-                    {!isClientMode && productData?.isVisible === false && <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0">⚠️ Unlisted Draft</span>}
+                    {!isClientMode && productData.isSale && <span className="inline-block px-3 py-1 bg-red-600 text-white rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse shrink-0">🔥 HOT BUY</span>}
+                    {!isClientMode && productData.isPropMgt && <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-gold border border-gold/30 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm shrink-0"><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</span>}
+                    {!isClientMode && productData.isContractor && <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm shrink-0"><span>🛠️</span> Pro Select</span>}
+                    {!isClientMode && productData.isVisible === false && <span className="inline-block px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0">⚠️ Unlisted Draft</span>}
                 </div>
             </div>
 
@@ -651,7 +688,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         <div className={`${isDesktop ? 'hidden lg:block my-6' : 'block lg:hidden mt-8'}`}>
             <div className="flex justify-between items-end mb-4 pr-2">
                 <h2 className="text-xl font-bold">Select a Color: {activeColor?.name}</h2>
-                {!isDesktop && (productData?.colors?.length > 3) && (
+                {!isDesktop && (productData.colors?.length > 3) && (
                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1 animate-pulse">
                         Swipe <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                     </span>
@@ -661,7 +698,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 ? "grid grid-cols-[repeat(auto-fill,minmax(85px,1fr))] gap-3 mb-6" 
                 : "flex overflow-x-auto gap-3 pb-4 snap-x snap-mandatory scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pr-6"
             }>
-                {productData?.colors?.map(c => {
+                {productData.colors?.map(c => {
                     const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
                     const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                     const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -689,10 +726,6 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         </div>
     );
 
-    if (!productData) return null;
-
-    const categoryAddons = globalAddons && productData?.category ? (globalAddons[productData.category] || globalAddons['Default'] || []) : [];
-
     return (
         <div className="flex-1 max-w-[1400px] mx-auto px-4 py-10 w-full flex flex-col lg:flex-row gap-10 relative">
           
@@ -701,7 +734,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
           {/* LEFT COLUMN */}
           <div className="flex-1 w-full lg:min-w-[450px] lg:sticky lg:top-24 self-start z-10">
-            <div className="w-full aspect-[4/3] rounded-lg bg-gray-50 border border-gray-200 overflow-hidden relative cursor-zoom-in group" onClick={toggleLightbox}>
+            <div className="w-full aspect-[4/3] rounded-lg bg-gray-50 border border-gray-200 overflow-hidden relative cursor-zoom-in group" onClick={() => activeView !== 'VIDEO' && setIsLightboxOpen(true)}>
                 {activeView === 'VIDEO' ? (
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
@@ -709,10 +742,12 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 )}
             </div>
 
-            {productData?.views && (
+            {productData.views && (
                 <div className="mt-4 flex gap-3">
+                    {/* Hide thumbnails that failed to load */}
                     {productData.views.filter(v => !failedViews[`${activeColor?.sku}-${v}`]).map(v => (
                          <div key={v} className="relative shrink-0">
+                             {/* Hidden video tag to test if the video URL is a 404! */}
                              {v === 'VIDEO' && (
                                  <video 
                                     key={activeColor?.sku}
@@ -728,7 +763,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                                 className={`w-[75px] h-[75px] min-w-[75px] shrink-0 object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} 
                                 onClick={() => setActiveView(v)} 
                                 onError={(e) => { 
-                                    handleViewError(v); 
+                                    handleViewError(v); // Hide the thumbnail view
                                     e.currentTarget.srcset = ''; 
                                     e.currentTarget.src = TBD_IMG; 
                                 }} 
@@ -741,9 +776,9 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
             <div className="flex gap-4 mt-6">
                 {!isClientMode && (
-                    <Link href={`/quote?product=${encodeURIComponent(activeTitle || '')}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-black text-white text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-gold transition-colors border-2 border-black hover:border-gold" style={{ textDecoration: 'none' }}>Get A Quote</Link>
+                    <Link href={`/quote?product=${encodeURIComponent(activeTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-black text-white text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-gold transition-colors border-2 border-black hover:border-gold" style={{ textDecoration: 'none' }}>Get A Quote</Link>
                 )}
-                <Link href={`/order-sample?product=${encodeURIComponent(activeTitle || '')}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
+                <Link href={`/order-sample?product=${encodeURIComponent(activeTitle)}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
             </div>
 
             {renderColorSwatches(false)}
@@ -753,7 +788,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
           <div className="flex-1 w-full lg:min-w-[400px]">
             {renderTitleBlock(true)}
 
-            <p className="text-[1.05rem] text-gray-500 mb-6 italic mt-4 lg:mt-0">{productData?.desc || 'Premium flooring collection.'}</p>
+            <p className="text-[1.05rem] text-gray-500 mb-6 italic mt-4 lg:mt-0">{productData.desc || 'Premium flooring collection.'}</p>
 
             <div className="my-5 p-4 border-l-4 border-gold bg-[#fdfdfd] relative overflow-hidden">
                 {isClientMode ? (
@@ -769,7 +804,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                         <div className="absolute top-0 right-0 bg-gold text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-widest flex items-center gap-2 shadow-sm">
                             <span className="w-1.5 h-1.5 rounded-full bg-white inline-block animate-pulse"></span> Wholesale Live
                         </div>
-                        <span className="text-[0.9rem] text-gray-500 line-through mb-1 block">Retail: ${(productData?.retailPrice ? parseFloat(productData.retailPrice) : (basePrice * 2.2)).toFixed(2)} <span className="text-sm">/</span><span className="text-sm">{productData?.unit || 'sqft'}</span></span>
+                        <span className="text-[0.9rem] text-gray-500 line-through mb-1 block">Retail: ${(productData?.retailPrice ? parseFloat(productData.retailPrice) : (basePrice * 2.2)).toFixed(2)} <span className="text-sm">/</span><span className="text-sm">{productData.unit || 'sqft'}</span></span>
                         <div className="mt-3 pt-3 border-t border-gray-200">
                             <div className="flex items-end gap-2">
                                 <span className="text-[1.1rem] text-gray-900 font-bold text-gold mb-1">Wholesale Price:</span>
@@ -779,7 +814,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                     </>
                 ) : (
                     <>
-                        <span className="text-[1.5rem] text-gray-900 font-bold mb-1 block">Retail: ${(productData?.retailPrice ? parseFloat(productData.retailPrice) : (basePrice * 2.2)).toFixed(2)} <span className="text-sm">/</span><span className="text-sm">{productData?.unit || 'sqft'}</span></span>
+                        <span className="text-[1.5rem] text-gray-900 font-bold mb-1 block">Retail: ${(productData?.retailPrice ? parseFloat(productData.retailPrice) : (basePrice * 2.2)).toFixed(2)} <span className="text-sm">/</span><span className="text-sm">{productData.unit || 'sqft'}</span></span>
                         <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
                             <button onClick={() => window.dispatchEvent(new Event('open-login-modal'))} className="block w-full text-left text-[10px] font-bold uppercase tracking-widest text-gold hover:text-black transition-colors underline bg-transparent border-none cursor-pointer outline-none">Log in for wholesale pricing</button>
                         </div>
@@ -808,7 +843,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
             {renderColorSwatches(true)}
 
-            {productData?.specs && productData.specs.length > 0 && (
+            {productData.specs && productData.specs.length > 0 && (
                 <div className="bg-gray-50 p-6 rounded-lg mt-8 border border-gray-200">
                     <h4 className="mt-0 uppercase tracking-widest text-gold text-sm font-bold mb-4">Technical Specifications</h4>
                     <ul className="list-disc pl-5 space-y-2 text-gray-600 text-sm">
