@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db, appId } from "../lib/firebase";
 
@@ -275,6 +276,14 @@ export default function ClientBoardsManager({ proId }) {
                         <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${brandBadgeClass}`}>
                             {displayBrandName}
                         </span>
+                        {/* NEW ADD PRODUCTS BUTTON */}
+<Link 
+    href="/category" 
+    className="text-[10px] font-black bg-black text-white px-3 py-0.5 rounded uppercase tracking-widest hover:bg-gold hover:text-black transition-colors border-none"
+    style={{ textDecoration: 'none' }}
+>
+    + Add Products
+</Link>
                     </div>
                   </div>
                 </div>
