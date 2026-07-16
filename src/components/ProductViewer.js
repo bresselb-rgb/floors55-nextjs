@@ -834,15 +834,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             )}
           </div>
 
-          {/* THE NEW PROPOSAL BUILDER TRIGGER BUTTON */}
-          {!isClientMode && user && !user.isAnonymous && !isCarpetCushionOnly && (
-              <button 
-                  className="fixed bottom-5 right-5 md:bottom-8 md:right-8 bg-black text-white px-6 py-4 rounded-full cursor-pointer font-bold shadow-2xl z-40 transition-all border-2 border-black hover:bg-gold hover:text-black hover:border-gold flex items-center gap-2 text-sm md:text-base hover:scale-105" 
-                  onClick={() => setIsBuilderOpen(true)}
-              >
-                  <span>📋</span> Build Custom Proposal
-              </button>
-          )}
+      
 
           {/* SLIDE OUT PROPOSAL BUILDER DRAWER */}
           {isBuilderOpen && (
