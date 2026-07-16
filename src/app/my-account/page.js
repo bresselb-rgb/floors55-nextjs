@@ -7,7 +7,6 @@ import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { auth, db, storage, appId } from "../../lib/firebase";
 import ClientBoardsManager from "../../components/ClientBoardsManager";
-import ProposalsManager from "../../components/ProposalsManager";
 
 export default function MyAccountPage() {
     const [user, setUser] = useState(null);
@@ -57,7 +56,7 @@ export default function MyAccountPage() {
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    setProfile({ ...profile, ...data });
+                    setProfile(prev => ({ ...prev, ...data }));
                     
                     // Read their saved toggle preference
                     if (data.isWhiteLabelEnabled !== undefined) {
@@ -208,16 +207,16 @@ export default function MyAccountPage() {
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(portalLink).then(() => triggerToast("Link Copied")).catch(console.error);
         } else {
-            const textArea = document.createElement("textarea");
-            textArea.value = portalLink;
-            textArea.style.position = "fixed";
-            textArea.style.left = "-999999px";
-            textArea.style.top = "-999999px";
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
+            const textDoc = document.createElement("textarea");
+            textDoc.value = portalLink;
+            textDoc.style.position = "fixed";
+            textDoc.style.left = "-999999px";
+            textDoc.style.top = "-999999px";
+            document.body.appendChild(textDoc);
+            textDoc.focus();
+            textDoc.select();
             try { document.execCommand('copy'); triggerToast("Link Copied"); } catch (err) { console.error(err); }
-            document.body.removeChild(textArea);
+            document.body.removeChild(textDoc);
         }
     };
 
@@ -258,7 +257,7 @@ export default function MyAccountPage() {
                         onClick={() => setActiveTab('proposals')} 
                         className={`py-3 px-2 md:px-4 font-black text-[10px] md:text-xs uppercase tracking-widest whitespace-nowrap border-b-2 transition-all outline-none cursor-pointer flex items-center gap-2 ${activeTab === 'proposals' ? 'border-gold text-black' : 'border-transparent text-gray-400 hover:text-gray-800'}`}
                     >
-                        Proposals <span className="hidden md:inline-block bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full text-[9px]">Beta</span>
+                        Proposals <span className="inline-block bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider animate-pulse">Coming Soon</span>
                     </button>
                     <button 
                         onClick={() => setActiveTab('boards')} 
@@ -334,6 +333,7 @@ export default function MyAccountPage() {
                         </div>
                         
                         <input 
+                            type="type" 
                             type="range" 
                             min="0" max="100" step="5" 
                             value={profile.clientMargin} 
@@ -426,22 +426,39 @@ export default function MyAccountPage() {
 
                 </div>
 
-                {/* TAB 2: PROPOSALS */}
-                <div className={activeTab === 'proposals' ? 'block animate-in fade-in duration-300' : 'hidden'}>
-                    
-                    {/* INLINE QUICK GUIDE: PROPOSALS */}
-                    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 mb-6 shadow-inner">
-                        <h4 className="text-blue-900 font-black text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
-                            <span className="text-base">📘</span> Quick Guide: Turnkey Proposals
-                        </h4>
-                        <ul className="text-blue-800 text-xs space-y-1.5 list-disc pl-5 leading-relaxed font-medium m-0">
-                            <li><strong>How to Create:</strong> Browse the catalog, open any product, and click the "Build Custom Proposal" button in the bottom right corner.</li>
-                            <li><strong>Build the Bid:</strong> Enter your net square footage, waste factor, and select required trims/carpet pad. Add your labor costs for a complete package.</li>
-                            <li><strong>Present to Client:</strong> Adjust your final profit margin and save. You can instantly share a digital link with your client or download a professional PDF.</li>
-                        </ul>
+                {/* TAB 2: PROPOSALS (Coming Soon Mode) */}
+                <div className={activeTab === 'proposals' ? 'block space-y-6 animate-in fade-in duration-300' : 'hidden'}>
+                    <div className="bg-white p-8 md:p-12 rounded-2xl shadow-md border border-gray-200 text-center relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gold"></div>
+                        <div className="w-16 h-16 bg-gold/10 text-gold rounded-full flex items-center justify-center text-3xl mx-auto mb-6">
+                            📋
+                        </div>
+                        <h2 className="text-2xl font-black text-gray-900 mb-2">Turnkey Proposals</h2>
+                        <p className="text-sm text-gray-500 uppercase tracking-widest font-black text-gold mb-6 animate-pulse">Coming Soon to Floors 55 Pro</p>
+                        
+                        <p className="text-gray-600 text-sm max-w-lg mx-auto leading-relaxed mb-8">
+                            We are currently polishing our turnkey B2B bidding engine! Soon, you will be able to build itemized, client-facing flooring proposals directly from your portal—complete with dynamic trim selection, labor, carpet cushions, and custom profit margin sliders.
+                        </p>
+                        
+                        <div className="max-w-2xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 text-left border-t border-gray-100 pt-8">
+                            <div className="flex items-start gap-2 text-xs text-gray-600 leading-normal">
+                                <span className="text-gold font-black text-base leading-none">✓</span>
+                                <span><strong>Dynamic Markups:</strong> Instantly re-calculate materials, labor, and accessories with custom pricing sliders.</span>
+                            </div>
+                            <div className="flex items-start gap-2 text-xs text-gray-600 leading-normal">
+                                <span className="text-gold font-gold text-base leading-none">✓</span>
+                                <span><strong>1-Click PDF Generation:</strong> Print or email professional contracts directly to clients with your branding.</span>
+                            </div>
+                            <div className="flex items-start gap-2 text-xs text-gray-600 leading-normal">
+                                <span className="text-gold font-gold text-base leading-none">✓</span>
+                                <span><strong>Direct PO Submission:</strong> Convert approved client proposals into formal warehouse orders with one tap.</span>
+                            </div>
+                            <div className="flex items-start gap-2 text-xs text-gray-600 leading-normal">
+                                <span className="text-gold font-gold text-base leading-none">✓</span>
+                                <span><strong>White-Label Presenting:</strong> Present bids branded with your company's identity to protect your margins.</span>
+                            </div>
+                        </div>
                     </div>
-
-                    <ProposalsManager proId={user?.uid} />
                 </div>
 
                 {/* TAB 3: CLIENT BOARDS */}

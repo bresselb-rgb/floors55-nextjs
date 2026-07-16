@@ -293,34 +293,38 @@ export default function MyAccountPage() {
                         </ul>
                     </div>
 
-                    {/* Account Manager Banner */}
-                    <div className="bg-gray-900 text-white p-6 md:p-8 rounded-2xl shadow-xl border border-gray-800 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
-                        <div className="absolute top-0 right-0 p-8 opacity-5 text-8xl pointer-events-none">🤝</div>
-                        <div className="relative z-10 flex items-center gap-6 w-full md:w-auto">
-                            <div className="w-16 h-16 bg-gold text-black rounded-full flex items-center justify-center font-black text-2xl uppercase shadow-lg shrink-0">
-                                {am.name !== "Pending Assignment" ? am.name.charAt(0) : "F55"}
+                    {/* Account Manager Banner (Hidden for Staff) */}
+                    {!isStaff && (
+                        <div className="bg-gray-900 text-white p-6 md:p-8 rounded-2xl shadow-xl border border-gray-800 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="absolute top-0 right-0 p-8 opacity-5 text-8xl pointer-events-none">🤝</div>
+                            <div className="relative z-10 flex items-center gap-6 w-full md:w-auto">
+                                <div className="w-16 h-16 bg-gold text-black rounded-full flex items-center justify-center font-black text-2xl uppercase shadow-lg shrink-0">
+                                    {am.name !== "Pending Assignment" ? am.name.charAt(0) : "F55"}
+                                </div>
+                                <div>
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gold mb-1">Your Dedicated Account Manager</h3>
+                                    <p className="text-2xl font-bold">{am.name}</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-[10px] font-black uppercase tracking-widest text-gold mb-1">Your Dedicated Account Manager</h3>
-                                <p className="text-2xl font-bold">{am.name}</p>
+                            <div className="relative z-10 flex flex-col md:items-end w-full md:w-auto gap-2">
+                                <a href={`tel:${am.phone}`} className="bg-white/10 hover:bg-white/20 border border-white/20 px-5 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-colors flex items-center gap-3 w-full md:w-auto justify-center md:justify-start" style={{ textDecoration: 'none', color: 'white' }}>
+                                    <span>📞</span> {am.phone}
+                                </a>
+                                <a href={`mailto:${am.email}`} className="text-gray-400 hover:text-white text-xs font-bold transition-colors text-center md:text-right w-full" style={{ textDecoration: 'none' }}>
+                                    {am.email}
+                                </a>
                             </div>
                         </div>
-                        <div className="relative z-10 flex flex-col md:items-end w-full md:w-auto gap-2">
-                            <a href={`tel:${am.phone}`} className="bg-white/10 hover:bg-white/20 border border-white/20 px-5 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-colors flex items-center gap-3 w-full md:w-auto justify-center md:justify-start" style={{ textDecoration: 'none', color: 'white' }}>
-                                <span>📞</span> {am.phone}
-                            </a>
-                            <a href={`mailto:${am.email}`} className="text-gray-400 hover:text-white text-xs font-bold transition-colors text-center md:text-right w-full" style={{ textDecoration: 'none' }}>
-                                {am.email}
-                            </a>
-                        </div>
-                    </div>
+                    )}
 
                     {/* Catalog Client Pricing */}
                     <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-1.5 h-full bg-gold"></div>
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-100 pb-6 gap-4">
                             <div>
-                                <h2 className="text-xl font-black uppercase tracking-tight">Catalog Client Pricing</h2>
+                                <h2 className="text-xl font-black uppercase tracking-tight">
+                                    {isStaff ? "Account Manager Pricing Tool" : "Catalog Client Pricing"}
+                                </h2>
                                 <p className="text-sm text-gray-500 mt-1 max-w-md">Set the default markup percentage applied to wholesale prices when your clients browse the general catalog.</p>
                             </div>
                             <div className="text-left md:text-right shrink-0 bg-gray-50 p-4 rounded-xl border border-gray-200 min-w-[200px]">
@@ -385,38 +389,40 @@ export default function MyAccountPage() {
                         </div>
                     </div>
 
-                    {/* Business Profile */}
-                    <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-1.5 h-full bg-black"></div>
-                        <h2 className="text-xl font-black mb-6 uppercase tracking-tight">Business Profile</h2>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Business Name</label>
-                                <input type="text" value={profile.business} onChange={e => setProfile({...profile, business: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
+                    {/* Business Profile (Hidden for Staff) */}
+                    {!isStaff && (
+                        <div className="bg-white p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-1.5 h-full bg-black"></div>
+                            <h2 className="text-xl font-black mb-6 uppercase tracking-tight">Business Profile</h2>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Business Name</label>
+                                    <input type="text" value={profile.business} onChange={e => setProfile({...profile, business: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Your Name</label>
+                                    <input type="text" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Phone Number</label>
+                                    <input type="tel" value={profile.phone} onChange={e => setProfile({...profile, phone: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Email Address (Login)</label>
+                                    <input type="email" value={user?.email || ''} disabled className="w-full px-4 py-3 border border-gray-100 rounded-xl bg-gray-50 text-gray-500 outline-none cursor-not-allowed" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Business Address</label>
+                                    <input type="text" value={profile.address || ''} onChange={e => setProfile({...profile, address: e.target.value})} placeholder="e.g. 123 Main St, Portland OR 97204" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Your Name</label>
-                                <input type="text" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Phone Number</label>
-                                <input type="tel" value={profile.phone} onChange={e => setProfile({...profile, phone: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Email Address (Login)</label>
-                                <input type="email" value={user?.email || ''} disabled className="w-full px-4 py-3 border border-gray-100 rounded-xl bg-gray-50 text-gray-500 outline-none cursor-not-allowed" />
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Business Address</label>
-                                <input type="text" value={profile.address || ''} onChange={e => setProfile({...profile, address: e.target.value})} placeholder="e.g. 123 Main St, Portland OR 97204" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-gold outline-none" />
-                            </div>
-                        </div>
 
-                        <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50 cursor-pointer outline-none">
-                            {isSaving ? "Saving..." : "Save Profile"}
-                        </button>
-                    </div>
+                            <button onClick={handleSave} disabled={isSaving} className="bg-black text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gold hover:text-black transition-colors disabled:opacity-50 cursor-pointer outline-none">
+                                {isSaving ? "Saving..." : "Save Profile"}
+                            </button>
+                        </div>
+                    )}
 
                 </div>
 
