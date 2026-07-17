@@ -253,17 +253,19 @@ export default function MyAccountPage() {
                     >
                         Overview & Pricing
                     </button>
-                    <button 
-                        onClick={() => setActiveTab('proposals')} 
-                        className={`py-3 px-2 md:px-4 font-black text-[10px] md:text-xs uppercase tracking-widest whitespace-nowrap border-b-2 transition-all outline-none cursor-pointer flex items-center gap-2 ${activeTab === 'proposals' ? 'border-gold text-black' : 'border-transparent text-gray-400 hover:text-gray-800'}`}
-                    >
-                        Proposals <span className="inline-block bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider animate-pulse">Coming Soon</span>
-                    </button>
+                    
                     <button 
                         onClick={() => setActiveTab('boards')} 
                         className={`py-3 px-2 md:px-4 font-black text-[10px] md:text-xs uppercase tracking-widest whitespace-nowrap border-b-2 transition-all outline-none cursor-pointer ${activeTab === 'boards' ? 'border-gold text-black' : 'border-transparent text-gray-400 hover:text-gray-800'}`}
                     >
                         Client Boards
+                    </button>
+                    
+                    <button 
+                        onClick={() => setActiveTab('proposals')} 
+                        className={`py-3 px-2 md:px-4 font-black text-[10px] md:text-xs uppercase tracking-widest whitespace-nowrap border-b-2 transition-all outline-none cursor-pointer flex items-center gap-2 ${activeTab === 'proposals' ? 'border-gold text-black' : 'border-transparent text-gray-400 hover:text-gray-800'}`}
+                    >
+                        Proposals <span className="inline-block bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider animate-pulse">Coming Soon</span>
                     </button>
                     
                     {/* Hide Branding Tab if User is Staff */}
