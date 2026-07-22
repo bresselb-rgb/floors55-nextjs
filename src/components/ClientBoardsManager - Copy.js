@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db, appId } from "../lib/firebase";
 
@@ -75,6 +76,7 @@ export default function ClientBoardsManager({ proId }) {
             lockedLogo = F55_LOGO_URL;
             brandIdentifier = "f55";
         } else if (boardBrand === 'private') {
+            // If private label is selected, use the Pro's custom colors/logos but set the identifier to 'private'
             if (proProfile) {
                 if (proProfile.business) lockedBusiness = proProfile.business;
                 if (proProfile.logoUrl) lockedLogo = proProfile.logoUrl;
@@ -236,6 +238,10 @@ export default function ClientBoardsManager({ proId }) {
                 displayLogo = ABBEY_LOGO_URL;
                 displayBrandName = "Abbey Carpet";
                 brandBadgeClass = "bg-blue-50 text-blue-800 border border-blue-200";
+            } else if (board.brandIdentifier === 'private') {
+                displayLogo = null;
+                displayBrandName = "Private Label";
+                brandBadgeClass = "bg-purple-50 text-purple-800 border border-purple-200";
             } else if (board.brandIdentifier === 'custom' || (!board.brandIdentifier && board.logoUrl && board.logoUrl !== ABBEY_LOGO_URL && board.logoUrl !== F55_LOGO_URL)) {
                 displayLogo = board.logoUrl || null;
                 displayBrandName = board.businessName || "Custom Brand";
@@ -270,6 +276,14 @@ export default function ClientBoardsManager({ proId }) {
                         <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${brandBadgeClass}`}>
                             {displayBrandName}
                         </span>
+                        {/* NEW ADD PRODUCTS BUTTON */}
+<Link 
+    href="/category" 
+    className="text-[10px] font-black bg-black text-white px-3 py-0.5 rounded uppercase tracking-widest hover:bg-gold hover:text-black transition-colors border-none"
+    style={{ textDecoration: 'none' }}
+>
+    + Add Products
+</Link>
                     </div>
                   </div>
                 </div>

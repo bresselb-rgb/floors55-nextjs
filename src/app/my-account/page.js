@@ -375,10 +375,12 @@ export default function MyAccountPage() {
                                             <span className="text-blue-900">Abbey Carpet & Floor</span>
                                         </label>
                                     )}
-                                    <label className="flex items-center gap-2 text-xs font-bold text-purple-700 cursor-pointer border border-purple-200 bg-purple-50 px-3 py-1.5 rounded-lg shadow-sm">
-                                        <input type="radio" name="linkBrand" checked={linkBranding === 'private'} onChange={() => setLinkBranding('private')} className="accent-purple-800 w-4 h-4 cursor-pointer" />
-                                        <span className="text-purple-900">Private Label (Hide Brands)</span>
-                                    </label>
+                                    {isStaff && (
+                                        <label className="flex items-center gap-2 text-xs font-bold text-purple-700 cursor-pointer border border-purple-200 bg-purple-50 px-3 py-1.5 rounded-lg shadow-sm">
+                                            <input type="radio" name="linkBrand" checked={linkBranding === 'private'} onChange={() => setLinkBranding('private')} className="accent-purple-800 w-4 h-4 cursor-pointer" />
+                                            <span className="text-purple-900">Private Label (Hide Brands)</span>
+                                        </label>
+                                    )}
                                 </div>
                             )}
 

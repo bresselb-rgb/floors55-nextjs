@@ -194,7 +194,7 @@ export default function ClientBoardsManager({ proId }) {
                 {!isStaff && <option value="custom">My Brand</option>}
                 <option value="f55">Floors 55 Pro</option>
                 {isStaff && <option value="abbey">Abbey Carpet & Floor</option>}
-                <option value="private">Private Label (Hide Brands)</option>
+                {isStaff && <option value="private">Private Label (Hide Brands)</option>}
             </select>
         </div>
 
