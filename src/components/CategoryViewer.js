@@ -289,7 +289,7 @@ function CategoryViewerContent({ initialCategory }) {
       }
   };
 
-  useEffect(() => {
+ useEffect(() => {
       if (typeof window !== 'undefined') {
           const prog = searchParams.get('program');
           if (prog === 'propmgt' || prog === 'contractor') {
@@ -300,6 +300,9 @@ function CategoryViewerContent({ initialCategory }) {
           const proParam = searchParams.get('pro');
           const cbParam = searchParams.get('cb'); 
           const plParam = searchParams.get('pl');
+
+          // CRITICAL FIX 1: Prevent Incognito infinite spin by waiting for Firebase Auth
+          if (proParam && !isAuthReady) return;
 
           if (plParam === '1') {
               sessionStorage.setItem('private_label', 'true');
@@ -332,8 +335,7 @@ function CategoryViewerContent({ initialCategory }) {
               }
               
               sessionStorage.setItem('magic_link_client', 'true');
-              window.history.replaceState(null, '', window.location.pathname);
-window.location.reload();
+              window.location.replace(window.location.pathname);
           } else if (proParam) {
                 const fetchProBranding = async () => {
                     try {
@@ -359,11 +361,12 @@ window.location.reload();
                             }
                             
                             sessionStorage.setItem('magic_link_client', 'true');
-                            window.history.replaceState(null, '', window.location.pathname);
-window.location.reload();
                         }
                     } catch(err) {
-                        console.error(err);
+                        console.error("Error fetching pro branding:", err);
+                    } finally {
+                        // Guarantee the page redirects safely even if the fetch fails
+                        window.location.replace(window.location.pathname);
                     }
                 };
                 fetchProBranding();
@@ -388,8 +391,11 @@ window.location.reload();
                       shouldReplace = true;
                   } catch(e) {}
               }
-              if (shouldReplace) window.history.replaceState(null, '', window.location.pathname);
-window.location.reload();
+              
+              // CRITICAL FIX 2: Wrapped the reload securely inside the IF block!
+              if (shouldReplace) {
+                  window.location.replace(window.location.pathname);
+              }
           }
 
           const storedMargin = sessionStorage.getItem('client_margin');
@@ -403,7 +409,7 @@ window.location.reload();
 
           if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
       }
-  }, [searchParams]);
+  }, [searchParams, isAuthReady]);
 
   useEffect(() => {
       setActiveCategory(initialCategory);
