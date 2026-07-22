@@ -335,7 +335,8 @@ function CategoryViewerContent({ initialCategory }) {
               }
               
               sessionStorage.setItem('magic_link_client', 'true');
-              window.location.replace(window.location.pathname);
+              window.history.replaceState(null, '', window.location.pathname);
+              window.location.reload();
           } else if (proParam) {
                 const fetchProBranding = async () => {
                     try {
@@ -365,8 +366,9 @@ function CategoryViewerContent({ initialCategory }) {
                     } catch(err) {
                         console.error("Error fetching pro branding:", err);
                     } finally {
-                        // Guarantee the page redirects safely even if the fetch fails
-                        window.location.replace(window.location.pathname);
+                        // CRITICAL FIX 2: Correctly forcing the background URL clear and hard reload
+                        window.history.replaceState(null, '', window.location.pathname);
+                        window.location.reload();
                     }
                 };
                 fetchProBranding();
@@ -392,9 +394,10 @@ function CategoryViewerContent({ initialCategory }) {
                   } catch(e) {}
               }
               
-              // CRITICAL FIX 2: Wrapped the reload securely inside the IF block!
               if (shouldReplace) {
-                  window.location.replace(window.location.pathname);
+                  // CRITICAL FIX 3: Correctly forcing the background URL clear and hard reload
+                  window.history.replaceState(null, '', window.location.pathname);
+                  window.location.reload();
               }
           }
 
@@ -410,7 +413,6 @@ function CategoryViewerContent({ initialCategory }) {
           if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
       }
   }, [searchParams, isAuthReady]);
-
   useEffect(() => {
       setActiveCategory(initialCategory);
   }, [initialCategory]);
