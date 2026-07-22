@@ -200,21 +200,16 @@ export default function ClientBoardsManager({ proId }) {
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
             <div className="flex-1">
-                <div className="flex justify-between items-end mb-2">
-                    <div>
-                        <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Locked Markup</label>
-                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                            Yields <span className="text-black font-black">{boardMargin > 0 ? Math.round((boardMargin / (100 + boardMargin)) * 100) : 0}%</span> Gross Margin
-                        </div>
-                    </div>
-                    <span className="text-lg font-black text-gold font-mono">{boardMargin}%</span>
+                <div className="flex justify-between items-center mb-2">
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">Locked Profit Margin</label>
+                    <span className="text-sm font-black text-gold font-mono">{boardMargin}%</span>
                 </div>
                 <input 
                     type="range" 
-                    min="0" max="100" step="5" 
+                    min="0" max="100" step="1" 
                     value={boardMargin} 
                     onChange={e => setBoardMargin(Number(e.target.value))} 
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black" 
+                    className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black" 
                 />
             </div>
             <button 
