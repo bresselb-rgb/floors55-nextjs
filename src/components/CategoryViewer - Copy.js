@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
-import { collection, onSnapshot, doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 
 let Link;
 let usePathname = () => '';
@@ -157,6 +157,8 @@ function CategoryViewerContent({ initialCategory }) {
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
+  const [userFavorites, setUserFavorites] = useState([]); // Array of product IDs
+
   // Raw input states (for the UI)
   const [searchQueryInput, setSearchQueryInput] = useState('');
   const [maxPriceInput, setMaxPriceInput] = useState(10000); 
@@ -168,6 +170,8 @@ function CategoryViewerContent({ initialCategory }) {
   const [selectedPrograms, setSelectedPrograms] = useState([]);
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedSpecs, setSelectedSpecs] = useState({});
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+  
   const [sortMode, setSortMode] = useState('price-asc');
   const [isListView, setIsListView] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
@@ -207,6 +211,8 @@ function CategoryViewerContent({ initialCategory }) {
       let finalUrl = `${window.location.origin}/s/${shortCode}`;
       
       try {
+          // Changed to use getDoc and setDoc from firestore properly
+          const { doc, setDoc } = require("firebase/firestore");
           await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'short_links', shortCode), {
               target: targetPath,
               createdAt: new Date().toISOString()
@@ -240,6 +246,36 @@ function CategoryViewerContent({ initialCategory }) {
               showToast("Product link copied!");
           };
           copyRichLink();
+      }
+  };
+
+  const handleToggleFavorite = async (e, productId) => {
+      e.preventDefault();
+      if (!user || user.isAnonymous) {
+          window.dispatchEvent(new Event('open-login-modal'));
+          return;
+      }
+
+      const isFav = userFavorites.includes(productId);
+      const newFavs = isFav ? userFavorites.filter(id => id !== productId) : [...userFavorites, productId];
+      
+      // Optimistic UI update
+      setUserFavorites(newFavs);
+
+      try {
+          const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid);
+          if (isFav) {
+              await updateDoc(userRef, { favorites: arrayRemove(productId) });
+              showToast("Removed from favorites");
+          } else {
+              await updateDoc(userRef, { favorites: arrayUnion(productId) });
+              showToast("Added to favorites");
+          }
+      } catch (err) {
+          console.error("Failed to update favorites:", err);
+          // Revert on failure
+          setUserFavorites(userFavorites);
+          showToast("Error updating favorites.");
       }
   };
 
@@ -379,6 +415,25 @@ function CategoryViewerContent({ initialCategory }) {
         unsub();
     };
   }, []);
+
+  // Listen for user favorites
+  useEffect(() => {
+      if (!user || user.isAnonymous || !db) {
+          setUserFavorites([]);
+          return;
+      }
+      
+      const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'users', user.uid), (docSnap) => {
+          if (docSnap.exists()) {
+              const data = docSnap.data();
+              setUserFavorites(data.favorites || []);
+          }
+      }, (error) => {
+          console.error("Error fetching favorites:", error);
+      });
+
+      return () => unsub();
+  }, [user]);
 
   useEffect(() => {
     if (!isAuthReady) return;
@@ -618,6 +673,9 @@ function CategoryViewerContent({ initialCategory }) {
     const searchVal = searchQuery.toLowerCase().trim();
     
     return liveProductsRaw.filter(p => {
+        // FAST FAIL: Favorite Filter
+        if (showOnlyFavorites && !userFavorites.includes(p.id)) return false;
+
         const priceValue = isClientMode ? p.price * (1 + clientMargin / 100) : (isWholesale ? p.price : (p.retailPrice ? parseFloat(p.retailPrice) : (p.price * 2.2)));
 
         const activeTitle = isPrivateLabel && p.privateName ? p.privateName : p.displayTitle;
@@ -710,7 +768,7 @@ function CategoryViewerContent({ initialCategory }) {
         if (catCompare !== 0) return catCompare;
         return (aTitle || '').localeCompare(bTitle || '');
     });
-  }, [liveProductsRaw, activeCategory, searchQuery, maxPrice, selectedPrograms, selectedBrands, selectedSpecs, sortMode, isWholesale, isClientMode, clientMargin, isPrivateLabel]);
+  }, [liveProductsRaw, activeCategory, searchQuery, maxPrice, selectedPrograms, selectedBrands, selectedSpecs, sortMode, isWholesale, isClientMode, clientMargin, isPrivateLabel, showOnlyFavorites, userFavorites]);
 
   const resetAllFilters = () => {
       setSearchQueryInput('');
@@ -719,6 +777,7 @@ function CategoryViewerContent({ initialCategory }) {
       setSelectedBrands([]);
       setSelectedSpecs({});
       setSortMode('price-asc');
+      setShowOnlyFavorites(false);
       if (isMobileDrawerOpen) setIsMobileDrawerOpen(false);
   };
 
@@ -848,6 +907,15 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
+                        
+                        {/* MY FAVORITES FILTER */}
+                        {!isClientMode && user && !user.isAnonymous && (
+                            <button onClick={() => setShowOnlyFavorites(!showOnlyFavorites)} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showOnlyFavorites ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
+                                <svg className="w-4 h-4" fill={showOnlyFavorites ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                                My Curated Favorites
+                            </button>
+                        )}
+
                         {['All Products', 'Hot Buys', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Tile', 'Carpet Cushion'].map(cat => {
                             if (cat === 'Hot Buys' && (!isWholesale || isClientMode)) return null;
                             return (
@@ -901,6 +969,7 @@ function CategoryViewerContent({ initialCategory }) {
                             <span>⚙️</span> Filters
                         </button>
                         
+                        {/* Mobile-only inline search bar */}
                         <div className="relative flex-1 lg:hidden">
                             <input 
                                 type="text" 
@@ -967,6 +1036,8 @@ function CategoryViewerContent({ initialCategory }) {
                             const rawPath = `images/${folderName}/${safePrefix}${displaySku}_${mainType}.jpg`.toLowerCase();
                             const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
                             
+                            const isFavorite = userFavorites.includes(p.id);
+
                             return (
                                 <div key={p.id} className={isListView ? "bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col sm:flex-row items-center p-4 gap-6 hover:shadow-md transition relative" : "bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-lg transition relative"}>
                                     
@@ -976,6 +1047,19 @@ function CategoryViewerContent({ initialCategory }) {
                                             {p.isPropMgt && <div className={`bg-black text-gold font-black rounded-full uppercase tracking-widest shadow-md flex items-center border border-gold/30 ${isListView ? 'text-[9px] px-2.5 py-1 gap-1.5' : 'text-[9px] px-3 py-1.5 gap-1.5'}`}><span className="text-[12px] bg-white rounded px-0.5 shadow-sm text-black">🏢</span> Prop Mgt</div>}
                                             {p.isContractor && <div className={`bg-purple-100 text-purple-800 font-black rounded-full uppercase tracking-widest shadow-md flex items-center ${isListView ? 'text-[9px] px-2.5 py-1 gap-1' : 'text-[9px] px-3 py-1.5 gap-1'}`}><span>🛠️</span> Pro Select</div>}
                                         </div>
+                                    )}
+
+                                    {/* HEART BUTTON OVERLAY */}
+                                    {!isClientMode && (
+                                        <button 
+                                            onClick={(e) => handleToggleFavorite(e, p.id)}
+                                            className={`absolute z-20 ${isListView ? 'top-2 right-2' : 'top-4 right-4'} w-8 h-8 rounded-full flex items-center justify-center bg-white/90 backdrop-blur shadow-sm border border-gray-200 transition-all hover:scale-110 outline-none cursor-pointer group/heart`}
+                                            title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+                                        >
+                                            <svg className={`w-4 h-4 transition-colors ${isFavorite ? 'text-red-500 fill-red-500' : 'text-gray-400 group-hover/heart:text-red-400'}`} viewBox="0 0 24 24" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                            </svg>
+                                        </button>
                                     )}
 
                                     <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
@@ -1112,6 +1196,13 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
+                        {/* MY FAVORITES FILTER */}
+                        {!isClientMode && user && !user.isAnonymous && (
+                            <button onClick={() => setShowOnlyFavorites(!showOnlyFavorites)} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showOnlyFavorites ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
+                                <svg className="w-4 h-4" fill={showOnlyFavorites ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                                My Curated Favorites
+                            </button>
+                        )}
                         {['All Products', 'Hot Buys', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Tile', 'Carpet Cushion'].map(cat => {
                             if (cat === 'Hot Buys' && (!isWholesale || isClientMode)) return null;
                             return (
