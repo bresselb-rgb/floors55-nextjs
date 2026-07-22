@@ -324,7 +324,7 @@ function CategoryViewerContent({ initialCategory }) {
               }
               
               sessionStorage.setItem('magic_link_client', 'true');
-              window.location.replace(window.location.pathname);
+              window.history.replaceState(null, '', window.location.pathname);
           } else if (proParam) {
                 const fetchProBranding = async () => {
                     try {
@@ -350,7 +350,7 @@ function CategoryViewerContent({ initialCategory }) {
                             }
                             
                             sessionStorage.setItem('magic_link_client', 'true');
-                            window.location.replace(window.location.pathname);
+                            window.history.replaceState(null, '', window.location.pathname);
                         }
                     } catch(err) {
                         console.error(err);
@@ -378,7 +378,7 @@ function CategoryViewerContent({ initialCategory }) {
                       shouldReplace = true;
                   } catch(e) {}
               }
-              if (shouldReplace) window.location.replace(window.location.pathname);
+              if (shouldReplace) window.history.replaceState(null, '', window.location.pathname);
           }
 
           const storedMargin = sessionStorage.getItem('client_margin');
@@ -931,7 +931,7 @@ function CategoryViewerContent({ initialCategory }) {
                         
                         {/* MY FAVORITES FILTER (Pro View) */}
                         {!isClientMode && user && !user.isAnonymous && (
-                            <button onClick={() => setShowOnlyFavorites(!showOnlyFavorites)} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showOnlyFavorites ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
+                            <button onClick={() => { setShowOnlyFavorites(!showOnlyFavorites); setIsMobileDrawerOpen(false); }} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showOnlyFavorites ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
                                 <svg className="w-4 h-4" fill={showOnlyFavorites ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                                 My Curated Favorites
                             </button>
@@ -939,7 +939,7 @@ function CategoryViewerContent({ initialCategory }) {
                         
                         {/* PRO'S TOP PICKS FILTER (Client View) */}
                         {isClientMode && proFavorites.length > 0 && (
-                            <button onClick={() => setShowProPicks(!showProPicks)} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showProPicks ? 'bg-gold text-black font-black border-yellow-300' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
+                            <button onClick={() => { setShowProPicks(!showProPicks); setIsMobileDrawerOpen(false); }} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showProPicks ? 'bg-gold text-black font-black border-yellow-300' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
                                 <span className="text-base">⭐</span> View Pro's Top Picks
                             </button>
                         )}
