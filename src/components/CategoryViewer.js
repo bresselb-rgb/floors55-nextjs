@@ -787,7 +787,7 @@ function CategoryViewerContent({ initialCategory }) {
       if (isMobileDrawerOpen) setIsMobileDrawerOpen(false);
   };
 
-  cconst getCategorySlug = (catName) => {
+  const getCategorySlug = (catName) => {
       if (catName === 'All Products') return '/category';
       if (catName === 'Hot Buys') return '/category/hot-buys';
       if (catName === 'Property Management') return '/category/property-management';
