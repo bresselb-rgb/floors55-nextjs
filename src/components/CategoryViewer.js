@@ -960,20 +960,7 @@ function CategoryViewerContent({ initialCategory }) {
                     </div>
                 </div>
 
-                {!isClientMode && activeCategory !== 'All Products' && activeCategory !== 'Hot Buys' && (
-                    <div>
-                        <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2.5">Exclusive Programs</label>
-                        <div className="space-y-2 text-xs font-bold text-gray-600">
-                            <label className="flex items-center gap-2 cursor-pointer hover:text-gold transition">
-                                <input type="checkbox" checked={selectedPrograms.includes('propmgt')} onChange={() => handleProgramToggle('propmgt')} className="accent-gold h-4 w-4 rounded" /> 🏠 Property Management
-                            </label>
-                            <label className="flex items-center gap-2 cursor-pointer hover:text-gold transition">
-                                <input type="checkbox" checked={selectedPrograms.includes('contractor')} onChange={() => handleProgramToggle('contractor')} className="accent-gold h-4 w-4 rounded" /> 🛠️ Contractor Pro
-                            </label>
-                        </div>
-                    </div>
-                )}
-
+               
                 {renderSpecFilters()}
 
                 <div className="pt-4 border-t border-gray-100">
@@ -1260,20 +1247,7 @@ function CategoryViewerContent({ initialCategory }) {
                     </div>
                 </div>
 
-                {!isClientMode && activeCategory !== 'All Products' && activeCategory !== 'Hot Buys' && (
-                    <div>
-                        <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2.5">Exclusive Programs</label>
-                        <div className="space-y-2 text-xs font-bold text-gray-600">
-                            <label className="flex items-center gap-2 cursor-pointer hover:text-gold transition">
-                                <input type="checkbox" checked={selectedPrograms.includes('propmgt')} onChange={() => handleProgramToggle('propmgt')} className="accent-gold h-4 w-4 rounded" /> 🏠 Property Management
-                            </label>
-                            <label className="flex items-center gap-2 cursor-pointer hover:text-gold transition">
-                                <input type="checkbox" checked={selectedPrograms.includes('contractor')} onChange={() => handleProgramToggle('contractor')} className="accent-gold h-4 w-4 rounded" /> 🛠️ Contractor Pro
-                            </label>
-                        </div>
-                    </div>
-                )}
-                
+                                
                 {renderSpecFilters()}
 
                 <div className="pt-4 flex gap-3">

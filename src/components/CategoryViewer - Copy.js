@@ -532,6 +532,8 @@ function CategoryViewerContent({ initialCategory }) {
     const categoryProducts = liveProductsRaw.filter(p => {
         if (activeCategory === "All Products") return p.category !== 'Carpet Cushion';
         if (activeCategory === "Hot Buys") return p.isSale === true;
+        if (activeCategory === "Property Management") return p.isPropMgt === true;
+        if (activeCategory === "Pro Select") return p.isContractor === true;
         return p.category === activeCategory;
     });
 
@@ -559,6 +561,8 @@ function CategoryViewerContent({ initialCategory }) {
       const relevantProducts = liveProductsRaw.filter(p => 
           (activeCategory === "All Products" && p.category !== 'Carpet Cushion') || 
           (activeCategory === "Hot Buys" && p.isSale) || 
+          (activeCategory === "Property Management" && p.isPropMgt) || 
+          (activeCategory === "Pro Select" && p.isContractor) || 
           p.category === activeCategory
       );
       
@@ -704,6 +708,8 @@ function CategoryViewerContent({ initialCategory }) {
 
         const matchesCategory = (activeCategory === "All Products" && (searchVal !== '' || p.category !== 'Carpet Cushion')) || 
                                 (activeCategory === "Hot Buys" && p.isSale === true) || 
+                                (activeCategory === "Property Management" && p.isPropMgt === true) || 
+                                (activeCategory === "Pro Select" && p.isContractor === true) || 
                                 (p.category === activeCategory);
 
         const matchesPrice = isNaN(maxPrice) || (priceValue <= maxPrice);
@@ -784,6 +790,8 @@ function CategoryViewerContent({ initialCategory }) {
   const getCategorySlug = (catName) => {
       if (catName === 'All Products') return '/category';
       if (catName === 'Hot Buys') return '/category/hot-buys';
+      if (catName === 'Property Management') return '/category/property-management';
+      if (catName === 'Pro Select') return '/category/pro-select';
       if (catName === 'Luxury Vinyl (LVP)') return '/category/luxury-vinyl';
       return `/category/${catName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
   };
@@ -916,11 +924,24 @@ function CategoryViewerContent({ initialCategory }) {
                             </button>
                         )}
 
-                        {['All Products', 'Hot Buys', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Tile', 'Carpet Cushion'].map(cat => {
-                            if (cat === 'Hot Buys' && (!isWholesale || isClientMode)) return null;
+                        {['All Products', 'Hot Buys', 'Property Management', 'Pro Select', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Tile', 'Carpet Cushion'].map(cat => {
+                            const isSpecial = cat === 'Hot Buys' || cat === 'Property Management' || cat === 'Pro Select';
+                            
+                            // Hide these special categories from standard retail clients
+                            if (isSpecial && (!isWholesale || isClientMode)) return null;
+                            
+                            // Auto-hide Hot Buys if nothing is currently on sale
+                            if (cat === 'Hot Buys' && !liveProductsRaw.some(p => p.isSale)) return null;
+                            
+                            let label = cat;
+                            if (cat === 'All Products') label = '🌐 All Collections';
+                            if (cat === 'Hot Buys') label = '🔥 Hot Buys (On Sale)';
+                            if (cat === 'Property Management') label = '🏠 Property Management';
+                            if (cat === 'Pro Select') label = '🛠️ Pro Select';
+
                             return (
                                 <button key={cat} onClick={() => handleCategorySwitch(cat)} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === cat ? 'bg-gold text-black font-black' : (cat === 'Hot Buys' ? 'text-red-600 hover:bg-red-50' : 'text-gray-500 hover:bg-gray-100')}`}>
-                                    {cat === 'All Products' ? '🌐 All Collections' : cat === 'Hot Buys' ? '🔥 Hot Buys (On Sale)' : cat}
+                                    {label}
                                 </button>
                             );
                         })}
@@ -1203,11 +1224,24 @@ function CategoryViewerContent({ initialCategory }) {
                                 My Curated Favorites
                             </button>
                         )}
-                        {['All Products', 'Hot Buys', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Tile', 'Carpet Cushion'].map(cat => {
-                            if (cat === 'Hot Buys' && (!isWholesale || isClientMode)) return null;
+                        {['All Products', 'Hot Buys', 'Property Management', 'Pro Select', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Tile', 'Carpet Cushion'].map(cat => {
+                            const isSpecial = cat === 'Hot Buys' || cat === 'Property Management' || cat === 'Pro Select';
+                            
+                            // Hide these special categories from standard retail clients
+                            if (isSpecial && (!isWholesale || isClientMode)) return null;
+                            
+                            // Auto-hide Hot Buys if nothing is currently on sale
+                            if (cat === 'Hot Buys' && !liveProductsRaw.some(p => p.isSale)) return null;
+                            
+                            let label = cat;
+                            if (cat === 'All Products') label = '🌐 All Collections';
+                            if (cat === 'Hot Buys') label = '🔥 Hot Buys (On Sale)';
+                            if (cat === 'Property Management') label = '🏠 Property Management';
+                            if (cat === 'Pro Select') label = '🛠️ Pro Select';
+
                             return (
                                 <button key={cat} onClick={() => handleCategorySwitch(cat)} className={`text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer ${activeCategory === cat ? 'bg-gold text-black font-black' : (cat === 'Hot Buys' ? 'text-red-600 hover:bg-red-50' : 'text-gray-500 hover:bg-gray-100')}`}>
-                                    {cat === 'All Products' ? '🌐 All Collections' : cat === 'Hot Buys' ? '🔥 Hot Buys (On Sale)' : cat}
+                                    {label}
                                 </button>
                             );
                         })}
