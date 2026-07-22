@@ -158,6 +158,8 @@ function CategoryViewerContent({ initialCategory }) {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   const [userFavorites, setUserFavorites] = useState([]); // Array of product IDs
+  const [proFavorites, setProFavorites] = useState([]); 
+  const [showProPicks, setShowProPicks] = useState(false);
 
   // Raw input states (for the UI)
   const [searchQueryInput, setSearchQueryInput] = useState('');
@@ -329,6 +331,9 @@ function CategoryViewerContent({ initialCategory }) {
                         const proDoc = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', proParam));
                         if (proDoc.exists()) {
                             const pData = proDoc.data();
+                            if (pData.favorites && Array.isArray(pData.favorites)) {
+                                sessionStorage.setItem('pro_favorites', JSON.stringify(pData.favorites));
+                            }
                             
                             sessionStorage.setItem('client_brand', pData.business || 'Premium Floors');
                             if (pData.logoUrl) sessionStorage.setItem('client_logo', pData.logoUrl);
@@ -378,6 +383,12 @@ function CategoryViewerContent({ initialCategory }) {
 
           const storedMargin = sessionStorage.getItem('client_margin');
           if (storedMargin !== null) setClientMargin(parseInt(storedMargin, 10));
+          const storedProFavs = sessionStorage.getItem('pro_favorites');
+          if (storedProFavs) {
+              try {
+                  setProFavorites(JSON.parse(storedProFavs));
+              } catch(e) {}
+          }
 
           if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
       }
@@ -679,6 +690,7 @@ function CategoryViewerContent({ initialCategory }) {
     return liveProductsRaw.filter(p => {
         // FAST FAIL: Favorite Filter
         if (showOnlyFavorites && !userFavorites.includes(p.id)) return false;
+        if (showProPicks && !proFavorites.includes(p.id)) return false;
 
         const priceValue = isClientMode ? p.price * (1 + clientMargin / 100) : (isWholesale ? p.price : (p.retailPrice ? parseFloat(p.retailPrice) : (p.price * 2.2)));
 
@@ -774,7 +786,7 @@ function CategoryViewerContent({ initialCategory }) {
         if (catCompare !== 0) return catCompare;
         return (aTitle || '').localeCompare(bTitle || '');
     });
-  }, [liveProductsRaw, activeCategory, searchQuery, maxPrice, selectedPrograms, selectedBrands, selectedSpecs, sortMode, isWholesale, isClientMode, clientMargin, isPrivateLabel, showOnlyFavorites, userFavorites]);
+  }, [liveProductsRaw, activeCategory, searchQuery, maxPrice, selectedPrograms, selectedBrands, selectedSpecs, sortMode, isWholesale, isClientMode, clientMargin, isPrivateLabel, showOnlyFavorites, userFavorites, showProPicks, proFavorites]);
 
   const resetAllFilters = () => {
       setSearchQueryInput('');
@@ -784,6 +796,7 @@ function CategoryViewerContent({ initialCategory }) {
       setSelectedSpecs({});
       setSortMode('price-asc');
       setShowOnlyFavorites(false);
+      setShowProPicks(false);
       if (isMobileDrawerOpen) setIsMobileDrawerOpen(false);
   };
 
@@ -916,11 +929,18 @@ function CategoryViewerContent({ initialCategory }) {
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
                         
-                        {/* MY FAVORITES FILTER */}
+                        {/* MY FAVORITES FILTER (Pro View) */}
                         {!isClientMode && user && !user.isAnonymous && (
                             <button onClick={() => setShowOnlyFavorites(!showOnlyFavorites)} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showOnlyFavorites ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
                                 <svg className="w-4 h-4" fill={showOnlyFavorites ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                                 My Curated Favorites
+                            </button>
+                        )}
+                        
+                        {/* PRO'S TOP PICKS FILTER (Client View) */}
+                        {isClientMode && proFavorites.length > 0 && (
+                            <button onClick={() => setShowProPicks(!showProPicks)} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showProPicks ? 'bg-gold text-black font-black border-yellow-300' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
+                                <span className="text-base">⭐</span> View Pro's Top Picks
                             </button>
                         )}
 
@@ -1204,11 +1224,18 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
-                        {/* MY FAVORITES FILTER */}
+                        {/* MY FAVORITES FILTER (Pro View) */}
                         {!isClientMode && user && !user.isAnonymous && (
                             <button onClick={() => setShowOnlyFavorites(!showOnlyFavorites)} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showOnlyFavorites ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
                                 <svg className="w-4 h-4" fill={showOnlyFavorites ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                                 My Curated Favorites
+                            </button>
+                        )}
+                        
+                        {/* PRO'S TOP PICKS FILTER (Client View) */}
+                        {isClientMode && proFavorites.length > 0 && (
+                            <button onClick={() => setShowProPicks(!showProPicks)} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showProPicks ? 'bg-gold text-black font-black border-yellow-300' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
+                                <span className="text-base">⭐</span> View Pro's Top Picks
                             </button>
                         )}
                         {['All Products', 'Hot Buys', 'Property Management', 'Pro Select', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Tile', 'Carpet Cushion'].map(cat => {
