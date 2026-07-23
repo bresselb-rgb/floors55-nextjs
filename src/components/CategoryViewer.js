@@ -291,18 +291,22 @@ function CategoryViewerContent({ initialCategory }) {
 
  useEffect(() => {
       if (typeof window !== 'undefined') {
-          const prog = searchParams.get('program');
-          if (prog === 'propmgt' || prog === 'contractor') {
-              setSelectedPrograms([prog]);
-          }
-
           const cmParam = searchParams.get('cm');
           const proParam = searchParams.get('pro');
           const cbParam = searchParams.get('cb'); 
           const plParam = searchParams.get('pl');
 
-          // CRITICAL FIX 1: Prevent Incognito infinite spin by waiting for Firebase Auth
-          if (proParam && !isAuthReady) return;
+          const hasMagicParams = proParam || cmParam || cbParam || plParam;
+
+          // THE ULTIMATE FIX: Wait for a valid Firebase User before processing custom links.
+          // In a fresh Incognito window, triggering a reload before anonymous auth completes 
+          // aborts the network request, kills the link parameters, and breaks the page.
+          if (hasMagicParams && !user) return;
+
+          const prog = searchParams.get('program');
+          if (prog === 'propmgt' || prog === 'contractor') {
+              setSelectedPrograms([prog]);
+          }
 
           if (plParam === '1') {
               sessionStorage.setItem('private_label', 'true');
@@ -366,7 +370,6 @@ function CategoryViewerContent({ initialCategory }) {
                     } catch(err) {
                         console.error("Error fetching pro branding:", err);
                     } finally {
-                        // CRITICAL FIX 2: Correctly forcing the background URL clear and hard reload
                         window.history.replaceState(null, '', window.location.pathname);
                         window.location.reload();
                     }
@@ -395,7 +398,6 @@ function CategoryViewerContent({ initialCategory }) {
               }
               
               if (shouldReplace) {
-                  // CRITICAL FIX 3: Correctly forcing the background URL clear and hard reload
                   window.history.replaceState(null, '', window.location.pathname);
                   window.location.reload();
               }
@@ -412,7 +414,7 @@ function CategoryViewerContent({ initialCategory }) {
 
           if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
       }
-  }, [searchParams, isAuthReady]);
+  }, [searchParams, user]); // CRITICAL FIX: Updated dependency array to listen for the user!
   useEffect(() => {
       setActiveCategory(initialCategory);
   }, [initialCategory]);
