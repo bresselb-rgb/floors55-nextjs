@@ -739,7 +739,9 @@ function CategoryViewerContent({ initialCategory }) {
                               colorsTextCombined.includes(searchVal) ||
                               hiddenKeywords.includes(searchVal);
 
-        const matchesCategory = (activeCategory === "All Products" && (searchVal !== '' || p.category !== 'Carpet Cushion')) || 
+        // Bypasses the category restriction if a user wants to view a global list of curated favorites
+        const matchesCategory = showOnlyFavorites || showProPicks || 
+                                (activeCategory === "All Products" && (searchVal !== '' || p.category !== 'Carpet Cushion')) || 
                                 (activeCategory === "Hot Buys" && p.isSale === true) || 
                                 (activeCategory === "Property Management" && p.isPropMgt === true) || 
                                 (activeCategory === "Pro Select" && p.isContractor === true) || 
