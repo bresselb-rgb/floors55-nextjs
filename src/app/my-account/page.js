@@ -29,6 +29,18 @@ export default function MyAccountPage() {
     // TAB STATE
     const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'proposals', 'boards', 'branding'
     
+    // Listen for tab hashes in the URL so "Finish & Return" goes to the right place
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.location.hash) {
+            const hash = window.location.hash.replace('#', '');
+            if (['overview', 'proposals', 'boards', 'branding'].includes(hash)) {
+                setActiveTab(hash);
+                // Clean up the URL hash so it doesn't linger
+                window.history.replaceState(null, '', window.location.pathname);
+            }
+        }
+    }, []);
+    
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
     const [isLogoInfoOpen, setIsLogoInfoOpen] = useState(false);

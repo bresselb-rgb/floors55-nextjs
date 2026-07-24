@@ -956,11 +956,10 @@ function CategoryViewerContent({ initialCategory }) {
               </div>
               <button 
                   onClick={() => {
-                      // Clear the active session and route them back to the dashboard
+                      // Clear the active session and route them back to the boards tab
                       sessionStorage.removeItem('active_curation_board_id');
                       sessionStorage.removeItem('active_curation_board_name');
-                      sessionStorage.removeItem('client_margin'); // Reset the pricing view
-                      router.push('/my-account');
+                      router.push('/my-account#boards');
                   }}
                   className="bg-gold hover:bg-white text-black px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-colors w-full sm:w-auto text-center cursor-pointer outline-none shrink-0"
               >

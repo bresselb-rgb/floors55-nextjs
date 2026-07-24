@@ -279,7 +279,10 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                     const snapshot = await getDocs(q);
                     const boardsData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                     setProBoards(boardsData.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0)));
-                    if (boardsData.length > 0) setSelectedBoardId(boardsData[0].id);
+                    if (boardsData.length > 0) {
+                        const savedBoardId = sessionStorage.getItem('active_curation_board_id');
+                        setSelectedBoardId(savedBoardId || boardsData[0].id);
+                    }
                 } catch (e) {
                     console.error("Error fetching boards", e);
                 }
@@ -739,11 +742,10 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                     </div>
                     <button 
                         onClick={() => {
-                            // Clear the active session and route them back to the dashboard
+                            // Clear the active session and route them back to the boards tab
                             sessionStorage.removeItem('active_curation_board_id');
                             sessionStorage.removeItem('active_curation_board_name');
-                            sessionStorage.removeItem('client_margin');
-                            router.push('/my-account');
+                            router.push('/my-account#boards');
                         }}
                         className="bg-gold hover:bg-white text-black px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-colors w-full sm:w-auto text-center cursor-pointer outline-none shrink-0"
                     >

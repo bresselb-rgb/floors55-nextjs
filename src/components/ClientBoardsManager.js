@@ -284,17 +284,15 @@ export default function ClientBoardsManager({ proId }) {
                             {displayBrandName}
                         </span>
                         {/* THE NEW ACTIVE SESSION LAUNCH BUTTON */}
+                        
                         <button 
                             onClick={(e) => {
                                 e.preventDefault();
                                 // Lock the board details into session storage
                                 sessionStorage.setItem('active_curation_board_id', board.id);
                                 sessionStorage.setItem('active_curation_board_name', board.name);
-                                // Set the client margin so the catalog shows the correct retail prices while they shop
-                                if (board.margin !== undefined) {
-                                    sessionStorage.setItem('client_margin', board.margin);
-                                }
-                                // Push them to the catalog
+                                
+                                // Push them to the catalog (in standard Wholesale mode)
                                 router.push('/category');
                             }}
                             className="text-[10px] font-black bg-black text-white px-3 py-0.5 rounded uppercase tracking-widest hover:bg-gold hover:text-black transition-colors border-none cursor-pointer outline-none"
