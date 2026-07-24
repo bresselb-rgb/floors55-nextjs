@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 
 // This includes your Pro SEO, keywords, AND the new Favicon links
 export const metadata = {
+  metadataBase: new URL('https://www.floors55pro.com'),
   title: "Floors 55 Pro | Wholesale Flooring for Portland Contractors",
   description: "Portland's premier wholesale flooring broker. Exclusive pricing on LVP, hardwood, and carpet for contractors, builders, and property managers in the PNW.",
   keywords: "wholesale flooring Portland, contractor flooring supplier, LVP wholesale Oregon, property management flooring, Floors 55 pro, trade flooring account",
