@@ -329,7 +329,7 @@ export default function ClientBoardsManager({ proId }) {
                           Copy Link
                       </button>
                       <button onClick={() => setExpandedBoardId(expandedBoardId === board.id ? null : board.id)} className="bg-white border border-gray-200 text-gray-600 hover:border-gold hover:text-gold px-3 py-2.5 rounded-lg transition-colors cursor-pointer outline-none text-xs font-bold uppercase tracking-widest">
-                          {expandedBoardId === board.id ? 'Hide' : 'View'}
+                          {expandedBoardId === board.id ? 'Hide' : 'View/Change'}
                       </button>
                       <button onClick={() => handleDelete(board.id, board.name)} className="bg-white border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-600 px-3 py-2.5 rounded-lg transition-colors cursor-pointer outline-none" title="Delete Board">
                           🗑️
@@ -345,17 +345,48 @@ export default function ClientBoardsManager({ proId }) {
                             <p className="text-xs text-gray-400 italic bg-white p-4 rounded-lg border border-gray-100">No products have been added to this board yet.</p>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {board.products.map((p, idx) => (
-                                    <div key={idx} className="flex justify-between items-center bg-white p-3 rounded-lg border border-gray-200 shadow-sm hover:border-gold transition-colors">
-                                        <div>
-                                            <p className="text-sm font-bold text-gray-900 line-clamp-1">{p.name}</p>
-                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{p.category} | Color: {p.colorName || p.colorSku}</p>
+                                {board.products.map((p, idx) => {
+                                    const wsPrice = p.price || 0;
+                                    const retailPrice = wsPrice * (1 + (board.margin || 0) / 100);
+                                    
+                                    return (
+                                        <div key={idx} className="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm hover:border-gold transition-colors relative">
+                                            
+                                            {/* Thumbnail Image */}
+                                            {p.thumbUrl ? (
+                                                <div className="w-14 h-14 rounded border border-gray-100 overflow-hidden shrink-0 bg-gray-50">
+                                                    <img src={p.thumbUrl} alt={p.name} className="w-full h-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
+                                                </div>
+                                            ) : (
+                                                <div className="w-14 h-14 rounded border border-gray-100 bg-gray-50 shrink-0 flex items-center justify-center text-[9px] font-black text-gray-400 uppercase">IMG</div>
+                                            )}
+
+                                            {/* Info & Pricing Spread */}
+                                            <div className="flex-1 min-w-0 pr-8">
+                                                <p className="text-sm font-bold text-gray-900 line-clamp-1">{p.name}</p>
+                                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest truncate">{p.category} | Color: {p.colorName || p.colorSku}</p>
+                                                
+                                                {(wsPrice > 0) && (
+                                                    <div className="flex items-center gap-4 mt-2 pt-2 border-t border-gray-50">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[8px] uppercase tracking-widest font-bold text-gray-400">Your Cost</span>
+                                                            <span className="text-xs font-mono font-bold text-gray-600">${wsPrice.toFixed(2)}<span className="text-[9px]">/{p.unit || 'sqft'}</span></span>
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[8px] uppercase tracking-widest font-black text-gold">Client Price</span>
+                                                            <span className="text-xs font-mono font-black text-gray-900">${retailPrice.toFixed(2)}<span className="text-[9px]">/{p.unit || 'sqft'}</span></span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Discreet Remove Button */}
+                                            <button onClick={() => handleRemoveProduct(board.id, p)} className="absolute top-2 right-2 text-red-400 hover:text-red-600 text-[10px] font-black uppercase tracking-widest p-1.5 outline-none cursor-pointer shrink-0 rounded bg-transparent hover:bg-red-50 transition-colors" title="Remove Product">
+                                                ✕
+                                            </button>
                                         </div>
-                                        <button onClick={() => handleRemoveProduct(board.id, p)} className="text-red-400 hover:text-red-600 text-[10px] font-black uppercase tracking-widest px-2 py-2 outline-none cursor-pointer shrink-0 border border-transparent hover:border-red-100 rounded bg-transparent hover:bg-red-50 transition-colors">
-                                            ✕ Remove
-                                        </button>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
