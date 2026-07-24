@@ -659,7 +659,7 @@ export default function MyAccountPage() {
                                     <p className="text-xs text-gray-600 mt-1 leading-relaxed">
                                        We are currently polishing our turnkey B2B bidding engine! Soon, you will be able to build itemized, client-facing flooring proposals directly from your portal, complete with custom profit margins and labor costs.
                                     </p>
-                                    </p>
+                                    
                                 </div>
                             </div>
                             <div className="flex gap-4">
