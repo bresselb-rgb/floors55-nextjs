@@ -545,6 +545,22 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         setIsSavingToBoard(true);
 
         try {
+            // Construct the thumbnail URL
+            const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            let folderName = 'images';
+            if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+            else if (safeName) folderName = safeName;
+            folderName = folderName.replace(/-+$/, '');
+            
+            const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
+            const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${activeColor?.sku || '01'}_${swatchType}.jpg`.toLowerCase();
+            const thumbFbUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+
+            // Calculate standardized wholesale price
+            let wsPrice = productData.price || 0;
+            if (productData.unit === 'sqyd') wsPrice = wsPrice / 9;
+
             const productToSave = {
                 productId: productData.id,
                 name: activeTitle || 'Product',
@@ -552,6 +568,9 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 colorName: activeColor?.name || '',
                 category: productData.category || '',
                 imgPrefix: productData.imgPrefix || '',
+                price: wsPrice,
+                unit: productData.unit || 'sqft',
+                thumbUrl: thumbFbUrl,
                 quote: null,
                 addedAt: new Date().toISOString()
             };
