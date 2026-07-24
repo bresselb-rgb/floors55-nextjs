@@ -657,7 +657,8 @@ export default function MyAccountPage() {
                                 <div>
                                     <h4 className="font-bold text-gray-900 text-sm">Turnkey Proposals</h4>
                                     <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-                                        Need to send an exact, itemized quote? Go to any product in the catalog and click "Build Custom Proposal". You can add pad, transitions, delivery, and your labor. The system will generate a secure link or a PDF for your client to review.
+                                       We are currently polishing our turnkey B2B bidding engine! Soon, you will be able to build itemized, client-facing flooring proposals directly from your portal, complete with custom profit margins and labor costs.
+                                    </p>
                                     </p>
                                 </div>
                             </div>
