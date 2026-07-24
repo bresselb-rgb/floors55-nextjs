@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, serverTimestamp, setDoc, updateDoc, arrayRemove } from "firebase/firestore";
 import { useRouter } from 'next/navigation';
 import { db, appId } from "../lib/firebase";
 
@@ -11,6 +11,30 @@ export default function ClientBoardsManager({ proId }) {
   const router = useRouter();
   const [boards, setBoards] = useState([]);
   const [newBoardName, setNewBoardName] = useState("");
+  const [expandedBoardId, setExpandedBoardId] = useState(null);
+
+  const handleRemoveProduct = async (boardId, productObj) => {
+      if (!db) return;
+      if (window.confirm(`Remove ${productObj.name} from this presentation?`)) {
+          try {
+              const boardRef = doc(db, "artifacts", appId, "public", "data", "client_boards", boardId);
+              await updateDoc(boardRef, {
+                  products: arrayRemove(productObj)
+              });
+              
+              // Instantly update the UI without needing a page refresh
+              setBoards(boards.map(b => {
+                  if (b.id === boardId) {
+                      return { ...b, products: (b.products || []).filter(p => p.addedAt !== productObj.addedAt) };
+                  }
+                  return b;
+              }));
+          } catch (error) {
+              console.error("Error removing product:", error);
+              alert("Failed to remove product.");
+          }
+      }
+  };
   const [isCreating, setIsCreating] = useState(false);
   
   const [isStaff, setIsStaff] = useState(false);
@@ -256,61 +280,86 @@ export default function ClientBoardsManager({ proId }) {
             }
 
             return (
-              <div key={board.id} className="flex flex-col md:flex-row md:items-center justify-between p-5 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md transition-all gap-4">
-                <div className="flex items-center gap-4">
-                  {/* Dynamic Logo Thumbnail */}
-                  {displayLogo ? (
-                      <div className="w-12 h-12 rounded-lg bg-white border border-gray-200 flex items-center justify-center p-1 shrink-0">
-                          <img src={displayLogo} alt={displayBrandName} className="max-w-full max-h-full object-contain" />
-                      </div>
-                  ) : (
-                      <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
+              <div key={board.id} className="p-5 border border-gray-100 rounded-xl bg-gray-50 hover:bg-white hover:shadow-md transition-all">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      {/* Dynamic Logo Thumbnail */}
+                      {displayLogo ? (
+                          <div className="w-12 h-12 rounded-lg bg-white border border-gray-200 flex items-center justify-center p-1 shrink-0">
+                              <img src={displayLogo} alt={displayBrandName} className="max-w-full max-h-full object-contain" />
+                          </div>
+                      ) : (
+                          <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
                           <span className="text-[10px] font-black text-gray-400 uppercase">Logo</span>
-                      </div>
-                  )}
+                          </div>
+                      )}
 
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-lg mb-1">{board.name}</h3>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-white border border-gray-200 px-2 py-0.5 rounded">
-                        {board.products?.length || 0} Products
-                        </p>
-                        {board.margin !== undefined && (
-                            <span className="text-[10px] font-black bg-gold/10 text-gold px-2 py-0.5 rounded uppercase tracking-widest border border-gold/20">
-                                {markupVal}% Markup
+                      <div>
+                        <h3 className="font-bold text-gray-900 text-lg mb-1">{board.name}</h3>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-white border border-gray-200 px-2 py-0.5 rounded">
+                            {board.products?.length || 0} Products
+                            </p>
+                            {board.margin !== undefined && (
+                                <span className="text-[10px] font-black bg-gold/10 text-gold px-2 py-0.5 rounded uppercase tracking-widest border border-gold/20">
+                                    {markupVal}% Markup
+                                </span>
+                            )}
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${brandBadgeClass}`}>
+                                {displayBrandName}
                             </span>
-                        )}
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${brandBadgeClass}`}>
-                            {displayBrandName}
-                        </span>
-                        {/* THE NEW ACTIVE SESSION LAUNCH BUTTON */}
-                        
-                        <button 
-                            onClick={(e) => {
-                                e.preventDefault();
-                                // Lock the board details into session storage
-                                sessionStorage.setItem('active_curation_board_id', board.id);
-                                sessionStorage.setItem('active_curation_board_name', board.name);
-                                
-                                // Push them to the catalog (in standard Wholesale mode)
-                                router.push('/category');
-                            }}
-                            className="text-[10px] font-black bg-black text-white px-3 py-0.5 rounded uppercase tracking-widest hover:bg-gold hover:text-black transition-colors border-none cursor-pointer outline-none"
-                        >
-                            + Add Products
-                        </button>
+                            {/* ADD PRODUCTS BUTTON */}
+                            <button 
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    sessionStorage.setItem('active_curation_board_id', board.id);
+                                    sessionStorage.setItem('active_curation_board_name', board.name);
+                                    router.push('/category');
+                                }}
+                                className="text-[10px] font-black bg-black text-white px-3 py-0.5 rounded uppercase tracking-widest hover:bg-gold hover:text-black transition-colors border-none cursor-pointer outline-none"
+                            >
+                                + Add Products
+                            </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button onClick={() => copyToClipboard(board)} className="flex-1 md:flex-none bg-white border border-gray-200 hover:border-gold hover:text-gold text-black px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors text-center cursor-pointer outline-none">
+                          Copy Link
+                      </button>
+                      <button onClick={() => setExpandedBoardId(expandedBoardId === board.id ? null : board.id)} className="bg-white border border-gray-200 text-gray-600 hover:border-gold hover:text-gold px-3 py-2.5 rounded-lg transition-colors cursor-pointer outline-none text-xs font-bold uppercase tracking-widest">
+                          {expandedBoardId === board.id ? 'Hide' : 'View'}
+                      </button>
+                      <button onClick={() => handleDelete(board.id, board.name)} className="bg-white border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-600 px-3 py-2.5 rounded-lg transition-colors cursor-pointer outline-none" title="Delete Board">
+                          🗑️
+                      </button>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button onClick={() => copyToClipboard(board)} className="flex-1 md:flex-none bg-white border border-gray-200 hover:border-gold hover:text-gold text-black px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-colors text-center cursor-pointer outline-none">
-                      Copy Link
-                  </button>
-                  <button onClick={() => handleDelete(board.id, board.name)} className="bg-white border border-red-100 text-red-500 hover:bg-red-50 hover:text-red-600 px-3 py-2.5 rounded-lg transition-colors cursor-pointer outline-none" title="Delete Board">
-                      🗑️
-                  </button>
-                </div>
+                {/* EXPANDED PRODUCTS LIST */}
+                {expandedBoardId === board.id && (
+                    <div className="mt-5 pt-5 border-t border-gray-200 animate-in fade-in slide-in-from-top-2">
+                        <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Products on this Board</h4>
+                        {(!board.products || board.products.length === 0) ? (
+                            <p className="text-xs text-gray-400 italic bg-white p-4 rounded-lg border border-gray-100">No products have been added to this board yet.</p>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {board.products.map((p, idx) => (
+                                    <div key={idx} className="flex justify-between items-center bg-white p-3 rounded-lg border border-gray-200 shadow-sm hover:border-gold transition-colors">
+                                        <div>
+                                            <p className="text-sm font-bold text-gray-900 line-clamp-1">{p.name}</p>
+                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{p.category} | Color: {p.colorName || p.colorSku}</p>
+                                        </div>
+                                        <button onClick={() => handleRemoveProduct(board.id, p)} className="text-red-400 hover:text-red-600 text-[10px] font-black uppercase tracking-widest px-2 py-2 outline-none cursor-pointer shrink-0 border border-transparent hover:border-red-100 rounded bg-transparent hover:bg-red-50 transition-colors">
+                                            ✕ Remove
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
               </div>
             );
           })

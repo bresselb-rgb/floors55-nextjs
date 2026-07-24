@@ -851,9 +851,17 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                      <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3">Quick Save to Client Presentation</h4>
                      {proBoards.length > 0 ? (
                          <div className="flex gap-2">
-                             <select value={selectedBoardId} onChange={e => setSelectedBoardId(e.target.value)} className="flex-1 p-3 border border-gray-200 rounded-lg text-sm font-bold bg-white focus:border-gold outline-none cursor-pointer">
-                                 {proBoards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                             </select>
+                             <div className="flex-1 flex flex-col">
+                                 <select 
+                                     value={selectedBoardId} 
+                                     onChange={e => setSelectedBoardId(e.target.value)} 
+                                     disabled={!!activeBoardId}
+                                     className={`w-full p-3 border border-gray-200 rounded-lg text-sm font-bold focus:border-gold outline-none ${activeBoardId ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white cursor-pointer'}`}
+                                 >
+                                     {proBoards.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                                 </select>
+                                 {activeBoardId && <span className="text-[9px] font-black text-gray-400 mt-1 uppercase tracking-widest px-1">Locked to Active Session</span>}
+                             </div>
                              <button onClick={handleSaveToBoard} disabled={isSavingToBoard} className="bg-black text-white px-6 py-3 rounded-lg font-bold uppercase tracking-widest text-xs hover:bg-gold hover:text-black transition-colors shrink-0 disabled:opacity-50 cursor-pointer">
                                  {boardSaveMessage && !isBuilderOpen ? "Saved ✓" : (isSavingToBoard && !isBuilderOpen ? "Saving..." : "Save Product")}
                              </button>
