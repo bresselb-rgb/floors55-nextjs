@@ -149,6 +149,10 @@ function CategoryViewerContent({ initialCategory }) {
   const [user, setUser] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   
+  // NEW: State for active curation session
+  const [activeBoardId, setActiveBoardId] = useState(null);
+  const [activeBoardName, setActiveBoardName] = useState('');
+  
   const [isProcessingLink, setIsProcessingLink] = useState(() => {
       if (typeof window !== 'undefined') {
           const params = new URLSearchParams(window.location.search);
@@ -415,10 +419,17 @@ function CategoryViewerContent({ initialCategory }) {
           if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
       }
   }, [searchParams, user]); // CRITICAL FIX: Updated dependency array to listen for the user!
+  // NEW: Check for an active curation session
   useEffect(() => {
-      setActiveCategory(initialCategory);
-  }, [initialCategory]);
-
+      if (typeof window !== 'undefined') {
+          const bId = sessionStorage.getItem('active_curation_board_id');
+          const bName = sessionStorage.getItem('active_curation_board_name');
+          if (bId) {
+              setActiveBoardId(bId);
+              setActiveBoardName(bName || 'Client Board');
+          }
+      }
+  }, []);
   useEffect(() => {
     let isMounted = true;
     const initAuth = async () => {
@@ -922,6 +933,8 @@ function CategoryViewerContent({ initialCategory }) {
                   sessionStorage.removeItem('client_text');
                   sessionStorage.removeItem('magic_link_client');
                   sessionStorage.removeItem('private_label');
+                  sessionStorage.removeItem('active_curation_board_id');
+                  sessionStorage.removeItem('active_curation_board_name');
                   window.location.reload(); 
               }} 
               className="fixed bottom-6 left-6 px-5 py-3 rounded-full font-bold text-xs uppercase tracking-widest shadow-2xl z-[200] transition-opacity hover:opacity-80 flex items-center gap-2 border border-black/10 cursor-pointer"
@@ -931,6 +944,30 @@ function CategoryViewerContent({ initialCategory }) {
           </button>
       )}
 
+{/* NEW: ACTIVE CURATION SESSION BANNER */}
+      {activeBoardId && (
+          <div className="bg-gray-900 text-white px-6 py-4 sticky top-0 z-[150] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl border-b-4 border-gold">
+              <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center text-xl shrink-0">📋</div>
+                  <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-gold mb-0.5">Currently Curating</div>
+                      <div className="text-base font-bold text-white">{activeBoardName}</div>
+                  </div>
+              </div>
+              <button 
+                  onClick={() => {
+                      // Clear the active session and route them back to the dashboard
+                      sessionStorage.removeItem('active_curation_board_id');
+                      sessionStorage.removeItem('active_curation_board_name');
+                      sessionStorage.removeItem('client_margin'); // Reset the pricing view
+                      router.push('/my-account');
+                  }}
+                  className="bg-gold hover:bg-white text-black px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-colors w-full sm:w-auto text-center cursor-pointer outline-none shrink-0"
+              >
+                  Finish & Return
+              </button>
+          </div>
+      )}
       <header 
         className="relative min-h-[250px] md:min-h-[320px] py-12 flex items-center justify-center text-center text-white transition-all duration-500"
         style={{ 

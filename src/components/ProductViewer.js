@@ -15,6 +15,11 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
     const [user, setUser] = useState(null);
     const [isStaff, setIsStaff] = useState(false);
+
+    // NEW: State for active curation session
+    const [activeBoardId, setActiveBoardId] = useState(null);
+    const [activeBoardName, setActiveBoardName] = useState('');
+
     const [productData, setProductData] = useState(initialProduct);
     const [isPrivateLabel, setIsPrivateLabel] = useState(false);
 
@@ -181,6 +186,18 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
         }
     }, [searchParams, urlColorSku]);
+
+    // NEW: Check for an active curation session
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const bId = sessionStorage.getItem('active_curation_board_id');
+            const bName = sessionStorage.getItem('active_curation_board_name');
+            if (bId) {
+                setActiveBoardId(bId);
+                setActiveBoardName(bName || 'Client Board');
+            }
+        }
+    }, []);
 
     useEffect(() => {
         let isMounted = true;
@@ -708,10 +725,37 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     const categoryAddons = globalAddons && productData?.category ? (globalAddons[productData.category] || globalAddons['Default'] || []) : [];
 
     return (
-        <div className="flex-1 max-w-[1400px] mx-auto px-4 py-10 w-full flex flex-col lg:flex-row gap-10 relative">
-          
-          {/* MOBILE TITLE */}
-          {renderTitleBlock(false)}
+        <div className="flex flex-col flex-1 w-full">
+        
+            {/* NEW: ACTIVE CURATION SESSION BANNER */}
+            {activeBoardId && (
+                <div className="bg-gray-900 text-white px-6 py-4 sticky top-0 z-[150] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl border-b-4 border-gold">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center text-xl shrink-0">📋</div>
+                        <div>
+                            <div className="text-[10px] font-black uppercase tracking-widest text-gold mb-0.5">Currently Curating</div>
+                            <div className="text-base font-bold text-white">{activeBoardName}</div>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={() => {
+                            // Clear the active session and route them back to the dashboard
+                            sessionStorage.removeItem('active_curation_board_id');
+                            sessionStorage.removeItem('active_curation_board_name');
+                            sessionStorage.removeItem('client_margin');
+                            router.push('/my-account');
+                        }}
+                        className="bg-gold hover:bg-white text-black px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-colors w-full sm:w-auto text-center cursor-pointer outline-none shrink-0"
+                    >
+                        Finish & Return
+                    </button>
+                </div>
+            )}
+
+            <div className="flex-1 max-w-[1400px] mx-auto px-4 py-10 w-full flex flex-col lg:flex-row gap-10 relative">
+              
+              {/* MOBILE TITLE */}
+              {renderTitleBlock(false)}
 
           {/* LEFT COLUMN */}
           <div className="flex-1 w-full lg:min-w-[450px] lg:sticky lg:top-24 self-start z-10">

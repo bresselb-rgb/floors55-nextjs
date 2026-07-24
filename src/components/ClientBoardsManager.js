@@ -4,9 +4,11 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { useRouter } from 'next/navigation';
 import { db, appId } from "../lib/firebase";
 
 export default function ClientBoardsManager({ proId }) {
+  const router = useRouter();
   const [boards, setBoards] = useState([]);
   const [newBoardName, setNewBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -281,14 +283,24 @@ export default function ClientBoardsManager({ proId }) {
                         <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${brandBadgeClass}`}>
                             {displayBrandName}
                         </span>
-                        {/* NEW ADD PRODUCTS BUTTON */}
-<Link 
-    href="/category" 
-    className="text-[10px] font-black bg-black text-white px-3 py-0.5 rounded uppercase tracking-widest hover:bg-gold hover:text-black transition-colors border-none"
-    style={{ textDecoration: 'none' }}
->
-    + Add Products
-</Link>
+                        {/* THE NEW ACTIVE SESSION LAUNCH BUTTON */}
+                        <button 
+                            onClick={(e) => {
+                                e.preventDefault();
+                                // Lock the board details into session storage
+                                sessionStorage.setItem('active_curation_board_id', board.id);
+                                sessionStorage.setItem('active_curation_board_name', board.name);
+                                // Set the client margin so the catalog shows the correct retail prices while they shop
+                                if (board.margin !== undefined) {
+                                    sessionStorage.setItem('client_margin', board.margin);
+                                }
+                                // Push them to the catalog
+                                router.push('/category');
+                            }}
+                            className="text-[10px] font-black bg-black text-white px-3 py-0.5 rounded uppercase tracking-widest hover:bg-gold hover:text-black transition-colors border-none cursor-pointer outline-none"
+                        >
+                            + Add Products
+                        </button>
                     </div>
                   </div>
                 </div>
