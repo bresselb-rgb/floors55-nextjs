@@ -1108,6 +1108,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
               </div>
           )}
         </div>
+      </div>
     );
 }
 
