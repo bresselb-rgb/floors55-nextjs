@@ -69,6 +69,22 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
 
+  // NEW: Auto-Kill Curation Session Watcher
+  useEffect(() => {
+      if (typeof window !== 'undefined') {
+          const activeBoard = sessionStorage.getItem('active_curation_board_id');
+          
+          // If a session is active, but the user leaves the catalog/product pages
+          if (activeBoard && !pathname.startsWith('/category') && !pathname.startsWith('/product')) {
+              sessionStorage.removeItem('active_curation_board_id');
+              sessionStorage.removeItem('active_curation_board_name');
+              sessionStorage.removeItem('client_margin');
+              
+              alert("Client board session saved and ended.");
+          }
+      }
+  }, [pathname]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
         const search = window.location.search;

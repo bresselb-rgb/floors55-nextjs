@@ -945,34 +945,34 @@ function CategoryViewerContent({ initialCategory }) {
       )}
 
 {/* NEW: ACTIVE CURATION SESSION BANNER */}
-            {activeBoardId && (
-                <div className="bg-gray-900 text-white px-6 py-3 sticky top-0 z-30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl border-b-4 border-x-4 border-t-0 border-gold w-[95%] md:w-1/2 mx-auto rounded-b-2xl">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center text-xl shrink-0">📋</div>
-                        <div>
-                            <div className="text-[10px] font-black uppercase tracking-widest text-gold mb-0.5">Currently Curating</div>
-                            <div className="text-base font-bold text-white truncate max-w-[150px] sm:max-w-[250px]">{activeBoardName}</div>
-                        </div>
-                    </div>
-                    <button 
-                        onClick={() => {
-                            // Clear the active session and route them back to the boards tab
-                            sessionStorage.removeItem('active_curation_board_id');
-                            sessionStorage.removeItem('active_curation_board_name');
-                            sessionStorage.removeItem('client_margin');
-                            router.push('/my-account#boards');
-                        }}
-                        className="relative overflow-hidden bg-gold hover:bg-white text-black px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-colors w-full sm:w-auto text-center cursor-pointer outline-none shrink-0 shadow-[0_0_15px_rgba(197,160,89,0.5)] group"
-                    >
-                        {/* The Twinkle Stars */}
-                        <span className="absolute top-1 left-2 text-[10px] animate-ping opacity-75">✨</span>
-                        <span className="absolute bottom-1 right-2 text-[10px] animate-pulse opacity-75">✨</span>
-                        
-                        {/* The Button Text */}
-                        <span className="relative z-10 px-2">Finish & Return</span>
-                    </button>
-                </div>
-            )}
+      {activeBoardId && (
+          <div className="bg-gray-900 text-white px-6 py-3 sticky top-[80px] z-30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl border-b-4 border-x-4 border-t-0 border-gold w-[95%] md:w-1/2 mx-auto rounded-b-2xl">
+              <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center text-xl shrink-0">📋</div>
+                  <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-gold mb-0.5">Currently Curating</div>
+                      <div className="text-base font-bold text-white truncate max-w-[150px] sm:max-w-[250px]">{activeBoardName}</div>
+                  </div>
+              </div>
+              <button 
+                  onClick={() => {
+                      // Clear the active session and route them back to the boards tab
+                      sessionStorage.removeItem('active_curation_board_id');
+                      sessionStorage.removeItem('active_curation_board_name');
+                      sessionStorage.removeItem('client_margin');
+                      router.push('/my-account#boards');
+                  }}
+                  className="relative overflow-hidden bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-colors w-full sm:w-auto text-center cursor-pointer outline-none shrink-0 shadow-[0_0_15px_rgba(239,68,68,0.5)] group"
+              >
+                  {/* The Twinkle Stars */}
+                  <span className="absolute top-1 left-2 text-[10px] animate-ping opacity-75">✨</span>
+                  <span className="absolute bottom-1 right-2 text-[10px] animate-pulse opacity-75">✨</span>
+                  
+                  {/* The Button Text */}
+                  <span className="relative z-10 px-2">Finish & Return</span>
+              </button>
+          </div>
+      )}
       <header 
         className="relative min-h-[250px] md:min-h-[320px] py-12 flex items-center justify-center text-center text-white transition-all duration-500"
         style={{ 
