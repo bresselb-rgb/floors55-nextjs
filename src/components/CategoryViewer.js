@@ -563,12 +563,29 @@ function CategoryViewerContent({ initialCategory }) {
 
               // 5. Visual / Style Type
               if (!hasSpec('Style Type')) {
-                  if (fullDesc.includes('tile') || fullDesc.includes('stone') || fullDesc.includes('slate') || fullDesc.includes('marble')) {
+                  let widthValue = 0;
+                  
+                  // First, try to extract the exact width from the specs array
+                  const widthSpec = existingSpecs.find(s => s.toLowerCase().includes('width'));
+                  if (widthSpec) {
+                      const match = widthSpec.match(/([\d.]+)/);
+                      if (match) widthValue = parseFloat(match[1]);
+                  }
+                  
+                  // If it wasn't explicitly in the specs, check the description for dimensions (e.g., "12x24" or "12 x 24")
+                  if (widthValue === 0) {
+                      const dimMatch = fullDesc.match(/([\d.]+)\s*(?:x|\*|by)\s*[\d.]+/);
+                      if (dimMatch) widthValue = parseFloat(dimMatch[1]);
+                  }
+
+                  // Only LVP products strictly wider than 11.5" become Tile Visuals
+                  if (widthValue > 11.5) {
                        existingSpecs.push('Style Type: Tile Visual');
                   } else {
                        existingSpecs.push('Style Type: Wood Visual');
                   }
               }
+              
           } else if (data.category === 'Hardwood') {
               if (!hasSpec('Construction / Core')) {
                   if (fullDesc.includes('solid') || data.displayTitle.toLowerCase().includes('solid')) {
