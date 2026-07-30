@@ -698,7 +698,7 @@ function CategoryViewerContent({ initialCategory }) {
           "Thickness",
           "Wear Layer",
           "Attached Pad",
-          "Species",
+          //"Species",
           "Style Type",
           "Fiber Type",
           "Face Weight"
@@ -1073,7 +1073,7 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Search Catalog</label>
                     <div className="relative">
-                        <input type="text" value={searchQueryInput} onChange={(e) => setSearchQueryInput(e.target.value)} placeholder="Product, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
+                        <input type="text" value={searchQueryInput} onChange={(e) => setSearchQueryInput(e.target.value)} placeholder="Product, Species, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
                         <span className="absolute right-3 top-3 text-gray-400 text-xs">🔍</span>
                     </div>
                 </div>
@@ -1370,7 +1370,7 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Search Catalog</label>
                     <div className="relative">
-                        <input type="text" value={searchQueryInput} onChange={(e) => setSearchQueryInput(e.target.value)} placeholder="Product, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
+                        <input type="text" value={searchQueryInput} onChange={(e) => setSearchQueryInput(e.target.value)} placeholder="Product, Species, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
                     </div>
                 </div>
 
