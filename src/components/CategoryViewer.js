@@ -60,7 +60,6 @@ const normalizeSpecKey = (rawKey) => {
 // Standardizes the values on the right side of the colon into specific buckets
 const normalizeSpecValue = (key, rawValue, category = '') => {
     const val = rawValue.trim();
-
     const lowerVal = val.toLowerCase();
 
     if (key.toLowerCase() === "thickness") {
@@ -93,12 +92,14 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
                 }
             }
 
-            // Tighter industry buckets to prevent visual overlap
+            // Tighter, strict hardwood buckets
             if (num > 0) {
-                if (num < 0.375) return "< 3/8\"";
-                if (num >= 0.375 && num <= 0.5) return "3/8\" - 1/2\"";
-                if (num > 0.5 && num < 0.75) return "9/16\" - 5/8\"";
-                if (num >= 0.75) return "3/4\"+";
+                if (num < 0.40625) return "3/8\"";
+                if (num >= 0.40625 && num < 0.46875) return "7/16\"";
+                if (num >= 0.46875 && num < 0.53125) return "1/2\"";
+                if (num >= 0.53125 && num < 0.59375) return "9/16\"";
+                if (num >= 0.59375 && num < 0.6875) return "5/8\"";
+                return "3/4\"+";
             }
             return val;
         }
@@ -112,7 +113,6 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
             if (num > 7 && num <= 10) return "7mm - 10mm";
             if (num > 10) return "10mm+";
         }
-    }
     }
 
     if (key.toLowerCase() === "construction / core") {
@@ -197,11 +197,11 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     }
 
     return val;
-;
+};
 
 const THICKNESS_ORDER = { 
     "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4,
-    "< 3/8\"": 5, "3/8\" - 1/2\"": 6, "9/16\" - 5/8\"": 7, "3/4\"+": 8 
+    "3/8\"": 5, "7/16\"": 6, "1/2\"": 7, "9/16\"": 8, "5/8\"": 9, "3/4\"+": 10
 };
 const FACE_WEIGHT_ORDER = { "< 30 oz": 1, "30 - 40 oz": 2, "40 - 50 oz": 3, "50 - 60 oz": 4, "60+ oz": 5 };
 
