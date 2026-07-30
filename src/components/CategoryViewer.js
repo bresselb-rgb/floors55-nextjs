@@ -687,6 +687,12 @@ function CategoryViewerContent({ initialCategory }) {
               s !== "Waterproof" && 
               s !== "Wear Layer"
           );
+      } else if (['Luxury Vinyl (LVP)', 'Hardwood', 'Laminate', 'Tile'].includes(activeCategory)) {
+          // Strictly eliminate carpet specs from hard surface categories
+          TARGET_SPECS = TARGET_SPECS.filter(s => 
+              s !== "Face Weight" && 
+              s !== "Fiber Type"
+          );
       }
       
       const specMap = {}; 
