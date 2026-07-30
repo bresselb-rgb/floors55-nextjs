@@ -73,23 +73,24 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     }
 
     if (key.toLowerCase() === "construction / core") {
-        // Explicitly catch COREtec's patent phrasing and WPC
-        if (lowerVal.includes("wpc") || lowerVal.includes("wood foamed") || lowerVal.includes("wood plastic")) return "WPC";
-        if (lowerVal.includes("spc") || lowerVal.includes("rigid") || lowerVal.includes("solid") || lowerVal.includes("stone")) return "SPC";
-        if (category === 'Luxury Vinyl (LVP)') return "SPC"; // Strict fallback
+        if (category === 'Luxury Vinyl (LVP)' && lowerVal.includes("solid")) return "SPC";
+        if (lowerVal.includes("solid")) return "Solid";
+        if (lowerVal.includes("wpc")) return "WPC";
+        if (lowerVal.includes("spc") || lowerVal.includes("rigid")) return "SPC";
+        if (lowerVal.includes("engineered") || lowerVal.includes("ply") || lowerVal.includes("hdf") || lowerVal.includes("veneer") || lowerVal.includes("multi")) return "Engineered";
         return val;
     }
 
     if (key.toLowerCase() === "attached pad" || key.toLowerCase() === "pad") {
         if (lowerVal.includes("cork")) return "Attached Cork";
         if (lowerVal.includes("no") || lowerVal === "none" || lowerVal === "n/a" || lowerVal === "false") return "None";
-        return "Attached Pad"; // Forces anything else into 'Attached Pad'
+        return "Attached Pad"; 
     }
 
-    if (key.toLowerCase() === "style type" || key.toLowerCase() === "visual") {
-        // Hardcode into two distinct visual buckets
-        if (lowerVal.includes("tile") || lowerVal.includes("stone") || lowerVal.includes("slate") || lowerVal.includes("concrete") || lowerVal.includes("marble")) return "Tile Visual";
-        return "Wood Visual"; 
+    if (key.toLowerCase() === "style type") {
+        if ((lowerVal.includes("texture") || lowerVal.includes("cut pile")) && !lowerVal.includes("loop")) return "Texture / Cut Pile";
+        if (lowerVal.includes("pattern") || (lowerVal.includes("cut") && lowerVal.includes("loop"))) return "Pattern / Cut & Loop";
+        if (lowerVal.includes("loop") || lowerVal.includes("berber")) return "Loop";
     }
 
     if (key.toLowerCase() === "wear layer") {
@@ -148,7 +149,25 @@ function CategoryViewerContent({ initialCategory }) {
   const [user, setUser] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   
-  // NEW: State for active curation session
+  // NEW: Store the blueprint from FilterManager
+  const [filterBlueprint, setFilterBlueprint] = useState({});
+
+  useEffect(() => {
+      const fetchFilters = async () => {
+          if (!db) return;
+          try {
+              const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'filterConfig');
+              const snap = await getDoc(docRef);
+              if (snap.exists()) {
+                  setFilterBlueprint(snap.data());
+              }
+          } catch (error) {
+              console.error("Failed to load filter blueprint:", error);
+          }
+      };
+      fetchFilters();
+  }, [db]);
+  
   const [activeBoardId, setActiveBoardId] = useState(null);
   const [activeBoardName, setActiveBoardName] = useState('');
   
@@ -168,15 +187,13 @@ function CategoryViewerContent({ initialCategory }) {
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  const [userFavorites, setUserFavorites] = useState([]); // Array of product IDs
+  const [userFavorites, setUserFavorites] = useState([]); 
   const [proFavorites, setProFavorites] = useState([]); 
   const [showProPicks, setShowProPicks] = useState(false);
 
-  // Raw input states (for the UI)
   const [searchQueryInput, setSearchQueryInput] = useState('');
   const [maxPriceInput, setMaxPriceInput] = useState(10000); 
 
-  // Debounced states (for the heavy filter logic)
   const searchQuery = useDebounce(searchQueryInput, 300);
   const maxPrice = useDebounce(maxPriceInput, 300);
 
@@ -224,7 +241,6 @@ function CategoryViewerContent({ initialCategory }) {
       let finalUrl = `${window.location.origin}/s/${shortCode}`;
       
       try {
-          // Changed to use getDoc and setDoc from firestore properly
           const { doc, setDoc } = require("firebase/firestore");
           await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'short_links', shortCode), {
               target: targetPath,
@@ -240,7 +256,6 @@ function CategoryViewerContent({ initialCategory }) {
       const plainText = `${title}\n${finalUrl}`;
       
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const isDesktop = !isMobile;
 
       if (navigator.share && isMobile) {
           navigator.share({ title: title, text: title, url: finalUrl }).catch(console.error);
@@ -272,7 +287,6 @@ function CategoryViewerContent({ initialCategory }) {
       const isFav = userFavorites.includes(productId);
       const newFavs = isFav ? userFavorites.filter(id => id !== productId) : [...userFavorites, productId];
       
-      // Optimistic UI update
       setUserFavorites(newFavs);
 
       try {
@@ -286,7 +300,6 @@ function CategoryViewerContent({ initialCategory }) {
           }
       } catch (err) {
           console.error("Failed to update favorites:", err);
-          // Revert on failure
           setUserFavorites(userFavorites);
           showToast("Error updating favorites.");
       }
@@ -301,9 +314,6 @@ function CategoryViewerContent({ initialCategory }) {
 
           const hasMagicParams = proParam || cmParam || cbParam || plParam;
 
-          // THE ULTIMATE FIX: Wait for a valid Firebase User before processing custom links.
-          // In a fresh Incognito window, triggering a reload before anonymous auth completes 
-          // aborts the network request, kills the link parameters, and breaks the page.
           if (hasMagicParams && !user) return;
 
           const prog = searchParams.get('program');
@@ -417,8 +427,8 @@ function CategoryViewerContent({ initialCategory }) {
 
           if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
       }
-  }, [searchParams, user]); // CRITICAL FIX: Updated dependency array to listen for the user!
-  // NEW: Check for an active curation session
+  }, [searchParams, user]); 
+
   useEffect(() => {
       if (typeof window !== 'undefined') {
           const bId = sessionStorage.getItem('active_curation_board_id');
@@ -429,6 +439,7 @@ function CategoryViewerContent({ initialCategory }) {
           }
       }
   }, []);
+
   useEffect(() => {
     let isMounted = true;
     const initAuth = async () => {
@@ -458,7 +469,6 @@ function CategoryViewerContent({ initialCategory }) {
     };
   }, []);
 
-  // Listen for user favorites
   useEffect(() => {
       if (!user || user.isAnonymous || !db) {
           setUserFavorites([]);
@@ -511,47 +521,16 @@ function CategoryViewerContent({ initialCategory }) {
           };
           
           if (data.category === 'Luxury Vinyl (LVP)') {
-              // 1. Purge unwanted DB tags (Remove Waterproof entirely, and strip old Species to rebuild from colors)
-              existingSpecs = existingSpecs.filter(s => {
-                  const k = s.toLowerCase();
-                  return !k.startsWith('waterproof') && !k.startsWith('species');
-              });
-
-              // 2. Attached Pad
+              if (!hasSpec('Waterproof')) existingSpecs.push('Waterproof: 100% Waterproof');
               if (!hasSpec('Attached Pad')) {
                   if (fullDesc.includes('cork')) existingSpecs.push('Attached Pad: Attached Cork');
                   else existingSpecs.push('Attached Pad: Attached Pad');
               }
-              
-              // 3. Construction / Core (with COREtec WPC safety net)
               if (!hasSpec('Construction / Core')) {
-                  if (fullDesc.includes('wpc') || fullDesc.includes('wood foamed') || fullDesc.includes('wood plastic') || data.displayTitle.toLowerCase().includes('coretec originals')) {
-                      existingSpecs.push('Construction / Core: WPC');
-                  } else {
-                      existingSpecs.push('Construction / Core: SPC'); // Default LVP to SPC
-                  }
+                  if (fullDesc.includes('wpc')) existingSpecs.push('Construction / Core: WPC');
+                  else if (fullDesc.includes('spc') || fullDesc.includes('rigid') || fullDesc.includes('solid')) existingSpecs.push('Construction / Core: SPC');
               }
-
-              // 4. Species Extraction (Strictly from Color Names)
-              const allColors = (data.colors || []).map(c => (c.name || '').toLowerCase()).join(' ');
-              if (allColors.includes('oak')) existingSpecs.push('Species: Oak');
-              else if (allColors.includes('hickory')) existingSpecs.push('Species: Hickory');
-              else if (allColors.includes('maple')) existingSpecs.push('Species: Maple');
-              else if (allColors.includes('pine')) existingSpecs.push('Species: Pine');
-              else if (allColors.includes('walnut')) existingSpecs.push('Species: Walnut');
-              else if (allColors.includes('chestnut')) existingSpecs.push('Species: Chestnut');
-              else if (allColors.includes('elm')) existingSpecs.push('Species: Elm');
-
-              // 5. Visual / Style Type
-              if (!hasSpec('Style Type')) {
-                  if (fullDesc.includes('tile') || fullDesc.includes('stone') || fullDesc.includes('slate') || fullDesc.includes('marble')) {
-                       existingSpecs.push('Style Type: Tile Visual');
-                  } else {
-                       existingSpecs.push('Style Type: Wood Visual');
-                  }
-              }
-          }
-           else if (data.category === 'Hardwood') {
+          } else if (data.category === 'Hardwood') {
               if (!hasSpec('Construction / Core')) {
                   if (fullDesc.includes('solid') || data.displayTitle.toLowerCase().includes('solid')) {
                       existingSpecs.push('Construction / Core: Solid');
@@ -598,7 +577,6 @@ function CategoryViewerContent({ initialCategory }) {
   const isWholesale = user && !user.isAnonymous;
   const isClientMode = clientMargin !== null;
 
-  // Memoize the price bounds so we only recalculate them when the raw data or category changes
   const priceBounds = useMemo(() => {
     let min = 0; let max = 15;
     
@@ -622,14 +600,7 @@ function CategoryViewerContent({ initialCategory }) {
     return { min, max };
   }, [liveProductsRaw, activeCategory, isWholesale, isClientMode, clientMargin]);
 
-  // Synchronize the input and debounced states when category changes
-  useEffect(() => {
-     if (liveProductsRaw.length > 0) {
-         setMaxPriceInput(priceBounds.max);
-     }
-  }, [priceBounds.max, activeCategory]);
-
-  const dynamicBrands = useMemo(() => {
+const dynamicBrands = useMemo(() => {
       const brands = new Set();
       const relevantProducts = liveProductsRaw.filter(p => 
           (activeCategory === "All Products" && p.category !== 'Carpet Cushion') || 
@@ -649,77 +620,23 @@ function CategoryViewerContent({ initialCategory }) {
       return [...brands].sort();
   }, [liveProductsRaw, activeCategory, isPrivateLabel]);
 
-  const dynamicSpecs = useMemo(() => {
-      let TARGET_SPECS = [
-          "Waterproof",
-          "Construction / Core",
-          "Thickness",
-          "Wear Layer",
-          "Attached Pad",
-          "Species",
-          "Style Type",
-          "Fiber Type",
-          "Face Weight"
-      ];
-
-      if (activeCategory === 'Carpet' || activeCategory === 'Carpet Cushion') {
-          TARGET_SPECS = TARGET_SPECS.filter(s => 
-              s !== "Construction / Core" && 
-              s !== "Thickness" && 
-              s !== "Waterproof" && 
-              s !== "Wear Layer"
-          );
-      }
+  // NEW: Combine Global and Category-Specific Blueprints
+  const activeSidebarBlocks = useMemo(() => {
+      const globalFilters = filterBlueprint['global'] || [];
       
-      const specMap = {}; 
+      let currentSlug = activeCategory.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      if (activeCategory === 'Luxury Vinyl (LVP)') currentSlug = 'luxury-vinyl';
       
-      const relevantProducts = liveProductsRaw.filter(p => 
-          (activeCategory === "All Products" && p.category !== 'Carpet Cushion') || 
-          (activeCategory === "Hot Buys" && p.isSale) || 
-          p.category === activeCategory
-      );
+      const specificFilters = filterBlueprint[currentSlug] || [];
+      
+      return [...globalFilters, ...specificFilters];
+  }, [filterBlueprint, activeCategory]);
 
-      relevantProducts.forEach(p => {
-          (p.specs || []).forEach(s => {
-              const parts = s.split(':');
-              if (parts.length >= 2) {
-                  const rawKey = parts[0].trim();
-                  const val = parts.slice(1).join(':').trim();
-                  
-                  const key = normalizeSpecKey(rawKey);
-                  const matchedSpec = TARGET_SPECS.find(t => t.toLowerCase() === key.toLowerCase());
-                  
-                  if (matchedSpec && val.length > 0 && val.length < 40) {
-                      const normalizedVal = normalizeSpecValue(matchedSpec, val, p.category);
-                      
-                      if (normalizedVal !== "None") {
-                          if (!specMap[matchedSpec]) specMap[matchedSpec] = new Set();
-                          specMap[matchedSpec].add(normalizedVal);
-                      }
-                  }
-              }
-          });
-      });
-
-      const result = {};
-      TARGET_SPECS.forEach(specName => {
-          if (specMap[specName] && specMap[specName].size > 0) { 
-              result[specName] = [...specMap[specName]].sort((a, b) => {
-                  if (specName === "Thickness") {
-                      return (THICKNESS_ORDER[a] || 99) - (THICKNESS_ORDER[b] || 99);
-                  }
-                  if (specName === "Face Weight") {
-                      return (FACE_WEIGHT_ORDER[a] || 99) - (FACE_WEIGHT_ORDER[b] || 99);
-                  }
-                  const numA = parseFloat(a);
-                  const numB = parseFloat(b);
-                  if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-                  return a.localeCompare(b);
-              });
-          }
-      });
-      return result;
-  }, [liveProductsRaw, activeCategory]);
+  useEffect(() => {
+     if (liveProductsRaw.length > 0) {
+         setMaxPriceInput(priceBounds.max);
+     }
+  }, [priceBounds.max, activeCategory]);
 
   const handleProgramToggle = (val) => {
       setSelectedPrograms(prev => prev.includes(val) ? prev.filter(p => p !== val) : [...prev, val]);
@@ -745,12 +662,10 @@ function CategoryViewerContent({ initialCategory }) {
       });
   };
 
-  // Uses the debounced searchQuery and maxPrice to prevent rapid re-rendering stutter!
   const filteredProducts = useMemo(() => {
     const searchVal = searchQuery.toLowerCase().trim();
     
     return liveProductsRaw.filter(p => {
-        // FAST FAIL: Favorite Filter
         if (showOnlyFavorites && !userFavorites.includes(p.id)) return false;
         if (showProPicks && !proFavorites.includes(p.id)) return false;
 
@@ -780,7 +695,6 @@ function CategoryViewerContent({ initialCategory }) {
                               colorsTextCombined.includes(searchVal) ||
                               hiddenKeywords.includes(searchVal);
 
-        // Bypasses the category restriction if a user wants to view a global list of curated favorites
         const matchesCategory = showOnlyFavorites || showProPicks || 
                                 (activeCategory === "All Products" && (searchVal !== '' || p.category !== 'Carpet Cushion')) || 
                                 (activeCategory === "Hot Buys" && p.isSale === true) || 
@@ -815,9 +729,10 @@ function CategoryViewerContent({ initialCategory }) {
                         
                         const pKey = normalizeSpecKey(rawKey);
                         
-                        if (pKey.toLowerCase() === key.toLowerCase()) {
+                        // Fallback logic mapping the visual UI changes
+                        if (pKey.toLowerCase().replace(/[^a-z0-9]+/g, '') === key.toLowerCase() || pKey.toLowerCase() === key.toLowerCase()) {
                             const normalizedPVal = normalizeSpecValue(key, pVal, p.category);
-                            return vals.includes(normalizedPVal);
+                            return vals.includes(normalizedPVal) || vals.includes(pVal);
                         }
                     }
                     return false;
@@ -878,9 +793,11 @@ function CategoryViewerContent({ initialCategory }) {
       router.push(getCategorySlug(catName), { scroll: true });
   };
 
+  // NEW: Refactored Spec Renderer to use Firebase Blueprint + Dynamic Brands
   const renderSpecFilters = () => {
       return (
           <>
+            {/* 1. AUTO-GENERATED BRANDS (Hardcoded to pull dynamically from live products) */}
             {dynamicBrands.length > 0 && !isPrivateLabel && (
                 <div className="pt-4 mt-4 border-t border-gray-100">
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-3">Brands & Manufacturers</label>
@@ -900,31 +817,25 @@ function CategoryViewerContent({ initialCategory }) {
                 </div>
             )}
 
-            {Object.keys(dynamicSpecs).length > 0 && activeCategory !== 'All Products' && activeCategory !== 'Hot Buys' && (
-                <div className="pt-4 mt-4 border-t border-gray-100">
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-3">Specifications</label>
-                    <div className="space-y-4">
-                        {Object.entries(dynamicSpecs).map(([specKey, specVals]) => (
-                            <div key={specKey}>
-                                <div className="text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">{specKey}</div>
-                                <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
-                                    {specVals.map(val => (
-                                        <label key={val} className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer hover:text-gold transition">
-                                            <input 
-                                                type="checkbox" 
-                                                checked={selectedSpecs[specKey]?.includes(val) || false}
-                                                onChange={() => handleSpecToggle(specKey, val)}
-                                                className="accent-gold h-3.5 w-3.5 rounded border-gray-300" 
-                                            /> 
-                                            <span className="truncate">{val}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
+            {/* 2. FIREBASE BLUEPRINT FILTERS (Wear Layer, Core Type, etc. built in FilterManager) */}
+            {activeSidebarBlocks.map((block) => (
+                <div key={block.id} className="pt-4 mt-4 border-t border-gray-100">
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-3">{block.label}</label>
+                    <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+                        {block.options.map(opt => (
+                            <label key={opt} className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer hover:text-gold transition">
+                                <input 
+                                    type="checkbox" 
+                                    checked={selectedSpecs[block.id]?.includes(opt) || false}
+                                    onChange={() => handleSpecToggle(block.id, opt)}
+                                    className="accent-gold h-3.5 w-3.5 rounded border-gray-300" 
+                                /> 
+                                <span className="truncate">{opt}</span>
+                            </label>
                         ))}
                     </div>
                 </div>
-            )}
+            ))}
           </>
       );
   };
@@ -974,7 +885,6 @@ function CategoryViewerContent({ initialCategory }) {
           </button>
       )}
 
-{/* NEW: ACTIVE CURATION SESSION BANNER */}
       {activeBoardId && (
           <div className="bg-gray-900 text-white px-6 py-3 sticky top-[80px] z-30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl border-b-4 border-x-4 border-t-0 border-gold w-[95%] md:w-1/2 mx-auto rounded-b-2xl">
               <div className="flex items-center gap-3">
@@ -986,7 +896,6 @@ function CategoryViewerContent({ initialCategory }) {
               </div>
               <button 
                   onClick={() => {
-                      // Clear the active session and route them back to the boards tab
                       sessionStorage.removeItem('active_curation_board_id');
                       sessionStorage.removeItem('active_curation_board_name');
                       sessionStorage.removeItem('client_margin');
@@ -994,11 +903,8 @@ function CategoryViewerContent({ initialCategory }) {
                   }}
                   className="relative overflow-hidden bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-colors w-full sm:w-auto text-center cursor-pointer outline-none shrink-0 shadow-[0_0_15px_rgba(239,68,68,0.5)] group"
               >
-                  {/* The Twinkle Stars */}
                   <span className="absolute top-1 left-2 text-[10px] animate-ping opacity-75">✨</span>
                   <span className="absolute bottom-1 right-2 text-[10px] animate-pulse opacity-75">✨</span>
-                  
-                  {/* The Button Text */}
                   <span className="relative z-10 px-2">Finish & Return</span>
               </button>
           </div>
@@ -1033,7 +939,6 @@ function CategoryViewerContent({ initialCategory }) {
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
                         
-                        {/* MY FAVORITES FILTER (Pro View) */}
                         {!isClientMode && user && !user.isAnonymous && (
                             <button onClick={() => { setShowOnlyFavorites(!showOnlyFavorites); setIsMobileDrawerOpen(false); }} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showOnlyFavorites ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
                                 <svg className="w-4 h-4" fill={showOnlyFavorites ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
@@ -1041,7 +946,6 @@ function CategoryViewerContent({ initialCategory }) {
                             </button>
                         )}
                         
-                        {/* PRO'S TOP PICKS FILTER (Client View) */}
                         {isClientMode && proFavorites.length > 0 && (
                             <button onClick={() => { setShowProPicks(!showProPicks); setIsMobileDrawerOpen(false); }} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showProPicks ? 'bg-gold text-black font-black border-yellow-300' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
                                 <span className="text-base">⭐</span> View Pro's Top Picks
@@ -1051,10 +955,7 @@ function CategoryViewerContent({ initialCategory }) {
                         {['All Products', 'Hot Buys', 'Property Management', 'Pro Select', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Tile', 'Carpet Cushion'].map(cat => {
                             const isSpecial = cat === 'Hot Buys' || cat === 'Property Management' || cat === 'Pro Select';
                             
-                            // Hide these special categories from standard retail clients
                             if (isSpecial && (!isWholesale || isClientMode)) return null;
-                            
-                            // Auto-hide Hot Buys if nothing is currently on sale
                             if (cat === 'Hot Buys' && !liveProductsRaw.some(p => p.isSale)) return null;
                             
                             let label = cat;
@@ -1101,7 +1002,6 @@ function CategoryViewerContent({ initialCategory }) {
                             <span>⚙️</span> Filters
                         </button>
                         
-                        {/* Mobile-only inline search bar */}
                         <div className="relative flex-1 lg:hidden">
                             <input 
                                 type="text" 
@@ -1181,7 +1081,6 @@ function CategoryViewerContent({ initialCategory }) {
                                         </div>
                                     )}
 
-                                    {/* HEART BUTTON OVERLAY */}
                                     {!isClientMode && (
                                         <button 
                                             onClick={(e) => handleToggleFavorite(e, p.id)}
@@ -1328,7 +1227,6 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
-                        {/* MY FAVORITES FILTER (Pro View) */}
                         {!isClientMode && user && !user.isAnonymous && (
                             <button onClick={() => { setShowOnlyFavorites(!showOnlyFavorites); setTimeout(() => setIsMobileDrawerOpen(false), 50); }} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showOnlyFavorites ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
                                 <svg className="w-4 h-4" fill={showOnlyFavorites ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
@@ -1336,7 +1234,6 @@ function CategoryViewerContent({ initialCategory }) {
                             </button>
                         )}
                         
-                        {/* PRO'S TOP PICKS FILTER (Client View) */}
                         {isClientMode && proFavorites.length > 0 && (
                             <button onClick={() => { setShowProPicks(!showProPicks); setTimeout(() => setIsMobileDrawerOpen(false), 50); }} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showProPicks ? 'bg-gold text-black font-black border-yellow-300' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
                                 <span className="text-base">⭐</span> View Pro's Top Picks
@@ -1345,10 +1242,7 @@ function CategoryViewerContent({ initialCategory }) {
                         {['All Products', 'Hot Buys', 'Property Management', 'Pro Select', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Tile', 'Carpet Cushion'].map(cat => {
                             const isSpecial = cat === 'Hot Buys' || cat === 'Property Management' || cat === 'Pro Select';
                             
-                            // Hide these special categories from standard retail clients
                             if (isSpecial && (!isWholesale || isClientMode)) return null;
-                            
-                            // Auto-hide Hot Buys if nothing is currently on sale
                             if (cat === 'Hot Buys' && !liveProductsRaw.some(p => p.isSale)) return null;
                             
                             let label = cat;
