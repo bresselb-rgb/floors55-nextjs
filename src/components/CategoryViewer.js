@@ -93,9 +93,11 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
                 }
             }
 
+            // Tighter industry buckets to prevent visual overlap
             if (num > 0) {
-                if (num < 0.5) return "3/8\" - 1/2\""; // Starts at 3/8"
-                if (num >= 0.5 && num < 0.75) return "1/2\" - 3/4\"";
+                if (num < 0.375) return "< 3/8\"";
+                if (num >= 0.375 && num <= 0.5) return "3/8\" - 1/2\"";
+                if (num > 0.5 && num < 0.75) return "9/16\" - 5/8\"";
                 if (num >= 0.75) return "3/4\"+";
             }
             return val;
@@ -110,6 +112,7 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
             if (num > 7 && num <= 10) return "7mm - 10mm";
             if (num > 10) return "10mm+";
         }
+    }
     }
 
     if (key.toLowerCase() === "construction / core") {
@@ -198,7 +201,7 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
 
 const THICKNESS_ORDER = { 
     "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4,
-    "3/8\" - 1/2\"": 5, "1/2\" - 3/4\"": 6, "3/4\"+": 7 
+    "< 3/8\"": 5, "3/8\" - 1/2\"": 6, "9/16\" - 5/8\"": 7, "3/4\"+": 8 
 };
 const FACE_WEIGHT_ORDER = { "< 30 oz": 1, "30 - 40 oz": 2, "40 - 50 oz": 3, "50 - 60 oz": 4, "60+ oz": 5 };
 
