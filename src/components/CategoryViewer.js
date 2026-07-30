@@ -70,6 +70,7 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
             if (val.includes("1/4")) num = 0.25;
             else if (val.includes("5/16")) num = 0.3125;
             else if (val.includes("3/8")) num = 0.375;
+            else if (val.includes("7/16")) num = 0.4375;
             else if (val.includes("1/2")) num = 0.5;
             else if (val.includes("9/16")) num = 0.5625;
             else if (val.includes("5/8")) num = 0.625;
@@ -92,7 +93,7 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
                 }
             }
 
-            // Tighter, strict hardwood buckets
+            // Strict Hardwood Buckets
             if (num > 0) {
                 if (num < 0.40625) return "3/8\"";
                 if (num >= 0.40625 && num < 0.46875) return "7/16\"";
