@@ -197,7 +197,7 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     }
 
     return val;
-};
+;
 
 const THICKNESS_ORDER = { 
     "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4,
