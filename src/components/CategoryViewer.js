@@ -60,9 +60,48 @@ const normalizeSpecKey = (rawKey) => {
 // Standardizes the values on the right side of the colon into specific buckets
 const normalizeSpecValue = (key, rawValue, category = '') => {
     const val = rawValue.trim();
+
     const lowerVal = val.toLowerCase();
 
     if (key.toLowerCase() === "thickness") {
+        // EXCLUSIVELY for Hardwood inch bucketing
+        if (category === 'Hardwood') {
+            let num = 0;
+            
+            if (val.includes("1/4")) num = 0.25;
+            else if (val.includes("5/16")) num = 0.3125;
+            else if (val.includes("3/8")) num = 0.375;
+            else if (val.includes("1/2")) num = 0.5;
+            else if (val.includes("9/16")) num = 0.5625;
+            else if (val.includes("5/8")) num = 0.625;
+            else if (val.includes("3/4")) num = 0.75;
+            else {
+                const inchMatch = val.match(/([\d.]+)\s*(?:"|''|in|inch)/i);
+                if (inchMatch) {
+                    num = parseFloat(inchMatch[1]);
+                } else {
+                    const mmMatch = val.match(/([\d.]+)\s*mm/i);
+                    if (mmMatch) {
+                        num = parseFloat(mmMatch[1]) / 25.4;
+                    } else {
+                        const match = val.match(/([\d.]+)/);
+                        if (match) {
+                            num = parseFloat(match[1]);
+                            if (num > 2) num = num / 25.4;
+                        }
+                    }
+                }
+            }
+
+            if (num > 0) {
+                if (num < 0.5) return "3/8\" - 1/2\""; // Starts at 3/8"
+                if (num >= 0.5 && num < 0.75) return "1/2\" - 3/4\"";
+                if (num >= 0.75) return "3/4\"+";
+            }
+            return val;
+        }
+        
+        // LVP, Laminate, Tile fallback (Standard mm bucketing)
         const match = val.match(/[\d.]+/);
         if (match) {
             const num = parseFloat(match[0]);
@@ -157,7 +196,10 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     return val;
 };
 
-const THICKNESS_ORDER = { "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4 };
+const THICKNESS_ORDER = { 
+    "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4,
+    "3/8\" - 1/2\"": 5, "1/2\" - 3/4\"": 6, "3/4\"+": 7 
+};
 const FACE_WEIGHT_ORDER = { "< 30 oz": 1, "30 - 40 oz": 2, "40 - 50 oz": 3, "50 - 60 oz": 4, "60+ oz": 5 };
 
 // Custom hook to debounce high-frequency state changes
