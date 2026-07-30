@@ -48,7 +48,7 @@ const normalizeSpecKey = (rawKey) => {
     if (k.includes('core') || k.includes('construction')) return 'Construction / Core';
     if (k.includes('pad') || k.includes('cushion') || k.includes('underlayment')) return 'Attached Pad';
     if (k.includes('style') || k.includes('pattern') || k.includes('visual')) return 'Style Type';
-    if (k.includes('wear layer') || k.includes('wearlayer')) return 'Wear Layer';
+    if (k.includes('wear layer') || k.includes('wearlayer') || k.includes('veneer')) return 'Wear Layer';
     if (k.includes('thickness') && !k.includes('wear')) return 'Thickness'; 
     if (k.includes('waterproof') || k.includes('water resistance')) return 'Waterproof';
     if (k.includes('weight')) return 'Face Weight';
@@ -74,6 +74,12 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     }
 
     if (key.toLowerCase() === "construction / core") {
+        // Hardwood strict bucketing (Must be checked before SPC to prevent 'solid' hijack)
+        if (category === 'Hardwood') {
+            if (lowerVal.includes("solid")) return "Solid";
+            return "Engineered"; 
+        }
+
         // Explicitly catch COREtec's patent phrasing and WPC
         if (lowerVal.includes("wpc") || lowerVal.includes("wood foamed") || lowerVal.includes("wood plastic")) return "WPC";
         if (lowerVal.includes("spc") || lowerVal.includes("rigid") || lowerVal.includes("solid") || lowerVal.includes("stone")) return "SPC";
@@ -94,6 +100,18 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     }
 
     if (key.toLowerCase() === "wear layer") {
+         // EXCLUSIVELY for Hardwood mm bucketing
+         if (category === 'Hardwood') {
+             const match = val.match(/([\d.]+)/);
+             if (match) {
+                 const num = parseFloat(match[1]);
+                 if (num < 2) return "1mm - 2mm";
+                 if (num >= 2 && num < 3) return "2mm - 3mm";
+                 return "3mm+";
+             }
+         }
+         
+         // LVP / Laminate fallback (Defaults back to standard mil processing)
          const match = val.match(/(\d+)/);
          if (match) return `${match[1]} mil`;
     }
