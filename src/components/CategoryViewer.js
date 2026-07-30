@@ -565,17 +565,24 @@ function CategoryViewerContent({ initialCategory }) {
               if (!hasSpec('Style Type')) {
                   let widthValue = 0;
                   
-                  // First, try to extract the exact width from the specs array
-                  const widthSpec = existingSpecs.find(s => s.toLowerCase().includes('width'));
+                  // 1. Try to find an explicit "Width" or "Wide" spec
+                  const widthSpec = existingSpecs.find(s => s.toLowerCase().includes('width') || s.toLowerCase().includes('wide'));
                   if (widthSpec) {
                       const match = widthSpec.match(/([\d.]+)/);
                       if (match) widthValue = parseFloat(match[1]);
                   }
                   
-                  // If it wasn't explicitly in the specs, check the description for dimensions (e.g., "12x24" or "12 x 24")
+                  // 2. If no width found, aggressively parse Dimensions anywhere in the specs or description
+                  // This easily jumps over quotes and words: matches 12x24, 12" x 24", 12" Wide x 24", etc.
                   if (widthValue === 0) {
-                      const dimMatch = fullDesc.match(/([\d.]+)\s*(?:x|\*|by)\s*[\d.]+/);
+                      const searchTarget = existingSpecs.join(' ') + ' ' + fullDesc;
+                      const dimMatch = searchTarget.match(/([\d.]+)\s*(?:"|''|in|inch|inches)?\s*(?:wide|w)?\s*(?:x|\*|by)\s*[\d.]+/);
                       if (dimMatch) widthValue = parseFloat(dimMatch[1]);
+                  }
+
+                  // Safeguard: If the number is huge (e.g., 300mm), mathematically convert it back to inches
+                  if (widthValue > 50) {
+                      widthValue = widthValue / 25.4; 
                   }
 
                   // Only LVP products strictly wider than 11.5" become Tile Visuals
@@ -585,7 +592,7 @@ function CategoryViewerContent({ initialCategory }) {
                        existingSpecs.push('Style Type: Wood Visual');
                   }
               }
-              
+
           } else if (data.category === 'Hardwood') {
               if (!hasSpec('Construction / Core')) {
                   if (fullDesc.includes('solid') || data.displayTitle.toLowerCase().includes('solid')) {
