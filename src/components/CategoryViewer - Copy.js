@@ -45,15 +45,14 @@ try {
 // Standardizes the labels on the left side of the colon
 const normalizeSpecKey = (rawKey) => {
     const k = rawKey.toLowerCase().trim();
-    if (k.includes('core') || k.includes('construction')) return 'Construction / Core';
-    if (k.includes('pad') || k.includes('cushion') || k.includes('underlayment')) return 'Attached Pad';
-    if (k.includes('style') || k.includes('pattern') || k.includes('visual')) return 'Style Type';
-    if (k.includes('wear layer') || k.includes('wearlayer')) return 'Wear Layer';
-    if (k.includes('thickness') && !k.includes('wear')) return 'Thickness'; 
-    if (k.includes('waterproof') || k.includes('water resistance')) return 'Waterproof';
-    if (k.includes('weight')) return 'Face Weight';
-    if (k.includes('fiber') || k.includes('yarn') || k.includes('material')) return 'Fiber Type';
-    if (k.includes('species')) return 'Species';
+    if (k === 'core' || k === 'construction' || k === 'core material' || k === 'core type') return 'Construction / Core';
+    if (k === 'pad' || k === 'cushion' || k === 'underlayment' || k === 'attached pad') return 'Attached Pad';
+    if (k === 'style' || k === 'pattern' || k === 'style type') return 'Style Type';
+    if (k === 'wearlayer' || k === 'wear layer') return 'Wear Layer';
+    if (k === 'overall thickness' || k === 'total thickness' || k === 'thickness') return 'Thickness';
+    if (k === 'waterproof' || k === 'water resistance') return 'Waterproof';
+    if (k === 'face weight' || k === 'ounce weight' || k === 'fiber weight' || k === 'weight' || k === 'oz weight') return 'Face Weight';
+    if (k === 'fiber' || k === 'fiber type' || k === 'yarn' || k === 'material') return 'Fiber Type';
     return rawKey.trim();
 };
 
@@ -121,19 +120,6 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
             if (num >= 50 && num < 60) return "50 - 60 oz";
             if (num >= 60) return "60+ oz";
         }
-    }
-
-    if (key.toLowerCase() === "species") {
-        if (lowerVal.includes("oak")) return "Oak";
-        if (lowerVal.includes("hickory") || lowerVal.includes("pecan")) return "Hickory";
-        if (lowerVal.includes("maple")) return "Maple";
-        if (lowerVal.includes("pine")) return "Pine";
-        if (lowerVal.includes("walnut")) return "Walnut";
-        if (lowerVal.includes("chestnut")) return "Chestnut";
-        if (lowerVal.includes("elm")) return "Elm";
-        if (lowerVal.includes("acacia")) return "Acacia";
-        if (lowerVal.includes("birch")) return "Birch";
-        return val;
     }
 
     return val;
@@ -432,7 +418,6 @@ function CategoryViewerContent({ initialCategory }) {
           if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
       }
   }, [searchParams, user]); // CRITICAL FIX: Updated dependency array to listen for the user!
-  
   // NEW: Check for an active curation session
   useEffect(() => {
       if (typeof window !== 'undefined') {
@@ -444,7 +429,6 @@ function CategoryViewerContent({ initialCategory }) {
           }
       }
   }, []);
-  
   useEffect(() => {
     let isMounted = true;
     const initAuth = async () => {
@@ -527,10 +511,10 @@ function CategoryViewerContent({ initialCategory }) {
           };
           
           if (data.category === 'Luxury Vinyl (LVP)') {
-              // 1. Purge unwanted DB tags (Nuke Waterproof AND old Species data to force a clean rebuild)
+              // 1. Purge unwanted DB tags (Remove Waterproof entirely, and strip old Species to rebuild from colors)
               existingSpecs = existingSpecs.filter(s => {
                   const k = s.toLowerCase();
-                  return !k.includes('waterproof') && !k.includes('species');
+                  return !k.startsWith('waterproof') && !k.startsWith('species');
               });
 
               // 2. Attached Pad
@@ -548,18 +532,15 @@ function CategoryViewerContent({ initialCategory }) {
                   }
               }
 
-              // 4. Species Extraction (Forced Rebuild from Names, Desc, and Colors)
-              const searchNet = `${data.displayTitle} ${fullDesc} ${(data.colors || []).map(c => c.name || '').join(' ')}`.toLowerCase();
-              
-              if (searchNet.includes('oak')) existingSpecs.push('Species: Oak');
-              else if (searchNet.includes('hickory') || searchNet.includes('pecan')) existingSpecs.push('Species: Hickory');
-              else if (searchNet.includes('maple')) existingSpecs.push('Species: Maple');
-              else if (searchNet.includes('pine')) existingSpecs.push('Species: Pine');
-              else if (searchNet.includes('walnut')) existingSpecs.push('Species: Walnut');
-              else if (searchNet.includes('chestnut')) existingSpecs.push('Species: Chestnut');
-              else if (searchNet.includes('elm')) existingSpecs.push('Species: Elm');
-              else if (searchNet.includes('acacia')) existingSpecs.push('Species: Acacia');
-              else if (searchNet.includes('birch')) existingSpecs.push('Species: Birch');
+              // 4. Species Extraction (Strictly from Color Names)
+              const allColors = (data.colors || []).map(c => (c.name || '').toLowerCase()).join(' ');
+              if (allColors.includes('oak')) existingSpecs.push('Species: Oak');
+              else if (allColors.includes('hickory')) existingSpecs.push('Species: Hickory');
+              else if (allColors.includes('maple')) existingSpecs.push('Species: Maple');
+              else if (allColors.includes('pine')) existingSpecs.push('Species: Pine');
+              else if (allColors.includes('walnut')) existingSpecs.push('Species: Walnut');
+              else if (allColors.includes('chestnut')) existingSpecs.push('Species: Chestnut');
+              else if (allColors.includes('elm')) existingSpecs.push('Species: Elm');
 
               // 5. Visual / Style Type
               if (!hasSpec('Style Type')) {
@@ -569,7 +550,8 @@ function CategoryViewerContent({ initialCategory }) {
                        existingSpecs.push('Style Type: Wood Visual');
                   }
               }
-          } else if (data.category === 'Hardwood') {
+          }
+           else if (data.category === 'Hardwood') {
               if (!hasSpec('Construction / Core')) {
                   if (fullDesc.includes('solid') || data.displayTitle.toLowerCase().includes('solid')) {
                       existingSpecs.push('Construction / Core: Solid');
@@ -992,7 +974,7 @@ function CategoryViewerContent({ initialCategory }) {
           </button>
       )}
 
-      {/* NEW: ACTIVE CURATION SESSION BANNER */}
+{/* NEW: ACTIVE CURATION SESSION BANNER */}
       {activeBoardId && (
           <div className="bg-gray-900 text-white px-6 py-3 sticky top-[80px] z-30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl border-b-4 border-x-4 border-t-0 border-gold w-[95%] md:w-1/2 mx-auto rounded-b-2xl">
               <div className="flex items-center gap-3">
@@ -1021,7 +1003,6 @@ function CategoryViewerContent({ initialCategory }) {
               </button>
           </div>
       )}
-      
       <header 
         className="relative min-h-[250px] md:min-h-[320px] py-12 flex items-center justify-center text-center text-white transition-all duration-500"
         style={{ 
