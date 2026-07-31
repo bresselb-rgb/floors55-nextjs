@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 export default function Home() {
   const [isClientMode, setIsClientMode] = useState(false);
@@ -24,13 +23,10 @@ export default function Home() {
       <header className="relative min-h-[250px] md:min-h-[320px] py-8 flex items-center justify-center text-center text-white overflow-hidden">
         {/* Next.js Optimized Background Image */}
         <div className="absolute inset-0 z-0">
-            <Image 
+            <img 
                 src={getFbUrl('images/heros/main-hero.jpg')} 
                 alt="Floors 55 Premium Flooring" 
-                fill 
-                priority 
-                sizes="100vw"
-                className="object-cover object-center" 
+                className="w-full h-full object-cover object-center" 
             />
             <div className="absolute inset-0 bg-black/60"></div>
         </div>
@@ -60,7 +56,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
                 <Link href="/category/luxury-vinyl" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/lvp.jpg')} alt="Luxury Vinyl" fill sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw" className="object-cover" />
+                    <img src={getFbUrl('images/heros/lvp.jpg')} alt="Luxury Vinyl" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h3 className="text-white text-3xl font-bold mb-1">Luxury Vinyl</h3>
@@ -70,7 +66,7 @@ export default function Home() {
                 </Link>
                 
                 <Link href="/category/carpet" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/carpet.jpg')} alt="Designer Carpet" fill sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw" className="object-cover" />
+                    <img src={getFbUrl('images/heros/carpet.jpg')} alt="Designer Carpet" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h3 className="text-white text-3xl font-bold mb-1">Designer Carpet</h3>
@@ -80,7 +76,7 @@ export default function Home() {
                 </Link>
 
                 <Link href="/category/laminate" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/laminate.jpg')} alt="Premium Laminate" fill sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw" className="object-cover" />
+                    <img src={getFbUrl('images/heros/laminate.jpg')} alt="Premium Laminate" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h3 className="text-white text-3xl font-bold mb-1">Premium Laminate</h3>
@@ -90,7 +86,7 @@ export default function Home() {
                 </Link>
 
                 <Link href="/category/hardwood" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/hardwood.jpg')} alt="Hardwood" fill sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw" className="object-cover" />
+                    <img src={getFbUrl('images/heros/hardwood.jpg')} alt="Hardwood" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h3 className="text-white text-3xl font-bold mb-1">Hardwood</h3>
@@ -101,7 +97,7 @@ export default function Home() {
 
                 {/* NEW TILE CATEGORY */}
                 <Link href="/category/tile" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/tile-hero.jpg')} alt="Premium Tile" fill sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw" className="object-cover" />
+                    <img src={getFbUrl('images/heros/tile-hero.jpg')} alt="Premium Tile" className="absolute inset-0 w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h3 className="text-white text-3xl font-bold mb-1">Premium Tile</h3>
@@ -119,12 +115,10 @@ export default function Home() {
           <section className="py-24 relative bg-gray-900 overflow-hidden">
             {/* Next.js Optimized Background Image */}
             <div className="absolute inset-0 z-0">
-                <Image 
+                <img 
                     src={getFbUrl('images/heros/trade-bg.jpg')} 
                     alt="Trade Professional Flooring" 
-                    fill 
-                    sizes="100vw"
-                    className="object-cover object-center" 
+                    className="w-full h-full object-cover object-center" 
                 />
                 <div className="absolute inset-0 bg-black/75"></div>
             </div>
@@ -167,12 +161,10 @@ export default function Home() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
                 <div className="order-2 md:order-1 rounded-3xl h-[400px] overflow-hidden shadow-2xl relative group border border-gray-800">
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-500 z-10 pointer-events-none"></div>
-                    <Image 
+                    <img 
                         src={getFbUrl('images/heros/samples.jpg')} 
                         alt="Flooring Samples" 
-                        fill 
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                        className="object-cover transition-transform duration-700 group-hover:scale-105" 
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                     />
                 </div>
                 <div className="order-1 md:order-2">
