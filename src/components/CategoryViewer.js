@@ -143,7 +143,7 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
             // Must check 'cut and loop' first so it doesn't get prematurely grabbed by just 'cut' or 'loop'
             if (lowerVal.includes("cut and loop") || lowerVal.includes("cut & loop") || lowerVal.includes("pattern")) return "Cut and Loop";
             if (lowerVal.includes("loop") || lowerVal.includes("berber/Loop")) return "Loop";
-            if (lowerVal.includes("cut") || lowerVal.includes("texture") || lowerVal.includes("plush") || lowerVal.includes("frieze") || lowerVal.includes("twist")) return "Cut Pile";
+            if (lowerVal.includes("cut") || lowerVal.includes("texture") || lowerVal.includes("plush") || lowerVal.includes("frieze") || lowerVal.includes("tonal") || lowerVal.includes("twist")) return "Cut Pile";
             
             // Return "None" to instantly vaporize random dimensions and style numbers!
             return "None"; 
