@@ -62,7 +62,7 @@ export default function Home() {
                     <Image src={getFbUrl('images/heros/lvp.jpg')} alt="Luxury Vinyl" fill className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
-                        <h3 className="text-white text-3xl font-bold mb-1">Luxury Vinyl</h3>
+                        <h2 className="text-white text-3xl font-bold mb-1">Luxury Vinyl</h2>
                         <p className="text-gray-300 text-sm mb-6">100% Waterproof & Durable</p>
                         <span className="inline-block bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold uppercase px-6 py-3 rounded-full group-hover:bg-gold transition-all">Shop LVP</span>
                     </div>
@@ -72,7 +72,7 @@ export default function Home() {
                     <Image src={getFbUrl('images/heros/carpet.jpg')} alt="Designer Carpet" fill className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
-                        <h3 className="text-white text-3xl font-bold mb-1">Designer Carpet</h3>
+                        <h2 className="text-white text-3xl font-bold mb-1">Designer Carpet</h2>
                         <p className="text-gray-300 text-sm mb-6">Plush Comfort & Warmth</p>
                         <span className="inline-block bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold uppercase px-6 py-3 rounded-full group-hover:bg-gold transition-all">Shop Carpet</span>
                     </div>
@@ -82,7 +82,7 @@ export default function Home() {
                     <Image src={getFbUrl('images/heros/laminate.jpg')} alt="Premium Laminate" fill className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
-                        <h3 className="text-white text-3xl font-bold mb-1">Premium Laminate</h3>
+                        <h2 className="text-white text-3xl font-bold mb-1">Premium Laminate</h2>
                         <p className="text-gray-300 text-sm mb-6">Scratch & Dent Resistant</p>
                         <span className="inline-block bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold uppercase px-6 py-3 rounded-full group-hover:bg-gold transition-all">Shop Laminate</span>
                     </div>
@@ -92,7 +92,7 @@ export default function Home() {
                     <Image src={getFbUrl('images/heros/hardwood.jpg')} alt="Hardwood" fill className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
-                        <h3 className="text-white text-3xl font-bold mb-1">Hardwood</h3>
+                        <h2 className="text-white text-3xl font-bold mb-1">Hardwood</h2>
                         <p className="text-gray-300 text-sm mb-6">Timeless Natural Beauty</p>
                         <span className="inline-block bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold uppercase px-6 py-3 rounded-full group-hover:bg-gold transition-all">Shop Hardwood</span>
                     </div>
@@ -103,7 +103,7 @@ export default function Home() {
                     <Image src={getFbUrl('images/heros/tile-hero.jpg')} alt="Premium Tile" fill className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
-                        <h3 className="text-white text-3xl font-bold mb-1">Premium Tile</h3>
+                        <h2 className="text-white text-3xl font-bold mb-1">Premium Tile</h2>
                         <p className="text-gray-300 text-sm mb-6">Elegant & Waterproof</p>
                         <span className="inline-block bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold uppercase px-6 py-3 rounded-full group-hover:bg-gold transition-all">Shop Tile</span>
                     </div>

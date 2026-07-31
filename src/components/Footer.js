@@ -70,11 +70,11 @@ export default function Footer() {
                         </>
                     )}
                 </div>
-                <p className="text-sm mt-4 md:mt-0 italic font-light opacity-60" style={{ color: clientBrand ? brandText : '#6b7280' }}>
+                <p className="text-sm mt-4 md:mt-0 italic font-light" style={{ color: clientBrand ? brandText : '#9ca3af' }}>
                     {clientBrand ? "Premium Flooring Catalog" : "The Northwest's Choice in Floor Fashions Since 2008"}
                 </p>
             </div>
-            <p className="text-xs uppercase tracking-widest font-bold opacity-60" style={{ color: clientBrand ? brandText : '#4b5563' }}>
+            <p className="text-xs uppercase tracking-widest font-bold" style={{ color: clientBrand ? brandText : '#9ca3af' }}>
                 © {new Date().getFullYear()} {clientBrand || "Floors 55"}. All Rights Reserved.
             </p>
         </div>
