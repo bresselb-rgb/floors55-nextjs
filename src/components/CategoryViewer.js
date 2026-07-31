@@ -43,12 +43,17 @@ try {
 }
 
 // Standardizes the labels on the left side of the colon
-const normalizeSpecKey = (rawKey) => {
+const normalizeSpecKey = (rawKey, category = '') => {
     const k = rawKey.toLowerCase().trim();
     if (k.includes('core') || k.includes('construction')) return 'Construction / Core';
     if (k.includes('pad') || k.includes('cushion') || k.includes('underlayment')) return 'Attached Pad';
     if (k.includes('style') || k.includes('pattern') || k.includes('visual')) return 'Style Type';
+    
+    // Force Laminate wear layers to group under AC Rating
+    if (category === 'Laminate' && (k.includes('wear') || k.includes('ac rating') || k.includes('ac class'))) return 'AC Rating';
+    
     if (k.includes('wear layer') || k.includes('wearlayer') || k.includes('veneer')) return 'Wear Layer';
+    if (k.includes('ac rating') || k.includes('ac class')) return 'AC Rating';
     if (k.includes('thickness') && !k.includes('wear')) return 'Thickness'; 
     if (k.includes('waterproof') || k.includes('water resistance')) return 'Waterproof';
     if (k.includes('weight')) return 'Face Weight';
@@ -104,8 +109,21 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
             }
             return val;
         }
+
+        // EXCLUSIVELY for Laminate mm bucketing
+        if (category === 'Laminate') {
+            const match = val.match(/[\d.]+/);
+            if (match) {
+                const num = parseFloat(match[0]);
+                if (num < 8) return "< 8mm";
+                if (num >= 8 && num < 10) return "8mm";
+                if (num >= 10 && num < 12) return "10mm";
+                if (num >= 12) return "12mm+";
+            }
+            return val;
+        }
         
-        // LVP, Laminate, Tile fallback (Standard mm bucketing)
+        // LVP, Tile fallback (Standard mm bucketing)
         const match = val.match(/[\d.]+/);
         if (match) {
             const num = parseFloat(match[0]);
@@ -153,7 +171,8 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
         if (lowerVal.includes("tile") || lowerVal.includes("stone") || lowerVal.includes("slate") || lowerVal.includes("concrete") || lowerVal.includes("marble")) return "Tile Visual";
         return "Wood Visual"; 
     }
-    if (key.toLowerCase() === "wear layer") {
+    
+    if (key.toLowerCase() === "wear layer" || key.toLowerCase() === "ac rating") {
          // EXCLUSIVELY for Hardwood mm bucketing
          if (category === 'Hardwood') {
              const match = val.match(/([\d.]+)/);
@@ -165,9 +184,24 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
              }
          }
          
-         // LVP / Laminate fallback (Defaults back to standard mil processing)
-         const match = val.match(/(\d+)/);
-         if (match) return `${match[1]} mil`;
+         // EXCLUSIVELY for Laminate AC Ratings
+         if (category === 'Laminate') {
+             if (lowerVal.includes("ac3") || lowerVal.includes("ac 3") || lowerVal.includes("ac-3")) return "AC3";
+             if (lowerVal.includes("ac4") || lowerVal.includes("ac 4") || lowerVal.includes("ac-4")) return "AC4";
+             if (lowerVal.includes("ac5") || lowerVal.includes("ac 5") || lowerVal.includes("ac-5")) return "AC5";
+             // Fallback if they just type the number
+             if (val.includes("3")) return "AC3";
+             if (val.includes("4")) return "AC4";
+             if (val.includes("5")) return "AC5";
+             return "None"; // Hide if it doesn't match an AC rating
+         }
+         
+         // LVP fallback (Defaults back to standard mil processing)
+         if (key.toLowerCase() === "wear layer") {
+             const match = val.match(/(\d+)/);
+             if (match) return `${match[1]} mil`;
+         }
+         return val;
     }
     
     if (key.toLowerCase() === "waterproof") {
@@ -216,6 +250,7 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
 
 const THICKNESS_ORDER = { 
     "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4,
+    "< 8mm": 4.1, "8mm": 4.2, "10mm": 4.3, "12mm+": 4.4,
     "3/8\"": 5, "7/16\"": 6, "1/2\"": 7, "9/16\"": 8, "5/8\"": 9, "3/4\"+": 10
 };
 const FACE_WEIGHT_ORDER = { 
@@ -609,7 +644,7 @@ function CategoryViewerContent({ initialCategory }) {
           const hasSpec = (targetKey) => {
               return existingSpecs.some(s => {
                   const parts = s.split(':');
-                  return parts.length > 1 && normalizeSpecKey(parts[0]) === targetKey;
+                  return parts.length > 1 && normalizeSpecKey(parts[0], data.category) === targetKey;
               });
           };
           
@@ -784,6 +819,7 @@ function CategoryViewerContent({ initialCategory }) {
           "Construction / Core",
           "Thickness",
           "Wear Layer",
+          "AC Rating",
           "Attached Pad",
           //"Species",
           "Style Type",
@@ -796,7 +832,8 @@ function CategoryViewerContent({ initialCategory }) {
               s !== "Construction / Core" && 
               s !== "Thickness" && 
               s !== "Waterproof" && 
-              s !== "Wear Layer"
+              s !== "Wear Layer" &&
+              s !== "AC Rating"
           );
       } else if (['Luxury Vinyl (LVP)', 'Hardwood', 'Laminate', 'Tile'].includes(activeCategory)) {
           // Strictly eliminate carpet specs from hard surface categories
@@ -804,6 +841,12 @@ function CategoryViewerContent({ initialCategory }) {
               s !== "Face Weight" && 
               s !== "Fiber Type"
           );
+          if (activeCategory !== 'Laminate') {
+              TARGET_SPECS = TARGET_SPECS.filter(s => s !== "AC Rating");
+          } else {
+              // Laminate category: remove generic Wear Layer to only show AC Rating
+              TARGET_SPECS = TARGET_SPECS.filter(s => s !== "Wear Layer");
+          }
       }
       
       const specMap = {}; 
@@ -821,7 +864,7 @@ function CategoryViewerContent({ initialCategory }) {
                   const rawKey = parts[0].trim();
                   const val = parts.slice(1).join(':').trim();
                   
-                  const key = normalizeSpecKey(rawKey);
+                  const key = normalizeSpecKey(rawKey, p.category);
                   const matchedSpec = TARGET_SPECS.find(t => t.toLowerCase() === key.toLowerCase());
                   
                   if (matchedSpec && val.length > 0 && val.length < 40) {
@@ -948,7 +991,7 @@ function CategoryViewerContent({ initialCategory }) {
                         const rawKey = parts[0].trim();
                         const pVal = parts.slice(1).join(':').trim();
                         
-                        const pKey = normalizeSpecKey(rawKey);
+                        const pKey = normalizeSpecKey(rawKey, p.category);
                         
                         if (pKey.toLowerCase() === key.toLowerCase()) {
                             const normalizedPVal = normalizeSpecValue(key, pVal, p.category);

@@ -45,14 +45,15 @@ try {
 // Standardizes the labels on the left side of the colon
 const normalizeSpecKey = (rawKey) => {
     const k = rawKey.toLowerCase().trim();
-    if (k === 'core' || k === 'construction' || k === 'core material' || k === 'core type') return 'Construction / Core';
-    if (k === 'pad' || k === 'cushion' || k === 'underlayment' || k === 'attached pad') return 'Attached Pad';
-    if (k === 'style' || k === 'pattern' || k === 'style type') return 'Style Type';
-    if (k === 'wearlayer' || k === 'wear layer') return 'Wear Layer';
-    if (k === 'overall thickness' || k === 'total thickness' || k === 'thickness') return 'Thickness';
-    if (k === 'waterproof' || k === 'water resistance') return 'Waterproof';
-    if (k === 'face weight' || k === 'ounce weight' || k === 'fiber weight' || k === 'weight' || k === 'oz weight') return 'Face Weight';
-    if (k === 'fiber' || k === 'fiber type' || k === 'yarn' || k === 'material') return 'Fiber Type';
+    if (k.includes('core') || k.includes('construction')) return 'Construction / Core';
+    if (k.includes('pad') || k.includes('cushion') || k.includes('underlayment')) return 'Attached Pad';
+    if (k.includes('style') || k.includes('pattern') || k.includes('visual')) return 'Style Type';
+    if (k.includes('wear layer') || k.includes('wearlayer') || k.includes('veneer')) return 'Wear Layer';
+    if (k.includes('thickness') && !k.includes('wear')) return 'Thickness'; 
+    if (k.includes('waterproof') || k.includes('water resistance')) return 'Waterproof';
+    if (k.includes('weight')) return 'Face Weight';
+    if (k.includes('fiber') || k.includes('yarn') || k.includes('material')) return 'Fiber Type';
+    if (k.includes('species')) return 'Species';
     return rawKey.trim();
 };
 
@@ -62,6 +63,49 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     const lowerVal = val.toLowerCase();
 
     if (key.toLowerCase() === "thickness") {
+        // EXCLUSIVELY for Hardwood inch bucketing
+        if (category === 'Hardwood') {
+            let num = 0;
+            
+            if (val.includes("1/4")) num = 0.25;
+            else if (val.includes("5/16")) num = 0.3125;
+            else if (val.includes("3/8")) num = 0.375;
+            else if (val.includes("7/16")) num = 0.4375;
+            else if (val.includes("1/2")) num = 0.5;
+            else if (val.includes("9/16")) num = 0.5625;
+            else if (val.includes("5/8")) num = 0.625;
+            else if (val.includes("3/4")) num = 0.75;
+            else {
+                const inchMatch = val.match(/([\d.]+)\s*(?:"|''|in|inch)/i);
+                if (inchMatch) {
+                    num = parseFloat(inchMatch[1]);
+                } else {
+                    const mmMatch = val.match(/([\d.]+)\s*mm/i);
+                    if (mmMatch) {
+                        num = parseFloat(mmMatch[1]) / 25.4;
+                    } else {
+                        const match = val.match(/([\d.]+)/);
+                        if (match) {
+                            num = parseFloat(match[1]);
+                            if (num > 2) num = num / 25.4;
+                        }
+                    }
+                }
+            }
+
+            // Strict Hardwood Buckets
+            if (num > 0) {
+                if (num < 0.40625) return "3/8\"";
+                if (num >= 0.40625 && num < 0.46875) return "7/16\"";
+                if (num >= 0.46875 && num < 0.53125) return "1/2\"";
+                if (num >= 0.53125 && num < 0.59375) return "9/16\"";
+                if (num >= 0.59375 && num < 0.6875) return "5/8\"";
+                return "3/4\"+";
+            }
+            return val;
+        }
+        
+        // LVP, Laminate, Tile fallback (Standard mm bucketing)
         const match = val.match(/[\d.]+/);
         if (match) {
             const num = parseFloat(match[0]);
@@ -73,6 +117,12 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     }
 
     if (key.toLowerCase() === "construction / core") {
+        // Hardwood strict bucketing (Must be checked before SPC to prevent 'solid' hijack)
+        if (category === 'Hardwood') {
+            if (lowerVal.includes("solid")) return "Solid";
+            return "Engineered"; 
+        }
+
         // Explicitly catch COREtec's patent phrasing and WPC
         if (lowerVal.includes("wpc") || lowerVal.includes("wood foamed") || lowerVal.includes("wood plastic")) return "WPC";
         if (lowerVal.includes("spc") || lowerVal.includes("rigid") || lowerVal.includes("solid") || lowerVal.includes("stone")) return "SPC";
@@ -87,12 +137,35 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     }
 
     if (key.toLowerCase() === "style type" || key.toLowerCase() === "visual") {
-        // Hardcode into two distinct visual buckets
+        
+        // 1. EXCLUSIVELY for Carpet style bucketing
+        if (category === 'Carpet') {
+            // Must check 'cut and loop' first so it doesn't get prematurely grabbed by just 'cut' or 'loop'
+            if (lowerVal.includes("cut and loop") || lowerVal.includes("cut & loop") || lowerVal.includes("pattern")) return "Cut and Loop";
+            if (lowerVal.includes("loop") || lowerVal.includes("berber/Loop")) return "Loop";
+            if (lowerVal.includes("cut") || lowerVal.includes("texture") || lowerVal.includes("plush") || lowerVal.includes("frieze") || lowerVal.includes("tonal") || lowerVal.includes("twist")) return "Cut Pile";
+            
+            // Return "None" to instantly vaporize random dimensions and style numbers!
+            return "None"; 
+        }
+
+        // 2. Hard Surface visual bucketing (LVP, Laminate, Hardwood, Tile)
         if (lowerVal.includes("tile") || lowerVal.includes("stone") || lowerVal.includes("slate") || lowerVal.includes("concrete") || lowerVal.includes("marble")) return "Tile Visual";
         return "Wood Visual"; 
     }
-
     if (key.toLowerCase() === "wear layer") {
+         // EXCLUSIVELY for Hardwood mm bucketing
+         if (category === 'Hardwood') {
+             const match = val.match(/([\d.]+)/);
+             if (match) {
+                 const num = parseFloat(match[1]);
+                 if (num < 2) return "1mm - 2mm";
+                 if (num >= 2 && num < 3) return "2mm - 3mm";
+                 return "3mm+";
+             }
+         }
+         
+         // LVP / Laminate fallback (Defaults back to standard mil processing)
          const match = val.match(/(\d+)/);
          if (match) return `${match[1]} mil`;
     }
@@ -114,19 +187,47 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
         const match = val.match(/[\d.]+/);
         if (match) {
             const num = parseFloat(match[0]);
-            if (num < 30) return "< 30 oz";
-            if (num >= 30 && num < 40) return "30 - 40 oz";
-            if (num >= 40 && num < 50) return "40 - 50 oz";
-            if (num >= 50 && num < 60) return "50 - 60 oz";
-            if (num >= 60) return "60+ oz";
+            if (num < 15) return "< 15 oz";
+            if (num >= 15 && num < 20) return "15 - 20 oz";
+            if (num >= 20 && num < 25) return "20 - 25 oz";
+            if (num >= 25 && num < 35) return "25 - 35 oz";
+            if (num >= 35 && num < 45) return "35 - 45 oz";
+            if (num >= 45 && num < 55) return "45 - 55 oz";
+            if (num >= 55 && num < 65) return "55 - 65 oz";
+            if (num >= 65) return "65+ oz";
         }
+    }
+
+    if (key.toLowerCase() === "species") {
+        if (lowerVal.includes("oak")) return "Oak";
+        if (lowerVal.includes("hickory") || lowerVal.includes("pecan")) return "Hickory";
+        if (lowerVal.includes("maple")) return "Maple";
+        if (lowerVal.includes("pine")) return "Pine";
+        if (lowerVal.includes("walnut")) return "Walnut";
+        if (lowerVal.includes("chestnut")) return "Chestnut";
+        if (lowerVal.includes("elm")) return "Elm";
+        if (lowerVal.includes("acacia")) return "Acacia";
+        if (lowerVal.includes("birch")) return "Birch";
+        return val;
     }
 
     return val;
 };
 
-const THICKNESS_ORDER = { "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4 };
-const FACE_WEIGHT_ORDER = { "< 30 oz": 1, "30 - 40 oz": 2, "40 - 50 oz": 3, "50 - 60 oz": 4, "60+ oz": 5 };
+const THICKNESS_ORDER = { 
+    "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4,
+    "3/8\"": 5, "7/16\"": 6, "1/2\"": 7, "9/16\"": 8, "5/8\"": 9, "3/4\"+": 10
+};
+const FACE_WEIGHT_ORDER = { 
+    "< 15 oz": 1, 
+    "15 - 20 oz": 2, 
+    "20 - 25 oz": 3, 
+    "25 - 35 oz": 4, 
+    "35 - 45 oz": 5, 
+    "45 - 55 oz": 6, 
+    "55 - 65 oz": 7, 
+    "65+ oz": 8 
+};
 
 // Custom hook to debounce high-frequency state changes
 function useDebounce(value, delay) {
@@ -418,6 +519,7 @@ function CategoryViewerContent({ initialCategory }) {
           if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
       }
   }, [searchParams, user]); // CRITICAL FIX: Updated dependency array to listen for the user!
+  
   // NEW: Check for an active curation session
   useEffect(() => {
       if (typeof window !== 'undefined') {
@@ -429,6 +531,7 @@ function CategoryViewerContent({ initialCategory }) {
           }
       }
   }, []);
+  
   useEffect(() => {
     let isMounted = true;
     const initAuth = async () => {
@@ -511,10 +614,10 @@ function CategoryViewerContent({ initialCategory }) {
           };
           
           if (data.category === 'Luxury Vinyl (LVP)') {
-              // 1. Purge unwanted DB tags (Remove Waterproof entirely, and strip old Species to rebuild from colors)
+              // 1. Purge unwanted DB tags (Nuke Waterproof AND old Species data to force a clean rebuild)
               existingSpecs = existingSpecs.filter(s => {
                   const k = s.toLowerCase();
-                  return !k.startsWith('waterproof') && !k.startsWith('species');
+                  return !k.includes('waterproof') && !k.includes('species');
               });
 
               // 2. Attached Pad
@@ -532,26 +635,52 @@ function CategoryViewerContent({ initialCategory }) {
                   }
               }
 
-              // 4. Species Extraction (Strictly from Color Names)
-              const allColors = (data.colors || []).map(c => (c.name || '').toLowerCase()).join(' ');
-              if (allColors.includes('oak')) existingSpecs.push('Species: Oak');
-              else if (allColors.includes('hickory')) existingSpecs.push('Species: Hickory');
-              else if (allColors.includes('maple')) existingSpecs.push('Species: Maple');
-              else if (allColors.includes('pine')) existingSpecs.push('Species: Pine');
-              else if (allColors.includes('walnut')) existingSpecs.push('Species: Walnut');
-              else if (allColors.includes('chestnut')) existingSpecs.push('Species: Chestnut');
-              else if (allColors.includes('elm')) existingSpecs.push('Species: Elm');
+              // 4. Species Extraction (Forced Rebuild from Names, Desc, and Colors)
+              const searchNet = `${data.displayTitle} ${fullDesc} ${(data.colors || []).map(c => c.name || '').join(' ')}`.toLowerCase();
+              
+              if (searchNet.includes('oak')) existingSpecs.push('Species: Oak');
+              else if (searchNet.includes('hickory') || searchNet.includes('pecan')) existingSpecs.push('Species: Hickory');
+              else if (searchNet.includes('maple')) existingSpecs.push('Species: Maple');
+              else if (searchNet.includes('pine')) existingSpecs.push('Species: Pine');
+              else if (searchNet.includes('walnut')) existingSpecs.push('Species: Walnut');
+              else if (searchNet.includes('chestnut')) existingSpecs.push('Species: Chestnut');
+              else if (searchNet.includes('elm')) existingSpecs.push('Species: Elm');
+              else if (searchNet.includes('acacia')) existingSpecs.push('Species: Acacia');
+              else if (searchNet.includes('birch')) existingSpecs.push('Species: Birch');
 
               // 5. Visual / Style Type
               if (!hasSpec('Style Type')) {
-                  if (fullDesc.includes('tile') || fullDesc.includes('stone') || fullDesc.includes('slate') || fullDesc.includes('marble')) {
+                  let widthValue = 0;
+                  
+                  // 1. Try to find an explicit "Width" or "Wide" spec
+                  const widthSpec = existingSpecs.find(s => s.toLowerCase().includes('width') || s.toLowerCase().includes('wide'));
+                  if (widthSpec) {
+                      const match = widthSpec.match(/([\d.]+)/);
+                      if (match) widthValue = parseFloat(match[1]);
+                  }
+                  
+                  // 2. If no width found, aggressively parse Dimensions anywhere in the specs or description
+                  // This easily jumps over quotes and words: matches 12x24, 12" x 24", 12" Wide x 24", etc.
+                  if (widthValue === 0) {
+                      const searchTarget = existingSpecs.join(' ') + ' ' + fullDesc;
+                      const dimMatch = searchTarget.match(/([\d.]+)\s*(?:"|''|in|inch|inches)?\s*(?:wide|w)?\s*(?:x|\*|by)\s*[\d.]+/);
+                      if (dimMatch) widthValue = parseFloat(dimMatch[1]);
+                  }
+
+                  // Safeguard: If the number is huge (e.g., 300mm), mathematically convert it back to inches
+                  if (widthValue > 50) {
+                      widthValue = widthValue / 25.4; 
+                  }
+
+                  // Only LVP products strictly wider than 11.5" become Tile Visuals
+                  if (widthValue > 11.5) {
                        existingSpecs.push('Style Type: Tile Visual');
                   } else {
                        existingSpecs.push('Style Type: Wood Visual');
                   }
               }
-          }
-           else if (data.category === 'Hardwood') {
+
+          } else if (data.category === 'Hardwood') {
               if (!hasSpec('Construction / Core')) {
                   if (fullDesc.includes('solid') || data.displayTitle.toLowerCase().includes('solid')) {
                       existingSpecs.push('Construction / Core: Solid');
@@ -656,7 +785,7 @@ function CategoryViewerContent({ initialCategory }) {
           "Thickness",
           "Wear Layer",
           "Attached Pad",
-          "Species",
+          //"Species",
           "Style Type",
           "Fiber Type",
           "Face Weight"
@@ -668,6 +797,12 @@ function CategoryViewerContent({ initialCategory }) {
               s !== "Thickness" && 
               s !== "Waterproof" && 
               s !== "Wear Layer"
+          );
+      } else if (['Luxury Vinyl (LVP)', 'Hardwood', 'Laminate', 'Tile'].includes(activeCategory)) {
+          // Strictly eliminate carpet specs from hard surface categories
+          TARGET_SPECS = TARGET_SPECS.filter(s => 
+              s !== "Face Weight" && 
+              s !== "Fiber Type"
           );
       }
       
@@ -974,7 +1109,7 @@ function CategoryViewerContent({ initialCategory }) {
           </button>
       )}
 
-{/* NEW: ACTIVE CURATION SESSION BANNER */}
+      {/* NEW: ACTIVE CURATION SESSION BANNER */}
       {activeBoardId && (
           <div className="bg-gray-900 text-white px-6 py-3 sticky top-[80px] z-30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl border-b-4 border-x-4 border-t-0 border-gold w-[95%] md:w-1/2 mx-auto rounded-b-2xl">
               <div className="flex items-center gap-3">
@@ -1003,6 +1138,7 @@ function CategoryViewerContent({ initialCategory }) {
               </button>
           </div>
       )}
+      
       <header 
         className="relative min-h-[250px] md:min-h-[320px] py-12 flex items-center justify-center text-center text-white transition-all duration-500"
         style={{ 
@@ -1024,7 +1160,7 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Search Catalog</label>
                     <div className="relative">
-                        <input type="text" value={searchQueryInput} onChange={(e) => setSearchQueryInput(e.target.value)} placeholder="Product, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
+                        <input type="text" value={searchQueryInput} onChange={(e) => setSearchQueryInput(e.target.value)} placeholder="Product, Species, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
                         <span className="absolute right-3 top-3 text-gray-400 text-xs">🔍</span>
                     </div>
                 </div>
@@ -1321,7 +1457,7 @@ function CategoryViewerContent({ initialCategory }) {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Search Catalog</label>
                     <div className="relative">
-                        <input type="text" value={searchQueryInput} onChange={(e) => setSearchQueryInput(e.target.value)} placeholder="Product, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
+                        <input type="text" value={searchQueryInput} onChange={(e) => setSearchQueryInput(e.target.value)} placeholder="Product, Species, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
                     </div>
                 </div>
 
