@@ -137,11 +137,20 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     }
 
     if (key.toLowerCase() === "style type" || key.toLowerCase() === "visual") {
-        // Hardcode into two distinct visual buckets
+        
+        // 1. EXCLUSIVELY for Carpet style bucketing
+        if (category === 'Carpet') {
+            // Must check 'cut and loop' first so it doesn't get prematurely grabbed by just 'cut' or 'loop'
+            if (lowerVal.includes("cut and loop") || lowerVal.includes("cut & loop") || lowerVal.includes("pattern")) return "Cut and Loop";
+            if (lowerVal.includes("loop") || lowerVal.includes("berber")) return "Loop";
+            if (lowerVal.includes("cut") || lowerVal.includes("texture") || lowerVal.includes("plush") || lowerVal.includes("frieze") || lowerVal.includes("twist")) return "Cut Pile";
+            return val; // Fallback to raw value if it doesn't match anything
+        }
+
+        // 2. Hard Surface visual bucketing (LVP, Laminate, Hardwood, Tile)
         if (lowerVal.includes("tile") || lowerVal.includes("stone") || lowerVal.includes("slate") || lowerVal.includes("concrete") || lowerVal.includes("marble")) return "Tile Visual";
         return "Wood Visual"; 
     }
-
     if (key.toLowerCase() === "wear layer") {
          // EXCLUSIVELY for Hardwood mm bucketing
          if (category === 'Hardwood') {
