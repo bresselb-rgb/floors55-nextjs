@@ -218,7 +218,16 @@ const THICKNESS_ORDER = {
     "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4,
     "3/8\"": 5, "7/16\"": 6, "1/2\"": 7, "9/16\"": 8, "5/8\"": 9, "3/4\"+": 10
 };
-const FACE_WEIGHT_ORDER = { "< 30 oz": 1, "30 - 40 oz": 2, "40 - 50 oz": 3, "50 - 60 oz": 4, "60+ oz": 5 };
+const FACE_WEIGHT_ORDER = { 
+    "< 15 oz": 1, 
+    "15 - 20 oz": 2, 
+    "20 - 25 oz": 3, 
+    "25 - 35 oz": 4, 
+    "35 - 45 oz": 5, 
+    "45 - 55 oz": 6, 
+    "55 - 65 oz": 7, 
+    "65+ oz": 8 
+};
 
 // Custom hook to debounce high-frequency state changes
 function useDebounce(value, delay) {
