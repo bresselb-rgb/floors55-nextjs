@@ -55,7 +55,9 @@ const normalizeSpecKey = (rawKey, category = '') => {
     if (k.includes('wear layer') || k.includes('wearlayer') || k.includes('veneer')) return 'Wear Layer';
     if (k.includes('ac rating') || k.includes('ac class')) return 'AC Rating';
     if (k.includes('thickness') && !k.includes('wear')) return 'Thickness'; 
-    if (k.includes('waterproof') || k.includes('water resistance')) return 'Waterproof';
+    if (k.includes('waterproof') || k.includes('water resistant') || k.includes('water resistance') || k.includes('moisture')) {
+        return category === 'Laminate' ? 'Water Resistant' : 'Waterproof';
+    }
     if (k.includes('weight')) return 'Face Weight';
     if (k.includes('fiber') || k.includes('yarn') || k.includes('material')) return 'Fiber Type';
     if (k.includes('species')) return 'Species';
@@ -204,8 +206,9 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
          return val;
     }
     
-    if (key.toLowerCase() === "waterproof") {
+    if (key.toLowerCase() === "waterproof" || key.toLowerCase() === "water resistant") {
         if (lowerVal.includes("no") || lowerVal === "false") return "None";
+        if (category === 'Laminate') return "Water Resistant";
         return "100% Waterproof";
     }
 
@@ -730,6 +733,23 @@ function CategoryViewerContent({ initialCategory }) {
                   else if (fullDesc.includes('wool')) existingSpecs.push('Fiber Type: Wool');
                   else if (fullDesc.includes('polyester') || fullDesc.includes(' pet ')) existingSpecs.push('Fiber Type: Polyester');
               }
+          } else if (data.category === 'Laminate') {
+              // 1. Aggressively scan description and ALL specs for hidden pad references
+              if (!hasSpec('Attached Pad')) {
+                  const searchNet = `${fullDesc} ${existingSpecs.join(' ')}`.toLowerCase();
+                  if (searchNet.includes('cork')) {
+                      existingSpecs.push('Attached Pad: Attached Cork');
+                  } else if (searchNet.includes('pad') || searchNet.includes('underlayment') || searchNet.includes('cushion')) {
+                      existingSpecs.push('Attached Pad: Attached Pad');
+                  }
+              }
+              
+              // 2. Aggressively scan description for any moisture/water claims if no spec exists
+              if (!hasSpec('Water Resistant')) {
+                  if (fullDesc.includes('waterproof') || fullDesc.includes('water resistant') || fullDesc.includes('moisture resistant') || fullDesc.includes('water proof') || fullDesc.includes('topically water')) {
+                      existingSpecs.push('Water Resistant: Water Resistant');
+                  }
+              }
           } else {
               if (fullDesc.includes('cork') && !hasSpec('Attached Pad')) {
                   existingSpecs.push('Attached Pad: Attached Cork');
@@ -836,18 +856,19 @@ function CategoryViewerContent({ initialCategory }) {
               s !== "AC Rating"
           );
       } else if (['Luxury Vinyl (LVP)', 'Hardwood', 'Laminate', 'Tile'].includes(activeCategory)) {
-          // Strictly eliminate carpet specs from hard surface categories
-          TARGET_SPECS = TARGET_SPECS.filter(s => 
-              s !== "Face Weight" && 
-              s !== "Fiber Type"
-          );
-          if (activeCategory !== 'Laminate') {
-              TARGET_SPECS = TARGET_SPECS.filter(s => s !== "AC Rating");
-          } else {
-              // Laminate category: remove generic Wear Layer to only show AC Rating
-              TARGET_SPECS = TARGET_SPECS.filter(s => s !== "Wear Layer");
+              // Strictly eliminate carpet specs from hard surface categories
+              TARGET_SPECS = TARGET_SPECS.filter(s => 
+                  s !== "Face Weight" && 
+                  s !== "Fiber Type"
+              );
+              if (activeCategory !== 'Laminate') {
+                  TARGET_SPECS = TARGET_SPECS.filter(s => s !== "AC Rating");
+              } else {
+                  // Laminate category: remove Wear Layer, Construction, and Style Type, swap Waterproof to Water Resistant
+                  TARGET_SPECS = TARGET_SPECS.filter(s => s !== "Wear Layer" && s !== "Construction / Core" && s !== "Style Type");
+                  TARGET_SPECS = TARGET_SPECS.map(s => s === "Waterproof" ? "Water Resistant" : s);
+              }
           }
-      }
       
       const specMap = {}; 
       
