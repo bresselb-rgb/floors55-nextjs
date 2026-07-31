@@ -144,7 +144,9 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
             if (lowerVal.includes("cut and loop") || lowerVal.includes("cut & loop") || lowerVal.includes("pattern")) return "Cut and Loop";
             if (lowerVal.includes("loop") || lowerVal.includes("berber")) return "Loop";
             if (lowerVal.includes("cut") || lowerVal.includes("texture") || lowerVal.includes("plush") || lowerVal.includes("frieze") || lowerVal.includes("twist")) return "Cut Pile";
-            return val; // Fallback to raw value if it doesn't match anything
+            
+            // Return "None" to instantly vaporize random dimensions and style numbers!
+            return "None"; 
         }
 
         // 2. Hard Surface visual bucketing (LVP, Laminate, Hardwood, Tile)
