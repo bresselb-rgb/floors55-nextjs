@@ -189,8 +189,8 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
             const num = parseFloat(match[0]);
             if (num < 15) return "< 15 oz";
             if (num >= 15 && num < 20) return "15 - 20 oz";
-            if (num >= 20 && num < 25) return "20 - 25 oz";
-            if (num >= 25 && num < 35) return "25 - 35 oz";
+            if (num >= 20 && num < 25.01) return "20 - 25 oz";
+            if (num >= 25.01 && num < 35) return "25 - 35 oz";
             if (num >= 35 && num < 45) return "35 - 45 oz";
             if (num >= 45 && num < 55) return "45 - 55 oz";
             if (num >= 55 && num < 65) return "55 - 65 oz";
