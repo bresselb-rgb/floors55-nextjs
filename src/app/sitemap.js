@@ -19,13 +19,15 @@ export default async function sitemap() {
     '/choosing-your-floor',
     '/floor-care',
     '/installation-prep',
+    '/hard-surface-transitions', // <-- Added your missing transitions guide
     '/flooring-glossary',
     '/faq',
     '/warranties',
     '/become-a-pro',
     '/general-contact',
     '/wholesale-request',
-    '/order-sample'
+    '/order-sample',
+    '/locations' // <-- Added your new locations page
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date(),
