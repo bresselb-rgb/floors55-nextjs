@@ -29,6 +29,7 @@ export default function Home() {
                 alt="Floors 55 Premium Flooring" 
                 fill
                 priority
+                sizes="100vw"
                 className="object-cover object-center" 
             />
             <div className="absolute inset-0 bg-black/60"></div>
@@ -59,7 +60,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
                 <Link href="/category/luxury-vinyl" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/lvp.jpg')} alt="Luxury Vinyl" fill className="object-cover" />
+                    <Image src={getFbUrl('images/heros/lvp.jpg')} alt="Luxury Vinyl" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h2 className="text-white text-3xl font-bold mb-1">Luxury Vinyl</h2>
@@ -69,7 +70,7 @@ export default function Home() {
                 </Link>
                 
                 <Link href="/category/carpet" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/carpet.jpg')} alt="Designer Carpet" fill className="object-cover" />
+                    <Image src={getFbUrl('images/heros/carpet.jpg')} alt="Designer Carpet" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h2 className="text-white text-3xl font-bold mb-1">Designer Carpet</h2>
@@ -79,7 +80,7 @@ export default function Home() {
                 </Link>
 
                 <Link href="/category/laminate" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/laminate.jpg')} alt="Premium Laminate" fill className="object-cover" />
+                    <Image src={getFbUrl('images/heros/laminate.jpg')} alt="Premium Laminate" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h2 className="text-white text-3xl font-bold mb-1">Premium Laminate</h2>
@@ -89,7 +90,7 @@ export default function Home() {
                 </Link>
 
                 <Link href="/category/hardwood" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/hardwood.jpg')} alt="Hardwood" fill className="object-cover" />
+                    <Image src={getFbUrl('images/heros/hardwood.jpg')} alt="Hardwood" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h2 className="text-white text-3xl font-bold mb-1">Hardwood</h2>
@@ -100,7 +101,7 @@ export default function Home() {
 
                 {/* NEW TILE CATEGORY */}
                 <Link href="/category/tile" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/tile-hero.jpg')} alt="Premium Tile" fill className="object-cover" />
+                    <Image src={getFbUrl('images/heros/tile-hero.jpg')} alt="Premium Tile" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h2 className="text-white text-3xl font-bold mb-1">Premium Tile</h2>
@@ -122,6 +123,7 @@ export default function Home() {
                     src={getFbUrl('images/heros/trade-bg.jpg')} 
                     alt="Trade Professional Flooring"
                     fill
+                    sizes="100vw"
                     className="object-cover object-center" 
                 />
                 <div className="absolute inset-0 bg-black/75"></div>
@@ -169,6 +171,7 @@ export default function Home() {
                         src={getFbUrl('images/heros/samples.jpg')} 
                         alt="Flooring Samples"
                         fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
                         className="object-cover transition-transform duration-700 group-hover:scale-105" 
                     />
                 </div>
