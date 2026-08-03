@@ -20,11 +20,11 @@ export default function LocationsPage() {
     {
       id: 2,
       name: "Lake Oswego Showroom",
-      address: "21 S State St",
+      address: "25 S State St Ste 2110",
       cityStateZip: "Lake Oswego, OR 97034",
       phone: "(503) 673-1333",
       hours: "Mon-Thu: 8:30 AM - 4:30 PM",
-      mapLink: "https://www.google.com/maps/search/?api=1&query=21+S+State+St,+Lake+Oswego,+OR+97034",
+      mapLink: "https://www.google.com/maps/search/?api=1&query=25+S+State+St+Ste+2110,+Lake+Oswego,+OR+97034",
     }
   ];
 
