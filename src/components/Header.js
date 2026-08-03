@@ -276,12 +276,11 @@ export default function Header() {
                     <span>📞</span> (503) 491-1776
                 </a>
             </div>
-            <div className="hidden sm:flex gap-4">
+            <div className="flex gap-4">
                 <Link href="/locations" className="hover:text-gold transition flex items-center gap-1.5" style={{ textDecoration: 'none' }}>
-                    <span>📍</span> View Showrooms
+                    <span>📍</span> <span className="hidden sm:inline">View </span>Showrooms
                 </Link>
             </div>
-        </div>
       )}
 
       <nav className="sticky top-0 z-50 shadow-sm transition-colors duration-300" style={clientBrand ? { backgroundColor: brandBg, color: brandText, borderBottom: `1px solid ${brandText}20` } : { backgroundColor: '#ffffff', borderBottom: '1px solid #f3f4f6' }}>
