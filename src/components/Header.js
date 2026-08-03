@@ -351,8 +351,11 @@ export default function Header() {
                     <Link href="/warranties" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
                       Understanding Warranties
                     </Link>
-                    <Link href="/faq" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold text-xs text-gray-900" style={{ textDecoration: 'none' }}>
+                    <Link href="/faq" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
                       FAQ
+                    </Link>
+                    <Link href="/locations" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold text-xs text-gray-900 font-bold" style={{ textDecoration: 'none' }}>
+                      Showrooms & Locations
                     </Link>
                   </div>
                 </div>
