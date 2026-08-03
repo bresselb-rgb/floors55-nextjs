@@ -1,4 +1,4 @@
-import { doc, getDoc, collection, query, where, getDocs, limit } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { signInAnonymously } from "firebase/auth";
 import { db, auth, appId } from "../../../lib/firebase";
 import ProductViewer from "../../../components/ProductViewer";
@@ -9,20 +9,6 @@ const authenticateServer = async () => {
     if (!auth.currentUser) {
         await signInAnonymously(auth).catch(() => {});
     }
-};
-
-// Image URL Helper for Similar Products Grid
-const getGridImgUrl = (data) => {
-  const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const safeSku = (data.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  let folderName = 'images'; 
-  if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-  else if (safeName) folderName = safeName;
-  folderName = folderName.replace(/-+$/, '');
-
-  const displaySku = data.colors?.[0]?.sku || '01';
-  const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
-  return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
 };
 
 // 1. Next.js Magic: This injects the precise meta data into the <head> for Google!
@@ -47,7 +33,17 @@ export async function generateMetadata({ params, searchParams }) {
     ? (data.privateName || 'Custom Collection') 
     : (data.name || 'Unnamed Product');
 
-  const imageUrl = getGridImgUrl(data);
+  // Format image URL so it renders in text message previews when shared directly
+  const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const safeSku = (data.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  let folderName = 'images'; 
+  if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+  else if (safeName) folderName = safeName;
+  folderName = folderName.replace(/-+$/, '');
+
+  const displaySku = data.colors?.[0]?.sku || '01';
+  const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
+  const imageUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
 
   return {
     title: `${title} | Floors 55`,
@@ -64,6 +60,7 @@ export async function generateMetadata({ params, searchParams }) {
         description: data.desc || `View the ${title} premium flooring collection at Floors 55.`,
         images: [imageUrl]
     },
+    // ✅ Canonical URLs tell Google to ignore any tracking parameters in the URL
     alternates: {
       canonical: `https://www.floors55pro.com/product/${id}`,
     }
@@ -94,20 +91,31 @@ export default async function ProductPageServer({ params, searchParams }) {
     );
   }
 
-  // Prep the main product data
+  // Prep the data
   const data = docSnap.data();
   const productData = { id: docSnap.id, ...data };
   
+  // ✅ The exact logic you requested: Use Private Name if URL param is present or DB flag is checked
   productData.displayTitle = (isPrivate || data.usePrivateName) 
     ? (data.privateName || 'Custom Collection') 
     : (data.name || 'Unnamed Product');
 
-  const currentPrice = parseFloat(data.price) || 0;
-  const retailPrice = data.retailPrice ? parseFloat(data.retailPrice).toFixed(2) : (currentPrice * 2.2).toFixed(2);
-  const imageUrl = getGridImgUrl(data);
+  const retailPrice = data.retailPrice ? parseFloat(data.retailPrice).toFixed(2) : ((data.price || 0) * 2.2).toFixed(2);
+  
+  const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const safeSku = (data.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  let folderName = 'images'; 
+  if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+  else if (safeName) folderName = safeName;
+  folderName = folderName.replace(/-+$/, '');
+
+  const displaySku = data.colors?.[0]?.sku || '01';
+  const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
+  const imageUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+
   const baseUrl = "https://www.floors55pro.com";
 
-  // Build category slug
+  // Helper to dynamically build the correct parent category URL
   const getCategorySlug = (catName) => {
       if (!catName) return '/category';
       if (catName === 'Luxury Vinyl (LVP)') return '/category/luxury-vinyl';
@@ -115,37 +123,7 @@ export default async function ProductPageServer({ params, searchParams }) {
   };
   const catSlug = getCategorySlug(data.category);
 
-  // 3. Fetch Similar Products (Same Category, Price to +30%)
-  let similarProducts = [];
-  if (currentPrice > 0 && data.category) {
-      const minPrice = currentPrice;
-      const maxPrice = currentPrice * 1.30;
-      
-      const similarProductsQuery = query(
-          collection(db, 'artifacts', appId, 'public', 'data', 'pricing'),
-          where('category', '==', data.category),
-          where('price', '>=', minPrice),
-          where('price', '<=', maxPrice),
-          limit(10) // Fetch extra to ensure we have enough after filtering out the current product
-      );
-
-      try {
-          const similarSnap = await getDocs(similarProductsQuery);
-          similarSnap.forEach((doc) => {
-              const simData = doc.data();
-              if (doc.id !== id && simData.isVisible !== false) {
-                  similarProducts.push({ id: doc.id, ...simData });
-              }
-          });
-      } catch (error) {
-          console.error("Error fetching similar products:", error);
-      }
-  }
-  
-  // Slice to exactly 4 for a perfect grid
-  const displaySimilar = similarProducts.slice(0, 4);
-
-  // Product Schema
+  // ✅ Product Schema (Rich Snippets for Google)
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -170,7 +148,7 @@ export default async function ProductPageServer({ params, searchParams }) {
     }
   };
 
-  // Breadcrumb Schema
+  // ✅ Breadcrumb Schema (Creates the clean trail in Google Search results)
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -201,7 +179,7 @@ export default async function ProductPageServer({ params, searchParams }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       
-      {/* The Visual Breadcrumb Trail */}
+      {/* ✅ The Visual Breadcrumb Trail for Users */}
       <div className="bg-white pt-6 pb-2">
         <div className="max-w-[1400px] mx-auto px-4 flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-gray-400">
             <Link href="/" className="hover:text-gold transition-colors" style={{ textDecoration: 'none' }}>Home</Link>
@@ -213,50 +191,6 @@ export default async function ProductPageServer({ params, searchParams }) {
       </div>
 
       <ProductViewer initialProduct={productData} hideBadges={isPrivate} />
-
-      {/* NEW: Similar Products Grid */}
-      {displaySimilar.length > 0 && (
-        <section className="bg-white border-t border-gray-100 py-16">
-          <div className="max-w-[1400px] mx-auto px-4">
-              <h3 className="text-2xl font-black text-gray-900 mb-8 uppercase tracking-tight">
-                  Similar Options
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  {displaySimilar.map((product) => {
-                      // Apply the exact same private naming logic to the similar items
-                      const simTitle = (isPrivate || product.usePrivateName) 
-                          ? (product.privateName || 'Custom Collection') 
-                          : (product.name || 'Unnamed Product');
-                      
-                      const simPrice = parseFloat(product.price) || 0;
-
-                      return (
-                          <Link 
-                            key={product.id} 
-                            href={`/product/${product.id}${isPrivate ? '?private=true' : ''}`} 
-                            className="group block" 
-                            style={{ textDecoration: 'none' }}
-                          >
-                              <div className="bg-gray-50 rounded-xl aspect-square mb-4 overflow-hidden border border-gray-100">
-                                  <img 
-                                    src={getGridImgUrl(product)} 
-                                    alt={simTitle} 
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                                    onError={(e) => e.target.style.display = 'none'} 
-                                  />
-                              </div>
-                              <h4 className="font-bold text-gray-900 text-sm mb-1 truncate">{simTitle}</h4>
-                              {/* Hide the price if in client presentation mode */}
-                              {!isPrivate && simPrice > 0 && (
-                                  <p className="text-gold font-bold text-sm">${simPrice.toFixed(2)} / sqft</p>
-                              )}
-                          </Link>
-                      );
-                  })}
-              </div>
-          </div>
-        </section>
-      )}
     </>
   );
 }
