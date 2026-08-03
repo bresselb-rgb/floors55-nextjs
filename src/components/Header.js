@@ -267,6 +267,23 @@ export default function Header() {
 
   return (
     <>
+      {/* UTILITY TOP BAR - Hidden in Client Presentation Mode */}
+      {!clientBrand && (
+        <div className="bg-gray-900 text-white py-1.5 px-4 sm:px-6 lg:px-8 text-[10px] sm:text-xs font-bold uppercase tracking-widest flex justify-between items-center z-[60] relative">
+            <div className="flex gap-4">
+                {/* UPDATE THIS PHONE NUMBER TO YOUR ACTUAL DISPATCH/SHOWROOM NUMBER */}
+                <a href="tel:+15034911776" className="hover:text-gold transition flex items-center gap-1.5" style={{ textDecoration: 'none' }}>
+                    <span>📞</span> (503) 491-1776
+                </a>
+            </div>
+            <div className="hidden sm:flex gap-4">
+                <Link href="/locations" className="hover:text-gold transition flex items-center gap-1.5" style={{ textDecoration: 'none' }}>
+                    <span>📍</span> View Showrooms
+                </Link>
+            </div>
+        </div>
+      )}
+
       <nav className="sticky top-0 z-50 shadow-sm transition-colors duration-300" style={clientBrand ? { backgroundColor: brandBg, color: brandText, borderBottom: `1px solid ${brandText}20` } : { backgroundColor: '#ffffff', borderBottom: '1px solid #f3f4f6' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
