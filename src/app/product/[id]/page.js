@@ -228,7 +228,8 @@ export default async function ProductPageServer({ params, searchParams }) {
                           ? (product.privateName || 'Custom Collection') 
                           : (product.name || 'Unnamed Product');
                       
-                      const simPrice = parseFloat(product.price) || 0;
+                      const rawSimPrice = parseFloat(product.price) || 0;
+                      const simRetailPrice = product.retailPrice ? parseFloat(product.retailPrice) : (rawSimPrice * 2.2);
 
                       return (
                           <Link 
@@ -245,9 +246,14 @@ export default async function ProductPageServer({ params, searchParams }) {
                                   />
                               </div>
                               <h4 className="font-bold text-gray-900 text-sm mb-1 truncate">{simTitle}</h4>
-                              {/* Hide the price if in client presentation mode */}
-                              {!isPrivate && simPrice > 0 && (
-                                  <p className="text-gold font-bold text-sm">${simPrice.toFixed(2)} / sqft</p>
+                              {/* Hide price if in client mode, otherwise show retail */}
+                              {!isPrivate && simRetailPrice > 0 && (
+                                  <div>
+                                      <div className="text-[9px] text-gray-400 uppercase font-black tracking-wider">Est. Retail</div>
+                                      <p className="text-gold font-bold text-sm font-mono">
+                                          ${simRetailPrice.toFixed(2)} <span className="text-[10px] font-bold text-gray-400 font-sans">/sqft</span>
+                                      </p>
+                                  </div>
                               )}
                           </Link>
                       );
