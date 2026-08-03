@@ -271,7 +271,6 @@ export default function Header() {
       {!clientBrand && (
         <div className="bg-gray-900 text-white py-1.5 px-4 sm:px-6 lg:px-8 text-[10px] sm:text-xs font-bold uppercase tracking-widest flex justify-between items-center z-[60] relative">
             <div className="flex gap-4">
-                {/* UPDATE THIS PHONE NUMBER TO YOUR ACTUAL DISPATCH/SHOWROOM NUMBER */}
                 <a href="tel:+15034911776" className="hover:text-gold transition flex items-center gap-1.5" style={{ textDecoration: 'none' }}>
                     <span>📞</span> (503) 491-1776
                 </a>
@@ -281,6 +280,7 @@ export default function Header() {
                     <span>📍</span> <span className="hidden sm:inline">View </span>Showrooms
                 </Link>
             </div>
+        </div>
       )}
 
       <nav className="sticky top-0 z-50 shadow-sm transition-colors duration-300" style={clientBrand ? { backgroundColor: brandBg, color: brandText, borderBottom: `1px solid ${brandText}20` } : { backgroundColor: '#ffffff', borderBottom: '1px solid #f3f4f6' }}>
