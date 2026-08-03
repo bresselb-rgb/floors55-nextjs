@@ -242,7 +242,6 @@ export default async function ProductPageServer({ params, searchParams }) {
                                     src={getGridImgUrl(product)} 
                                     alt={simTitle} 
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                                    onError={(e) => e.target.style.display = 'none'} 
                                   />
                               </div>
                               <h4 className="font-bold text-gray-900 text-sm mb-1 truncate">{simTitle}</h4>
