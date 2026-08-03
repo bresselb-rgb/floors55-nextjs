@@ -2,6 +2,7 @@ import { doc, getDoc, collection, query, where, getDocs, limit } from "firebase/
 import { signInAnonymously } from "firebase/auth";
 import { db, auth, appId } from "../../../lib/firebase";
 import ProductViewer from "../../../components/ProductViewer";
+import SimilarProducts from "../../../components/SimilarProducts";
 import Link from "next/link";
 
 // Helper to ensure the server is authenticated before asking Firebase for data
@@ -214,54 +215,7 @@ export default async function ProductPageServer({ params, searchParams }) {
 
       <ProductViewer initialProduct={productData} hideBadges={isPrivate} />
 
-      {/* NEW: Similar Products Grid */}
-      {displaySimilar.length > 0 && (
-        <section className="bg-white border-t border-gray-100 py-16">
-          <div className="max-w-[1400px] mx-auto px-4">
-              <h3 className="text-2xl font-black text-gray-900 mb-8 uppercase tracking-tight">
-                  Similar Options
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  {displaySimilar.map((product) => {
-                      // Apply the exact same private naming logic to the similar items
-                      const simTitle = (isPrivate || product.usePrivateName) 
-                          ? (product.privateName || 'Custom Collection') 
-                          : (product.name || 'Unnamed Product');
-                      
-                      const rawSimPrice = parseFloat(product.price) || 0;
-                      const simRetailPrice = product.retailPrice ? parseFloat(product.retailPrice) : (rawSimPrice * 2.2);
-
-                      return (
-                          <Link 
-                            key={product.id} 
-                            href={`/product/${product.id}${isPrivate ? '?private=true' : ''}`} 
-                            className="group block" 
-                            style={{ textDecoration: 'none' }}
-                          >
-                              <div className="bg-gray-50 rounded-xl aspect-square mb-4 overflow-hidden border border-gray-100">
-                                  <img 
-                                    src={getGridImgUrl(product)} 
-                                    alt={simTitle} 
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                                  />
-                              </div>
-                              <h4 className="font-bold text-gray-900 text-sm mb-1 truncate">{simTitle}</h4>
-                              {/* Hide price if in client mode, otherwise show retail */}
-                              {!isPrivate && simRetailPrice > 0 && (
-                                  <div>
-                                      <div className="text-[9px] text-gray-400 uppercase font-black tracking-wider">Est. Retail</div>
-                                      <p className="text-gold font-bold text-sm font-mono">
-                                          ${simRetailPrice.toFixed(2)} <span className="text-[10px] font-bold text-gray-400 font-sans">/sqft</span>
-                                      </p>
-                                  </div>
-                              )}
-                          </Link>
-                      );
-                  })}
-              </div>
-          </div>
-        </section>
-      )}
+      <SimilarProducts products={displaySimilar} isPrivate={isPrivate} />
     </>
   );
 }
