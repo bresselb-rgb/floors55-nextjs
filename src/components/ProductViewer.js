@@ -77,9 +77,9 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     
     const [availablePads, setAvailablePads] = useState([]);
 
-    // DYNAMIC FALLBACK IMAGE: Checks if the product is an accessory and provides the sleek SVG
+    // DYNAMIC FALLBACK IMAGE: A sleek, modern, minimal T-Mold graphic
     const FALLBACK_IMG = productData?.isAccessory 
-        ? `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="%23f9fafb"><rect width="400" height="400" fill="%23f3f4f6"/><path d="M50 220 L350 220 L350 235 L50 235 Z" fill="%23e5e7eb"/><path d="M190 190 L210 190 L210 235 L190 235 Z" fill="%23d1d5db"/><text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="%239ca3af" letter-spacing="2">TRIM &amp; ACCESSORY</text></svg>`
+        ? `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="%23FAFAFA"/><path d="M120 180h160v15h-70v85h-20v-85h-70z" fill="%23E5E7EB"/><text x="200" y="320" font-family="sans-serif" font-size="11" font-weight="bold" fill="%239CA3AF" text-anchor="middle" letter-spacing="4">MATCHING MOLDING</text></svg>`
         : `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
     useEffect(() => {
@@ -841,7 +841,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
           <div className="flex-1 w-full lg:min-w-[400px]">
             {renderTitleBlock(true)}
 
-            <p className="text-[1.05rem] text-gray-500 mb-6 italic mt-4 lg:mt-0">{productData?.desc || 'Premium flooring collection.'}</p>
+            <div className="text-[1.05rem] text-gray-500 mb-6 italic mt-4 lg:mt-0 leading-relaxed" dangerouslySetInnerHTML={{ __html: productData?.desc || 'Premium flooring collection.' }} />
 
             <div className="my-5 p-4 border-l-4 border-gold bg-[#fdfdfd] relative overflow-hidden">
                 {isClientMode ? (

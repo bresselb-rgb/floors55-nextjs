@@ -27,9 +27,9 @@ export default function SimilarProducts({ products, isPrivate, title }) {
     const isClientMode = clientMargin !== null;
 
     const getGridImgUrl = (data) => {
-        // Automatically return a sleek vector graphic if it's a trim without a custom image prefix!
+        // Automatically return the sleek vector graphic if it's a trim
         if (data.isAccessory && !data.imgPrefix) {
-            return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="%23f9fafb"><rect width="400" height="400" fill="%23f3f4f6"/><path d="M50 220 L350 220 L350 235 L50 235 Z" fill="%23e5e7eb"/><path d="M190 190 L210 190 L210 235 L190 235 Z" fill="%23d1d5db"/><text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="%239ca3af" letter-spacing="2">TRIM &amp; ACCESSORY</text></svg>`;
+            return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="%23FAFAFA"/><path d="M120 180h160v15h-70v85h-20v-85h-70z" fill="%23E5E7EB"/><text x="200" y="320" font-family="sans-serif" font-size="11" font-weight="bold" fill="%239CA3AF" text-anchor="middle" letter-spacing="4">MATCHING MOLDING</text></svg>`;
         }
 
         const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
