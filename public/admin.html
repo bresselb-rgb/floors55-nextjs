@@ -2298,14 +2298,12 @@
             btn.innerText = "Analyzing Spec Sheet...";
             btn.disabled = true;
 
-            // Updated Prompt to be smarter about mapping specific prices to specific trims
+            // Updated Prompt with strict rules to force INCHES and ignore mm
             const prompt = `You are a data extractor. Read the following flooring specification sheet and extract ONLY the coordinating trims, moldings, and accessories (e.g., T-Mold, Reducer, Stairnose, Quarter Round, Baby Threshold, Stair Cap, etc.).
             
-            CRITICAL PRICING INSTRUCTIONS: Look for dollar amounts in the text. 
-            1. If a price is specifically associated with a certain trim, apply it ONLY to that trim's "cost" field. 
-            2. If there is clearly only ONE universal trim price listed in the entire text, apply it to all trims. 
-            3. If you cannot confidently determine the price for a trim, leave its "cost" field null.
-            Do not extract raw numbers (like lengths or carton sizes) as costs.
+            CRITICAL PRICING & MEASUREMENT INSTRUCTIONS: 
+            1. Look for dollar amounts in the text. If a price is specifically associated with a certain trim, apply it ONLY to that trim's "cost" field. If there is clearly only ONE universal trim price listed in the entire text, apply it to all trims. If you cannot confidently determine the price for a trim, leave its "cost" field null. Do not extract raw numbers as costs.
+            2. For the "length" field, ALWAYS extract the measurement in INCHES (e.g., "94 in" or "94"). If the text provides both inches and millimeters (mm), ignore the mm. Do NOT extract product thickness (e.g., 5.5mm) as the length.
             
             Return ONLY a raw JSON array of objects. Do not use markdown tags like \`\`\`json.
             
@@ -2314,7 +2312,7 @@
                 {
                     "name": "Trim Name (e.g. Overlap Stairnose)",
                     "sku": "SKU code",
-                    "length": "Length if available (e.g. 94 in)",
+                    "length": "Length in INCHES ONLY (e.g. 94 in)",
                     "cost": 15.99
                 }
             ]
