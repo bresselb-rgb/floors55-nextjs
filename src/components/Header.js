@@ -187,7 +187,10 @@ export default function Header() {
           cats.add(cat);
         }
       });
-      setCategories([...cats].sort());
+      
+      // FILTER OUT "Trim & Molding" before updating the menu state
+      setCategories([...cats].filter(cat => cat !== 'Trim & Molding').sort());
+      
       setHasSaleItems(sale);
       setAllProducts(productList);
     }, (error) => {
