@@ -705,47 +705,52 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         </div>
     );
 
-    const renderColorSwatches = (isDesktop) => (
-        <div className={`${isDesktop ? 'hidden lg:block my-6' : 'block lg:hidden mt-8'}`}>
-            <div className="flex justify-between items-end mb-4 pr-2">
-                <h2 className="text-xl font-bold">Select a Color: {activeColor?.name}</h2>
-                {!isDesktop && (productData?.colors?.length > 3) && (
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1 animate-pulse">
-                        Swipe <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                    </span>
-                )}
-            </div>
-            <div className={isDesktop 
-                ? "grid grid-cols-[repeat(auto-fill,minmax(85px,1fr))] gap-3 mb-6" 
-                : "flex overflow-x-auto gap-3 pb-4 snap-x snap-mandatory scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pr-6"
-            }>
-                {productData?.colors?.map(c => {
-                    const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
-                    const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    let folderName = 'images';
-                    if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-                    else if (safeName) folderName = safeName;
-                    folderName = folderName.replace(/-+$/, '');
+    const renderColorSwatches = (isDesktop) => {
+        // Automatically hide the color swatches if the product is an accessory/trim
+        if (productData?.isAccessory) return null;
 
-                    const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${c.sku}_${swatchType}.jpg`.toLowerCase();
-                    const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+        return (
+            <div className={`${isDesktop ? 'hidden lg:block my-6' : 'block lg:hidden mt-8'}`}>
+                <div className="flex justify-between items-end mb-4 pr-2">
+                    <h2 className="text-xl font-bold">Select a Color: {activeColor?.name}</h2>
+                    {!isDesktop && (productData?.colors?.length > 3) && (
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1 animate-pulse">
+                            Swipe <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                        </span>
+                    )}
+                </div>
+                <div className={isDesktop 
+                    ? "grid grid-cols-[repeat(auto-fill,minmax(85px,1fr))] gap-3 mb-6" 
+                    : "flex overflow-x-auto gap-3 pb-4 snap-x snap-mandatory scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pr-6"
+                }>
+                    {productData?.colors?.map(c => {
+                        const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
+                        const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                        const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                        let folderName = 'images';
+                        if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                        else if (safeName) folderName = safeName;
+                        folderName = folderName.replace(/-+$/, '');
 
-                    return (
-                        <div key={c.sku} className={`cursor-pointer text-center group ${!isDesktop ? 'snap-start shrink-0 w-[85px]' : ''}`} onClick={() => {
-                            router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
-                            setActiveColor(c);
-                        }}>
-                            <div className={`relative w-full aspect-square border-2 rounded-md transition duration-200 bg-gray-100 overflow-hidden ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`}>
-                                <img src={fbPath} alt={c.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} />
+                        const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${c.sku}_${swatchType}.jpg`.toLowerCase();
+                        const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+
+                        return (
+                            <div key={c.sku} className={`cursor-pointer text-center group ${!isDesktop ? 'snap-start shrink-0 w-[85px]' : ''}`} onClick={() => {
+                                router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
+                                setActiveColor(c);
+                            }}>
+                                <div className={`relative w-full aspect-square border-2 rounded-md transition duration-200 bg-gray-100 overflow-hidden ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`}>
+                                    <img src={fbPath} alt={c.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} />
+                                </div>
+                                <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
                             </div>
-                            <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
-                        </div>
-                    );
-                })}
+                        );
+                    })}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     if (!productData) return null;
 
