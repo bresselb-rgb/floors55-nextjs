@@ -1,9 +1,15 @@
-import { doc, getDoc, collection, query, where, getDocs, limit } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, limit, documentId } from "firebase/firestore";
 import { signInAnonymously } from "firebase/auth";
 import { db, auth, appId } from "../../../lib/firebase";
 import ProductViewer from "../../../components/ProductViewer";
+import ProductAccessories from "../../../components/ProductAccessories";
 import SimilarProducts from "../../../components/SimilarProducts";
 import Link from "next/link";
+
+// ADD THIS LINE TO KILL THE VERCEL CACHE
+export const dynamic = 'force-dynamic';
+
+// Helper to ensure the server is authenticated...
 
 // Helper to ensure the server is authenticated before asking Firebase for data
 const authenticateServer = async () => {
@@ -12,7 +18,7 @@ const authenticateServer = async () => {
     }
 };
 
-// Image URL Helper for Similar Products Grid
+// Image URL Helper for Metadata & SEO Sharing
 const getGridImgUrl = (data) => {
   const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const safeSku = (data.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -116,6 +122,28 @@ export default async function ProductPageServer({ params, searchParams }) {
   };
   const catSlug = getCategorySlug(data.category);
 
+  // 2.5 Fetch Exact Match Accessories (Trims, Moldings)
+  let matchingAccessories = [];
+  if (data.accessories && Array.isArray(data.accessories) && data.accessories.length > 0) {
+      const safeAccessories = data.accessories.slice(0, 10);
+      const accessoriesQuery = query(
+          collection(db, 'artifacts', appId, 'public', 'data', 'pricing'),
+          where(documentId(), 'in', safeAccessories)
+      );
+
+      try {
+          const accSnap = await getDocs(accessoriesQuery);
+          accSnap.forEach((doc) => {
+              const accData = doc.data();
+              if (accData.isVisible !== false) {
+                  matchingAccessories.push({ id: doc.id, ...accData });
+              }
+          });
+      } catch (error) {
+          console.error("Error fetching accessories:", error);
+      }
+  }
+
   // 3. Fetch Similar Products (Same Category, Price to +30%)
   let similarProducts = [];
   if (currentPrice > 0 && data.category) {
@@ -127,7 +155,7 @@ export default async function ProductPageServer({ params, searchParams }) {
           where('category', '==', data.category),
           where('price', '>=', minPrice),
           where('price', '<=', maxPrice),
-          limit(10) // Fetch extra to ensure we have enough after filtering out the current product
+          limit(10)
       );
 
       try {
@@ -214,6 +242,8 @@ export default async function ProductPageServer({ params, searchParams }) {
       </div>
 
       <ProductViewer initialProduct={productData} hideBadges={isPrivate} />
+
+      <ProductAccessories accessories={matchingAccessories} isPrivate={isPrivate} />
 
       <SimilarProducts products={displaySimilar} isPrivate={isPrivate} />
     </>

@@ -77,10 +77,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     
     const [availablePads, setAvailablePads] = useState([]);
 
-    // DYNAMIC FALLBACK IMAGE: Checks if the product is an accessory and provides the sleek SVG
-    const FALLBACK_IMG = productData?.isAccessory 
-        ? `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="%23f9fafb"><rect width="400" height="400" fill="%23f3f4f6"/><path d="M50 220 L350 220 L350 235 L50 235 Z" fill="%23e5e7eb"/><path d="M190 190 L210 190 L210 235 L190 235 Z" fill="%23d1d5db"/><text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="%239ca3af" letter-spacing="2">TRIM &amp; ACCESSORY</text></svg>`
-        : `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
+    const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -338,8 +335,6 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
-        if (productData.isAccessory && !productData.imgPrefix) return FALLBACK_IMG;
-
         const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
         const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
         let folderName = 'images';
@@ -737,7 +732,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                             setActiveColor(c);
                         }}>
                             <div className={`relative w-full aspect-square border-2 rounded-md transition duration-200 bg-gray-100 overflow-hidden ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`}>
-                                <img src={fbPath} alt={c.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} />
+                                <img src={fbPath} alt={c.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = TBD_IMG; }} />
                             </div>
                             <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
                         </div>
@@ -795,7 +790,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 {activeView === 'VIDEO' ? (
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
-                    <img src={getMediaPath(activeView) || FALLBACK_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
+                    <img src={getMediaPath(activeView) || TBD_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = TBD_IMG; }} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
                 )}
             </div>
 
@@ -813,12 +808,12 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                                  />
                              )}
                              <img 
-                                src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || FALLBACK_IMG)} 
+                                src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)} 
                                 className={`w-[75px] h-[75px] min-w-[75px] shrink-0 object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} 
                                 onClick={() => setActiveView(v)} 
                                 onError={(e) => { 
                                     handleViewError(v); 
-                                    e.currentTarget.src = FALLBACK_IMG; 
+                                    e.currentTarget.src = TBD_IMG; 
                                 }} 
                                 alt={`View ${v}`} 
                              />
@@ -1138,11 +1133,11 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                       onTouchEnd={() => setZoomPos({x:50, y:50})}
                   >
                       <img 
-                          src={getMediaPath(activeView) || FALLBACK_IMG} 
+                          src={getMediaPath(activeView) || TBD_IMG} 
                           alt="Zoomed Product" 
                           className="w-full h-full object-contain transition-transform duration-150 ease-out hover:scale-[2.2]"
                           style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }}
-                          onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }}
+                          onError={(e) => { e.currentTarget.src = TBD_IMG; }}
                       />
                   </div>
               </div>

@@ -6,19 +6,15 @@ import ProductAccessories from "../../../components/ProductAccessories";
 import SimilarProducts from "../../../components/SimilarProducts";
 import Link from "next/link";
 
-// ADD THIS LINE TO KILL THE VERCEL CACHE
+// 0. Force Vercel to always fetch fresh data for this page
 export const dynamic = 'force-dynamic';
 
-// Helper to ensure the server is authenticated...
-
-// Helper to ensure the server is authenticated before asking Firebase for data
 const authenticateServer = async () => {
     if (!auth.currentUser) {
         await signInAnonymously(auth).catch(() => {});
     }
 };
 
-// Image URL Helper for Metadata & SEO Sharing
 const getGridImgUrl = (data) => {
   const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const safeSku = (data.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -32,7 +28,6 @@ const getGridImgUrl = (data) => {
   return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
 };
 
-// 1. Next.js Magic: This injects the precise meta data into the <head> for Google!
 export async function generateMetadata({ params, searchParams }) {
   await authenticateServer();
   
@@ -48,8 +43,6 @@ export async function generateMetadata({ params, searchParams }) {
   }
 
   const data = docSnap.data();
-  
-  // Use private name if URL param is true, OR if the DB flag is checked
   const title = (isPrivate || data.usePrivateName) 
     ? (data.privateName || 'Custom Collection') 
     : (data.name || 'Unnamed Product');
@@ -77,7 +70,6 @@ export async function generateMetadata({ params, searchParams }) {
   };
 }
 
-// 2. The Server Page: Fetches data purely on the server before sending HTML to the browser
 export default async function ProductPageServer({ params, searchParams }) {
   await authenticateServer();
   
@@ -88,7 +80,6 @@ export default async function ProductPageServer({ params, searchParams }) {
   const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'pricing', id);
   const docSnap = await getDoc(docRef);
 
-  // Handle dead links gracefully with a 404 block
   if (!docSnap.exists()) {
     return (
       <main className="bg-white flex-1 flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
@@ -101,7 +92,6 @@ export default async function ProductPageServer({ params, searchParams }) {
     );
   }
 
-  // Prep the main product data
   const data = docSnap.data();
   const productData = { id: docSnap.id, ...data };
   
@@ -114,7 +104,6 @@ export default async function ProductPageServer({ params, searchParams }) {
   const imageUrl = getGridImgUrl(data);
   const baseUrl = "https://www.floors55pro.com";
 
-  // Build category slug
   const getCategorySlug = (catName) => {
       if (!catName) return '/category';
       if (catName === 'Luxury Vinyl (LVP)') return '/category/luxury-vinyl';
@@ -122,7 +111,7 @@ export default async function ProductPageServer({ params, searchParams }) {
   };
   const catSlug = getCategorySlug(data.category);
 
-  // 2.5 Fetch Exact Match Accessories (Trims, Moldings)
+  // Fetch Exact Match Accessories (Trims, Moldings)
   let matchingAccessories = [];
   if (data.accessories && Array.isArray(data.accessories) && data.accessories.length > 0) {
       const safeAccessories = data.accessories.slice(0, 10);
@@ -144,9 +133,46 @@ export default async function ProductPageServer({ params, searchParams }) {
       }
   }
 
-  // 3. Fetch Similar Products (Same Category, Price to +30%)
+  // Fetch Similar Products OR Sibling Trims
   let similarProducts = [];
-  if (currentPrice > 0 && data.category) {
+  let similarTitle = "Similar Options"; // Default Title
+
+  if (data.isAccessory) {
+      // It's a trim! Do a reverse lookup to find the parent floor.
+      try {
+          const parentQuery = query(
+              collection(db, 'artifacts', appId, 'public', 'data', 'pricing'),
+              where('accessories', 'array-contains', id),
+              limit(1)
+          );
+          const parentSnap = await getDocs(parentQuery);
+          
+          if (!parentSnap.empty) {
+              const parentData = parentSnap.docs[0].data();
+              similarTitle = `More Trims for ${parentData.name || 'this Collection'}`;
+              
+              if (parentData.accessories && parentData.accessories.length > 0) {
+                  const safeAccessories = parentData.accessories.slice(0, 10);
+                  const siblingsQuery = query(
+                      collection(db, 'artifacts', appId, 'public', 'data', 'pricing'),
+                      where(documentId(), 'in', safeAccessories)
+                  );
+                  
+                  const siblingsSnap = await getDocs(siblingsQuery);
+                  siblingsSnap.forEach((doc) => {
+                      const simData = doc.data();
+                      // Only add it if it's NOT the trim we are currently viewing
+                      if (doc.id !== id && simData.isVisible !== false) {
+                          similarProducts.push({ id: doc.id, ...simData });
+                      }
+                  });
+              }
+          }
+      } catch (error) {
+          console.error("Error fetching sibling accessories:", error);
+      }
+  } else if (currentPrice > 0 && data.category) {
+      // Standard Similar Products Logic for normal floors
       const minPrice = currentPrice;
       const maxPrice = currentPrice * 1.30;
       
@@ -171,10 +197,8 @@ export default async function ProductPageServer({ params, searchParams }) {
       }
   }
   
-  // Slice to exactly 4 for a perfect grid
   const displaySimilar = similarProducts.slice(0, 4);
 
-  // Product Schema
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -199,7 +223,6 @@ export default async function ProductPageServer({ params, searchParams }) {
     }
   };
 
-  // Breadcrumb Schema
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -230,7 +253,6 @@ export default async function ProductPageServer({ params, searchParams }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       
-      {/* The Visual Breadcrumb Trail */}
       <div className="bg-white pt-6 pb-2">
         <div className="max-w-[1400px] mx-auto px-4 flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-gray-400">
             <Link href="/" className="hover:text-gold transition-colors" style={{ textDecoration: 'none' }}>Home</Link>
@@ -243,9 +265,11 @@ export default async function ProductPageServer({ params, searchParams }) {
 
       <ProductViewer initialProduct={productData} hideBadges={isPrivate} />
 
+      {/* Renders accessories only if it's a main floor */}
       <ProductAccessories accessories={matchingAccessories} isPrivate={isPrivate} />
 
-      <SimilarProducts products={displaySimilar} isPrivate={isPrivate} />
+      {/* Renders dynamic similar products OR sibling trims depending on the prop! */}
+      <SimilarProducts products={displaySimilar} isPrivate={isPrivate} title={similarTitle} />
     </>
   );
 }

@@ -68,11 +68,12 @@ export default function ProductAccessories({ accessories, isPrivate }) {
                                         {item.thickness && <span className="text-[9px] font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">{item.thickness}</span>}
                                     </div>
                                     
-                                    {/* Display the description */}
+                                    {/* Display the description safely rendering HTML links */}
                                     {item.desc && (
-                                        <p className="text-[10px] text-gray-500 mb-3 line-clamp-2 leading-relaxed">
-                                            {item.desc}
-                                        </p>
+                                        <div 
+                                            className="text-[10px] text-gray-500 mb-3 line-clamp-2 leading-relaxed"
+                                            dangerouslySetInnerHTML={{ __html: item.desc }}
+                                        />
                                     )}
                                 </div>
                                 

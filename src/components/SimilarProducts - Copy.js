@@ -1,3 +1,5 @@
+
+// src/components/SimilarProducts.js
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -5,11 +7,11 @@ import Link from 'next/link';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
-// We added the `title` prop here
-export default function SimilarProducts({ products, isPrivate, title }) {
+export default function SimilarProducts({ products, isPrivate }) {
     const [user, setUser] = useState(null);
     const [clientMargin, setClientMargin] = useState(null);
 
+    // Check auth status and client board margins on the browser
     useEffect(() => {
         const unsub = onAuthStateChanged(auth, (currentUser) => {
             setUser(currentUser);
@@ -26,12 +28,8 @@ export default function SimilarProducts({ products, isPrivate, title }) {
     const isWholesale = user && !user.isAnonymous;
     const isClientMode = clientMargin !== null;
 
+    // Image URL Helper
     const getGridImgUrl = (data) => {
-        // Automatically return a sleek vector graphic if it's a trim without a custom image prefix!
-        if (data.isAccessory && !data.imgPrefix) {
-            return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="%23f9fafb"><rect width="400" height="400" fill="%23f3f4f6"/><path d="M50 220 L350 220 L350 235 L50 235 Z" fill="%23e5e7eb"/><path d="M190 190 L210 190 L210 235 L190 235 Z" fill="%23d1d5db"/><text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="bold" fill="%239ca3af" letter-spacing="2">TRIM &amp; ACCESSORY</text></svg>`;
-        }
-
         const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
         const safeSku = (data.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
         let folderName = 'images'; 
@@ -49,8 +47,7 @@ export default function SimilarProducts({ products, isPrivate, title }) {
     return (
         <section className="bg-white border-t border-gray-100 py-16">
             <div className="max-w-[1400px] mx-auto px-4">
-                {/* Dynamically display the title passed from page.js */}
-                <h3 className="text-2xl font-black text-gray-900 mb-8 uppercase tracking-tight">{title || 'Similar Options'}</h3>
+                <h3 className="text-2xl font-black text-gray-900 mb-8 uppercase tracking-tight">Similar Options</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     {products.map((product) => {
                         const simTitle = (isPrivate || product.usePrivateName) 
@@ -63,8 +60,9 @@ export default function SimilarProducts({ products, isPrivate, title }) {
                         let displayPrice = 0;
                         let priceLabel = "";
                         
+                        // Dynamically calculate the correct price based on who is viewing the component
                         if (isPrivate) {
-                            displayPrice = 0;
+                            displayPrice = 0; // Hide completely for strict private links without margins
                         } else if (isClientMode) {
                             displayPrice = rawPrice * (1 + (clientMargin / 100));
                             priceLabel = "Price";
@@ -96,7 +94,7 @@ export default function SimilarProducts({ products, isPrivate, title }) {
                                     <div>
                                         <div className="text-[9px] text-gray-400 uppercase font-black tracking-wider">{priceLabel}</div>
                                         <p className="text-gold font-bold text-sm font-mono">
-                                            ${displayPrice.toFixed(2)} <span className="text-[10px] font-bold text-gray-400 font-sans">/{product.unit || 'sqft'}</span>
+                                            ${displayPrice.toFixed(2)} <span className="text-[10px] font-bold text-gray-400 font-sans">/sqft</span>
                                         </p>
                                     </div>
                                 )}
