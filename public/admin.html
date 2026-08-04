@@ -424,7 +424,7 @@
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 pb-2 border-b border-gray-100">
                         <label class="flex items-center gap-2 text-[11px] font-bold text-gray-700 cursor-pointer">
                             <input type="checkbox" id="new-prod-use-private" class="accent-gold h-4 w-4">
                             Use Private Style Name as Public Default
@@ -441,6 +441,25 @@
                             <input type="checkbox" id="new-prod-contractor" class="accent-purple-600 h-4 w-4">
                             🛠️ Feature in Contractor Pro
                         </label>
+                        <label class="flex items-center gap-2 text-[11px] font-bold text-indigo-700 cursor-pointer md:col-span-2 bg-indigo-50 p-2 rounded">
+                            <input type="checkbox" id="new-prod-is-accessory" class="accent-indigo-600 h-4 w-4">
+                            🔗 Mark as Accessory (Hides from main catalog grids, keeps SKU searchable)
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 pt-2">
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-gray-400 mb-1">Length</label>
+                            <input type="text" id="new-prod-length" placeholder="e.g. 94 in" class="w-full px-3 py-2 border rounded focus:border-gold outline-none text-sm bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-gray-400 mb-1">Width</label>
+                            <input type="text" id="new-prod-width" placeholder="e.g. 2 in" class="w-full px-3 py-2 border rounded focus:border-gold outline-none text-sm bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-gray-400 mb-1">Thickness</label>
+                            <input type="text" id="new-prod-thickness" placeholder="e.g. 5.5mm" class="w-full px-3 py-2 border rounded focus:border-gold outline-none text-sm bg-white">
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
@@ -1325,7 +1344,15 @@
                         </td>
                         <td class="px-4 py-1.5 align-middle text-[10px]">
                             <div class="font-bold text-gray-500 mb-1">${p.category}</div>
-                            <input type="text" id="edit-img-prefix-${p.id}" value="${p.imgPrefix || ''}" placeholder="Prefix: mb915_" class="w-full px-1.5 py-0.5 border border-gray-200 rounded text-[9px] font-mono focus:ring-1 focus:ring-gold bg-white outline-none text-blue-600">
+                            <input type="text" id="edit-img-prefix-${p.id}" value="${p.imgPrefix || ''}" placeholder="Prefix: mb915_" class="w-full px-1.5 py-0.5 border border-gray-200 rounded text-[9px] font-mono focus:ring-1 focus:ring-gold bg-white outline-none text-blue-600 mb-1">
+                            <div class="flex gap-1 mb-1">
+                                <input type="text" id="edit-length-${p.id}" value="${p.length || ''}" placeholder="L (94in)" class="w-1/3 px-1.5 py-0.5 border border-gray-200 rounded text-[9px] focus:ring-1 focus:ring-gold outline-none">
+                                <input type="text" id="edit-width-${p.id}" value="${p.width || ''}" placeholder="W (2in)" class="w-1/3 px-1.5 py-0.5 border border-gray-200 rounded text-[9px] focus:ring-1 focus:ring-gold outline-none">
+                                <input type="text" id="edit-thickness-${p.id}" value="${p.thickness || ''}" placeholder="T (5mm)" class="w-1/3 px-1.5 py-0.5 border border-gray-200 rounded text-[9px] focus:ring-1 focus:ring-gold outline-none">
+                            </div>
+                            <label class="flex items-center gap-1 text-[9px] font-bold text-indigo-600 cursor-pointer">
+                                <input type="checkbox" id="edit-accessory-${p.id}" ${p.isAccessory ? 'checked' : ''} class="accent-indigo-600 h-3.3 w-3.5"> 🔗 Accessory
+                            </label>
                         </td>
                         <td class="px-4 py-1.5 align-middle">
                             <div class="flex items-center gap-2 mb-1">
@@ -1430,6 +1457,10 @@
         window.startEdit = (id) => { window.editingId = id; window.filterPricingTable(); };
         window.cancelEdit = () => { window.editingId = null; window.filterPricingTable(); };
         window.saveEdit = async (e, id) => {
+            const isAccessory = document.getElementById(`edit-accessory-${id}`)?.checked || false;
+            const length = document.getElementById(`edit-length-${id}`)?.value || '';
+            const width = document.getElementById(`edit-width-${id}`)?.value || '';
+            const thickness = document.getElementById(`edit-thickness-${id}`)?.value || '';
             const cost = parseFloat(document.getElementById(`edit-cost-${id}`).value);
             const ws = parseFloat(document.getElementById(`edit-ws-${id}`).value);
             const ret = parseFloat(document.getElementById(`edit-ret-${id}`).value);
@@ -1469,6 +1500,10 @@
                     isSale: isSale,
                     isPropMgt: isPropMgt,
                     isContractor: isContractor,
+                    isAccessory: isAccessory,
+                    length: length,
+                    width: width,
+                    thickness: thickness,
                     imgPrefix: imgPrefix
                 });
                 window.editingId = null; 
@@ -1604,6 +1639,10 @@
                         isSale: document.getElementById('new-prod-is-sale').checked,
                         isPropMgt: document.getElementById('new-prod-prop-mgt').checked,
                         isContractor: document.getElementById('new-prod-contractor').checked,
+                        isAccessory: document.getElementById('new-prod-is-accessory').checked,
+                        length: document.getElementById('new-prod-length').value,
+                        width: document.getElementById('new-prod-width').value,
+                        thickness: document.getElementById('new-prod-thickness').value,
                         category: cat, 
                         imgPrefix: document.getElementById('new-prod-img-prefix').value,
                         desc: document.getElementById('new-prod-desc').value,
@@ -1611,7 +1650,7 @@
                         price: parseFloat(document.getElementById('new-prod-price').value),
                         retailPrice: parseFloat(document.getElementById('new-prod-retail').value) || null,
                         unit: document.getElementById('new-prod-unit').value,
-                        cartonSize: isNaN(cSize) ? null : cSize, // Ensure it saves cleanly
+                        cartonSize: isNaN(cSize) ? null : cSize,
                         isVisible: true,
                         colors: [{sku:'01', name:'Default'}], views: ["MAIN"], specs: [], addedAt: new Date().toISOString()
                     });

@@ -624,6 +624,44 @@
         </div>
     </div>
 
+<!-- PRODUCT RELATIONSHIPS MODAL -->
+    <div id="relations-modal" class="hidden fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl p-6 w-full max-w-lg shadow-2xl">
+            <h3 class="text-lg font-bold text-gray-900 mb-1">Link Related Products</h3>
+            <p id="relations-product-name" class="text-xs text-gray-500 mb-4 font-bold text-gold"></p>
+            
+            <input type="hidden" id="relations-id">
+            
+            <div class="space-y-6">
+                <!-- 1. Sister Products (Tile) -->
+                <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg">
+                    <h4 class="text-xs font-black uppercase tracking-widest text-gray-700 mb-2">Sister Products (Tile / Collections)</h4>
+                    <p class="text-[10px] text-gray-500 mb-3 leading-relaxed">Enter a shared Collection ID (e.g., "carrara_matte"). All products with this exact ID will automatically show up on each other's pages.</p>
+                    <input type="text" id="relations-family" placeholder="e.g. carrara_matte" class="w-full px-3 py-2 border border-gray-300 rounded focus:border-gold outline-none text-sm bg-white font-mono">
+                </div>
+
+                <!-- 2. Parent-Child Accessories (Hard Surface) -->
+                <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg">
+                    <h4 class="text-xs font-black uppercase tracking-widest text-gray-700 mb-2">Matching Accessories (Trims)</h4>
+                    <p class="text-[10px] text-gray-500 mb-3 leading-relaxed">Add the exact Product IDs for trims that match this specific floor.</p>
+                    
+                    <div class="flex gap-2 mb-3">
+                        <input type="text" id="new-accessory-id" placeholder="Paste Product ID (e.g. prod_123)" class="flex-1 px-3 py-2 border border-gray-300 rounded focus:border-gold outline-none text-sm bg-white font-mono">
+                        <button onclick="window.addAccessory()" class="bg-black text-white px-4 py-2 rounded text-xs font-bold uppercase tracking-widest hover:bg-gold hover:text-black transition-colors">Add</button>
+                    </div>
+                    
+                    <!-- Dynamic list of added accessories will render here -->
+                    <ul id="accessories-list" class="space-y-2 max-h-32 overflow-y-auto"></ul>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-6 border-t border-gray-100 pt-4">
+                <button type="button" onclick="window.closeRelationsModal()" class="text-xs font-bold uppercase text-gray-400 px-4 py-2 hover:text-black">Cancel</button>
+                <button type="button" onclick="window.saveRelations()" id="btn-save-relations" class="bg-black text-white px-6 py-2 rounded font-bold uppercase text-xs hover:bg-gold hover:text-black transition-colors">Save Links</button>
+            </div>
+        </div>
+    </div>
+    
     <div id="toast" class="fixed bottom-6 right-6 bg-black text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 opacity-0 translate-y-4 z-50 pointer-events-none">
         <span class="text-gold font-bold">✓</span><p class="font-bold text-xs" id="toast-message"></p>
     </div>
@@ -1376,6 +1414,7 @@
                         <td class="px-4 py-1.5 align-middle text-right flex items-center justify-end gap-3 h-full pt-4">
                             <button onclick="window.shareProduct('${p.id}')" class="text-gold hover:text-black text-[10px] font-bold uppercase tracking-wider transition-colors">Share</button>
                             <button onclick="window.duplicateProduct('${p.id}')" class="text-blue-500 hover:text-blue-700 text-[10px] font-bold uppercase tracking-wider transition-colors">Copy</button>
+                            <button onclick="window.openRelationsModal('${p.id}')" class="text-indigo-500 hover:text-indigo-700 text-[10px] font-bold uppercase tracking-wider transition-colors">🔗 Links</button>
                             <button onclick="window.startEdit('${p.id}')" class="text-gray-400 hover:text-black text-[10px] font-bold uppercase tracking-wider transition-colors">Edit</button>
                             <button onclick="window.deleteProduct('${p.id}', '${(p.name || 'Product').replace(/'/g, "\\'")}')" class="text-gray-300 hover:text-red-500 transition-colors text-xs">🗑</button>
                         </td>`;
@@ -2086,6 +2125,97 @@
         window.handleCategoryChange = () => document.getElementById('new-prod-custom-cat').classList.toggle('hidden', document.getElementById('new-prod-cat').value !== 'Custom');
         function showToast(msg) { const t = document.getElementById('toast'); document.getElementById('toast-message').innerText = msg; t.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none'); setTimeout(() => t.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none'), 3000); }
         
+        // --- NEW: PRODUCT RELATIONSHIPS LOGIC ---
+        window.currentAccessories = [];
+
+        window.openRelationsModal = (id) => {
+            const product = productsMaster.find(p => p.id === id);
+            if (!product) return;
+
+            document.getElementById('relations-id').value = id;
+            document.getElementById('relations-product-name').innerText = `Managing: ${product.name || 'Unnamed Product'}`;
+            document.getElementById('relations-family').value = product.styleFamily || '';
+            
+            // Clone the array so we don't accidentally edit the master until they hit save
+            window.currentAccessories = product.accessories ? [...product.accessories] : [];
+            window.renderAccessoriesList();
+
+            document.getElementById('relations-modal').classList.remove('hidden');
+        };
+
+        window.closeRelationsModal = () => {
+            document.getElementById('relations-modal').classList.add('hidden');
+        };
+
+        window.addAccessory = () => {
+            const input = document.getElementById('new-accessory-id');
+            const newId = input.value.trim();
+            if (newId && !window.currentAccessories.includes(newId)) {
+                window.currentAccessories.push(newId);
+                input.value = '';
+                window.renderAccessoriesList();
+            }
+        };
+
+        window.removeAccessory = (idToRemove) => {
+            window.currentAccessories = window.currentAccessories.filter(id => id !== idToRemove);
+            window.renderAccessoriesList();
+        };
+
+        window.renderAccessoriesList = () => {
+            const ul = document.getElementById('accessories-list');
+            ul.innerHTML = '';
+            
+            if (window.currentAccessories.length === 0) {
+                ul.innerHTML = '<li class="text-[10px] text-gray-400 italic">No accessories linked yet.</li>';
+                return;
+            }
+
+            window.currentAccessories.forEach(accId => {
+                // Try to find the name if it's already in the database
+                const accProduct = productsMaster.find(p => p.id === accId);
+                const displayName = accProduct ? accProduct.name : 'Unknown Product';
+
+                const li = document.createElement('li');
+                li.className = "flex justify-between items-center bg-white border border-gray-200 p-2 rounded text-xs";
+                li.innerHTML = `
+                    <div>
+                        <span class="font-bold text-gray-800 block">${displayName}</span>
+                        <span class="text-[9px] text-gray-400 font-mono">${accId}</span>
+                    </div>
+                    <button onclick="window.removeAccessory('${accId}')" class="text-gray-400 hover:text-red-500 font-black text-lg">&times;</button>
+                `;
+                ul.appendChild(li);
+            });
+        };
+
+        window.saveRelations = async () => {
+            const btn = document.getElementById('btn-save-relations');
+            const originalText = btn.innerText;
+            btn.innerText = "Saving...";
+            btn.disabled = true;
+
+            const id = document.getElementById('relations-id').value;
+            const styleFamily = document.getElementById('relations-family').value.trim();
+            
+            try {
+                // Update Firestore
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', id), {
+                    styleFamily: styleFamily || null, // Don't save empty strings
+                    accessories: window.currentAccessories
+                });
+                
+                showToast("Product relationships updated!");
+                window.closeRelationsModal();
+            } catch (err) {
+                console.error(err);
+                window.customAlert("Error", "Could not save relationships to database.");
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        };
+
         initAdmin();
     </script>
 </body>
