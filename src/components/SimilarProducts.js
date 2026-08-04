@@ -27,9 +27,9 @@ export default function SimilarProducts({ products, isPrivate, title }) {
     const isClientMode = clientMargin !== null;
 
     const getGridImgUrl = (data) => {
-        // Automatically return the sleek vector graphic if it's a trim
+        // Automatically return the mouldings graphic if it's a trim without a specific image
         if (data.isAccessory && !data.imgPrefix) {
-            return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="%23FAFAFA"/><path d="M120 180h160v15h-70v85h-20v-85h-70z" fill="%23E5E7EB"/><text x="200" y="320" font-family="sans-serif" font-size="11" font-weight="bold" fill="%239CA3AF" text-anchor="middle" letter-spacing="4">MATCHING MOLDING</text></svg>`;
+            return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/mouldings.png')}?alt=media`;
         }
 
         const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -43,7 +43,6 @@ export default function SimilarProducts({ products, isPrivate, title }) {
         const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
         return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
     };
-
     if (!products || products.length === 0) return null;
 
     return (

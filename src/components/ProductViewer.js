@@ -77,9 +77,9 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     
     const [availablePads, setAvailablePads] = useState([]);
 
-    // DYNAMIC FALLBACK IMAGE: A sleek, modern, minimal T-Mold graphic
+    // DYNAMIC FALLBACK IMAGE: Uses your uploaded mouldings.png for accessories
     const FALLBACK_IMG = productData?.isAccessory 
-        ? `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="%23FAFAFA"/><path d="M120 180h160v15h-70v85h-20v-85h-70z" fill="%23E5E7EB"/><text x="200" y="320" font-family="sans-serif" font-size="11" font-weight="bold" fill="%239CA3AF" text-anchor="middle" letter-spacing="4">MATCHING MOLDING</text></svg>`
+        ? `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/moldings.png')}?alt=media`
         : `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
     useEffect(() => {
