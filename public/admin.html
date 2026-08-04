@@ -2415,7 +2415,6 @@
             btn.innerText = "Publishing to Database...";
             btn.disabled = true;
 
-            // 1. Find the highest product ID currently in the database to increment from
             let max = 0; 
             productsMaster.forEach(p => { 
                 if (p.id && p.id.startsWith('prod_')) {
@@ -2424,13 +2423,11 @@
                 }
             });
 
-            // 2. Get the parent product info so the trims inherit the correct manufacturer
             const parentId = document.getElementById('relations-id').value;
             const parentProd = productsMaster.find(p => p.id === parentId) || {};
 
             let addedCount = 0;
 
-            // 3. Loop through the staging area and create a new Firestore document for each
             for (let i = 0; i < window.stagedTrims.length; i++) {
                 const name = document.getElementById(`stage-name-${i}`).value;
                 const sku = document.getElementById(`stage-sku-${i}`).value;
@@ -2438,29 +2435,26 @@
                 const cost = parseFloat(document.getElementById(`stage-cost-${i}`).value) || 0;
                 const price = parseFloat(document.getElementById(`stage-price-${i}`).value) || 0;
 
-                // Skip if they left the name or SKU blank
                 if(!name || !sku) continue; 
 
                 max++;
                 const newId = `prod_${max}`;
 
-                // Create the standalone accessory product in Firestore
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', newId), {
-                    name: `${parentProd.name || ''} ${name}`.trim(), // Combine parent color name with trim name
+                    name: `${parentProd.name || ''} ${name}`.trim(), 
                     sku: sku,
                     length: length,
                     landedCost: cost,
                     price: price,
-                    retailPrice: price * 2.2, // Standard retail math
+                    retailPrice: price * 2.2, 
                     category: "Trim & Molding", 
                     manufacturer: parentProd.manufacturer || '',
-                    isAccessory: true, // Hides it from main visual grid
+                    isAccessory: true, 
                     isVisible: true,
                     unit: 'pc',
                     addedAt: new Date().toISOString()
                 });
 
-                // Push the new ID to the visual array in the modal
                 window.currentAccessories.push(newId);
                 addedCount++;
             }
@@ -2475,8 +2469,6 @@
                 await window.saveRelations(); 
             } else {
                 window.customAlert("Missing Data", "No trims were created. Make sure Name and SKU are filled out.");
-                
-                // Only reset the button if it failed, otherwise saveRelations handles closing the modal
                 btn.innerText = "Approve, Create, & Link Items";
                 btn.disabled = false;
             }

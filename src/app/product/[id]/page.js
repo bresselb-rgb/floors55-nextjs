@@ -6,6 +6,11 @@ import ProductAccessories from "../../../components/ProductAccessories";
 import SimilarProducts from "../../../components/SimilarProducts";
 import Link from "next/link";
 
+// ADD THIS LINE TO KILL THE VERCEL CACHE
+export const dynamic = 'force-dynamic';
+
+// Helper to ensure the server is authenticated...
+
 // Helper to ensure the server is authenticated before asking Firebase for data
 const authenticateServer = async () => {
     if (!auth.currentUser) {
