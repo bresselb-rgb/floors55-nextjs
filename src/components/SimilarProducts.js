@@ -27,9 +27,9 @@ export default function SimilarProducts({ products, isPrivate, title }) {
     const isClientMode = clientMargin !== null;
 
     const getGridImgUrl = (data) => {
-        // Automatically return the mouldings graphic if it's a trim without a specific image
+        // Automatically return the moldings graphic if it's a trim without a specific image
         if (data.isAccessory && !data.imgPrefix) {
-            return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/mouldings.png')}?alt=media`;
+            return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/moldings.png')}?alt=media`;
         }
 
         const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
