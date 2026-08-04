@@ -2434,7 +2434,7 @@
                 // Use the SKU as the exact database ID (stripping illegal characters just in case)
                 const newId = sku.trim().replace(/[^a-zA-Z0-9_-]/g, '');
 
-                const autoDesc = `Length: ${length}. <a href="/resources/transitions" target="_blank" style="text-decoration: underline; color: #c5a059;">View our Hard Surface Transitions guide here.</a>`;
+                const autoDesc = `Length: ${length}. <a href="/hard-surface-transitions" target="_blank" style="text-decoration: underline; color: #c5a059;">View our Hard Surface Transitions guide here.</a>`;
 
                 // Create the standalone accessory
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', newId), {
