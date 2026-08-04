@@ -822,7 +822,10 @@
             const btn = document.getElementById('btn-auto-desc');
             btn.innerText = "Generating...";
             
-            const prompt = `Write a 2-3 sentence engaging, SEO-friendly e-commerce product description for a flooring product named "${name}" manufactured by "${mfg}" in the "${cat}" category for Floors 55. Keep it professional, appealing, and focus on style and durability. Return ONLY the description text, no quotes or markdown.`;
+            // BRAND AGNOSTIC PROMPT
+            const prompt = `Write a 2-3 sentence engaging, SEO-friendly e-commerce product description for a flooring product in the "${cat}" category. 
+            CRITICAL: Do NOT use the manufacturer name ("${mfg}") or the specific product name ("${name}") anywhere in the description. 
+            Use generic, premium phrasing like "this stunning collection" or "this premium flooring". Keep it professional, appealing, and focus on style and durability. Return ONLY the description text, no quotes or markdown.`;
             
             const result = await window.callGemini(prompt);
             if(result) document.getElementById('new-prod-desc').value = result.trim();
@@ -837,7 +840,10 @@
             const btn = document.getElementById('btn-generate-json');
             btn.innerText = "Analyzing & Extracting...";
             
+            // BRAND AGNOSTIC JSON PROMPT
             const prompt = `You are a data extraction assistant for Floors 55. Analyze the following raw flooring product text and extract the details into a strict JSON object. 
+            
+            CRITICAL INSTRUCTION: For the "desc" field, write a 1-2 sentence description based on the specs, but DO NOT use the manufacturer name or the product name in the description text. Use generic terms like "this premium collection".
             
             REQUIRED SCHEMA:
             {
@@ -845,7 +851,7 @@
               "manufacturer": "Manufacturer Name",
               "sku": "Base SKU if any",
               "category": "Luxury Vinyl (LVP) OR Laminate OR Carpet OR Hardwood",
-              "desc": "Write a 1 sentence description based on the specs",
+              "desc": "Write a 1 sentence brand-agnostic description based on the specs",
               "landedCost": 0.00,
               "price": 0.00,
               "retailPrice": 0.00,
