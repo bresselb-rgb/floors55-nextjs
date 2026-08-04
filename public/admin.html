@@ -2420,6 +2420,7 @@
             const parentProd = productsMaster.find(p => p.id === parentId) || {};
 
             let addedCount = 0;
+            let duplicateCount = 0;
 
             // Loop through staging area and create trims
             for (let i = 0; i < window.stagedTrims.length; i++) {
@@ -2431,12 +2432,25 @@
 
                 if(!name || !sku) continue; 
 
-                // Use the SKU as the exact database ID (stripping illegal characters just in case)
+                // Format the SKU for the database ID
                 const newId = sku.trim().replace(/[^a-zA-Z0-9_-]/g, '');
 
+                // SAFETY CHECK: Does this trim already exist in the database?
+                const existingProduct = productsMaster.find(p => p.id === newId);
+
+                if (existingProduct) {
+                    // It's a duplicate. Skip creating it, but make sure it gets linked!
+                    if (!window.currentAccessories.includes(newId)) {
+                        window.currentAccessories.push(newId);
+                    }
+                    duplicateCount++;
+                    addedCount++;
+                    continue; 
+                }
+
+                // If it's brand new, create the description and save it
                 const autoDesc = `Length: ${length}. <a href="/hard-surface-transitions" target="_blank" style="text-decoration: underline; color: #c5a059;">View our Hard Surface Transitions guide here.</a>`;
 
-                // Create the standalone accessory
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', newId), {
                     name: `${parentProd.name || ''} ${name}`.trim(), 
                     sku: sku,
@@ -2455,7 +2469,9 @@
                     addedAt: new Date().toISOString()
                 });
 
-                window.currentAccessories.push(newId);
+                if (!window.currentAccessories.includes(newId)) {
+                    window.currentAccessories.push(newId);
+                }
                 addedCount++;
             }
 
@@ -2465,10 +2481,16 @@
                     await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', parentId), {
                         accessories: window.currentAccessories
                     });
-                    showToast(`${addedCount} trims created and linked successfully!`);
+                    
+                    if (duplicateCount > 0) {
+                        showToast(`${addedCount} trims linked! (${duplicateCount} existing trims safely reused)`);
+                    } else {
+                        showToast(`${addedCount} new trims created and linked successfully!`);
+                    }
+                    
                 } catch (err) {
                     console.error("Failed to link to parent:", err);
-                    window.customAlert("Linking Error", "Trims were created, but failed to link to the main floor. Please try adding them manually.");
+                    window.customAlert("Linking Error", "Trims were processed, but failed to link to the main floor.");
                 }
 
                 // Clean up UI and close
