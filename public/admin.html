@@ -2335,30 +2335,80 @@
             }
         };
 
+// NEW FUNCTION: Removes a single trim from the staging array and re-renders
+        window.removeStagedTrim = (index) => {
+            window.stagedTrims.splice(index, 1);
+            window.renderStagedTrims();
+        };
+
         window.renderStagedTrims = () => {
             const container = document.getElementById('ai-trim-staging');
-            const list = document.getElementById('ai-trim-list');
-            list.innerHTML = '';
-
-            if(window.stagedTrims.length === 0) {
-                list.innerHTML = '<div class="text-[10px] text-gray-500 italic p-2">No trims detected in the provided text.</div>';
-            } else {
-                window.stagedTrims.forEach((trim, index) => {
-                    // Updated grid classes to match the wider modal layout
-                    list.innerHTML += `
-                        <div class="bg-white p-2 border border-blue-100 rounded text-[10px] flex gap-2 items-center shadow-sm">
-                            <input type="text" id="stage-name-${index}" value="${trim.name || ''}" class="w-1/3 border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-gold" placeholder="Name">
-                            <input type="text" id="stage-sku-${index}" value="${trim.sku || ''}" class="w-1/4 border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-gold font-mono uppercase" placeholder="SKU">
-                            <input type="text" id="stage-length-${index}" value="${trim.length || ''}" class="w-[12%] border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-gold" placeholder="Length">
-                            <input type="number" step="0.01" id="stage-cost-${index}" value="${trim.cost || ''}" placeholder="Cost $" class="w-[15%] border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-gold bg-blue-50 font-mono text-center">
-                            <input type="number" step="0.01" id="stage-price-${index}" placeholder="WS $" class="w-[15%] border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-gold font-mono text-center">
-                        </div>
-                    `;
-                });
+            
+            // If we deleted the last trim, hide the staging area entirely
+            if(!window.stagedTrims || window.stagedTrims.length === 0) {
+                container.innerHTML = '';
+                container.classList.add('hidden');
+                return;
             }
+
+            let html = '<h4 class="font-bold text-gray-900 mb-3 text-sm uppercase tracking-widest">Review & Edit Extracted Trims</h4>';
+            html += '<div class="space-y-3 max-h-[60vh] overflow-y-auto pb-4 px-1">';
+
+            window.stagedTrims.forEach((trim, i) => {
+                // Font size updated to text-[13px] for the perfect middle ground
+                html += `
+                    <div class="grid grid-cols-[1fr_1fr_90px_90px_90px_auto] gap-3 items-center bg-white p-3 rounded-xl border border-gray-200 shadow-sm relative">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Name</label>
+                            <input type="text" id="stage-name-${i}" value="${trim.name || ''}" class="w-full p-2 border border-gray-300 rounded-lg text-[13px] font-bold text-gray-900 focus:border-gold outline-none bg-gray-50 focus:bg-white transition-colors" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">SKU</label>
+                            <input type="text" id="stage-sku-${i}" value="${trim.sku || ''}" class="w-full p-2 border border-gray-300 rounded-lg text-[13px] font-bold text-gray-900 focus:border-gold outline-none bg-gray-50 focus:bg-white transition-colors" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Length</label>
+                            <input type="text" id="stage-length-${i}" value="${trim.length || ''}" class="w-full p-2 border border-gray-300 rounded-lg text-[13px] font-bold text-gray-900 focus:border-gold outline-none bg-gray-50 focus:bg-white transition-colors" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Cost</label>
+                            <input type="number" step="0.01" id="stage-cost-${i}" value="${trim.cost || 0}" class="w-full p-2 border border-gray-300 rounded-lg text-[13px] font-bold text-gray-900 focus:border-gold outline-none bg-gray-50 focus:bg-white transition-colors text-right" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Price</label>
+                            <input type="number" step="0.01" id="stage-price-${i}" value="${trim.price || trim.cost || 0}" class="w-full p-2 border border-gray-300 rounded-lg text-[13px] font-bold text-gray-900 focus:border-gold outline-none bg-gray-50 focus:bg-white transition-colors text-right" />
+                        </div>
+                        <div class="pt-5 flex items-center justify-center">
+                            <button onclick="window.removeStagedTrim(${i})" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg font-black transition-colors cursor-pointer outline-none" title="Remove this trim">✕</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            
+            // Restore your utility buttons to the bottom of the container
+            html += `
+                <div class="mt-4 flex gap-2">
+                    <button type="button" onclick="window.clearStagedTrims()" class="w-1/4 bg-gray-200 text-gray-700 px-2 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-gray-300 transition-colors outline-none cursor-pointer">Clear</button>
+                    <button type="button" onclick="window.calculateWSPricing()" class="w-1/4 bg-blue-600 text-white px-2 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-blue-700 transition-colors outline-none cursor-pointer">Set Margin</button>
+                    <button type="button" onclick="window.approveAndCreateTrims()" id="btn-approve-trims" class="w-2/4 bg-black text-white px-4 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-gold hover:text-black transition-colors outline-none cursor-pointer">Approve, Create, & Link</button>
+                </div>
+            `;
+
+            container.innerHTML = html;
             container.classList.remove('hidden');
         };
 
+        window.clearStagedTrims = () => {
+            window.stagedTrims = [];
+            const container = document.getElementById('ai-trim-staging');
+            if(container) {
+                container.innerHTML = '';
+                container.classList.add('hidden');
+            }
+            document.getElementById('ai-trim-text').value = '';
+        };
         // New function to instantly clear the staging area and input text
         window.clearStagedTrims = () => {
             window.stagedTrims = [];
@@ -2369,14 +2419,15 @@
 
 // Instantly calculate and apply Wholesale Price based on a target margin
         window.calculateWSPricing = async () => {
-            // Prompt the user for the margin percentage
+            // FIXED: Passed "25" as the 4th argument so it actually pre-fills the input box
             const marginStr = await window.customPrompt(
                 "Set Wholesale Margin",
                 "Enter your desired margin percentage for these trims (e.g., 25 for 25%):",
+                "e.g. 25", 
                 "25"
             );
             
-            if (!marginStr) return; // Exit if they hit Cancel
+            if (!marginStr) return; 
             
             const margin = parseFloat(marginStr);
             if (isNaN(margin) || margin < 0 || margin >= 100) {
@@ -2385,22 +2436,39 @@
 
             let appliedCount = 0;
 
-            // Loop through the rendered inputs and update the WS Price
+            // Sync any manual text edits from the screen into our data array 
+            // so we don't lose them when the screen refreshes!
             for (let i = 0; i < window.stagedTrims.length; i++) {
                 const costInput = document.getElementById(`stage-cost-${i}`);
+                const nameInput = document.getElementById(`stage-name-${i}`);
+                const skuInput = document.getElementById(`stage-sku-${i}`);
+                const lengthInput = document.getElementById(`stage-length-${i}`);
                 const priceInput = document.getElementById(`stage-price-${i}`);
                 
-                if (costInput && priceInput) {
-                    const cost = parseFloat(costInput.value);
-                    if (!isNaN(cost) && cost > 0) {
-                        // Standard margin formula matching your matrix: WS = Cost / (1 - Margin/100)
+                if (costInput) {
+                    const cost = parseFloat(costInput.value) || 0;
+                    
+                    // Sync text fields back to the master array
+                    window.stagedTrims[i].name = nameInput ? nameInput.value : window.stagedTrims[i].name;
+                    window.stagedTrims[i].sku = skuInput ? skuInput.value : window.stagedTrims[i].sku;
+                    window.stagedTrims[i].length = lengthInput ? lengthInput.value : window.stagedTrims[i].length;
+                    window.stagedTrims[i].cost = cost;
+                    
+                    // Calculate and set the new Wholesale Price
+                    if (cost > 0) {
                         const wsPrice = cost / (1 - (margin / 100));
-                        priceInput.value = wsPrice.toFixed(2);
+                        window.stagedTrims[i].price = parseFloat(wsPrice.toFixed(2));
                         appliedCount++;
+                    } else {
+                        // If there is no cost, fall back to whatever is in the price box
+                        window.stagedTrims[i].price = priceInput ? parseFloat(priceInput.value) || 0 : 0;
                     }
                 }
             }
             
+            // Force a clean re-render with the newly calculated data
+            window.renderStagedTrims();
+
             if (appliedCount > 0) {
                 showToast(`Margin of ${margin}% applied to ${appliedCount} trims!`);
             } else {
