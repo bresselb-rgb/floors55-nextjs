@@ -534,6 +534,12 @@ export default function Header() {
                                   const displayTitle = (p.usePrivateName && p.privateName) ? p.privateName : (p.name || 'Unnamed Product');
                                   const isTrim = p.isAccessory || p.category === 'Trim & Molding';
                                   
+                                  // NEW: Find if a specific color matched the search query
+                                  const matchedColor = headerSearchQuery.trim() ? (p.colors || []).find(c => 
+                                      (c.name || '').toLowerCase().includes(headerSearchQuery.toLowerCase()) || 
+                                      (c.sku || '').toLowerCase().includes(headerSearchQuery.toLowerCase())
+                                  ) : null;
+                                  
                                   return (
                                       <Link key={p.id} href={`/product/${p.id}`} onClick={() => { setIsSearchOpen(false); setHeaderSearchQuery(''); }} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100" style={{ textDecoration: 'none' }}>
                                          <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center">
@@ -552,6 +558,14 @@ export default function Header() {
                                             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                                 <HighlightMatch text={p.category || ''} query={headerSearchQuery} /> &bull; <span className="font-mono"><HighlightMatch text={p.sku || ''} query={headerSearchQuery} /></span>
                                             </div>
+                                            
+                                            {/* NEW: Render the matched color so the highlight is visible */}
+                                            {matchedColor && (
+                                                <div className="text-[10px] font-bold text-gray-500 mt-1 flex items-center gap-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-gold inline-block"></span>
+                                                    Color Match: <HighlightMatch text={`${matchedColor.name} (${matchedColor.sku})`} query={headerSearchQuery} />
+                                                </div>
+                                            )}
                                          </div>
                                       </Link>
                                   );
