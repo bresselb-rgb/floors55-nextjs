@@ -2298,19 +2298,20 @@
             btn.innerText = "Analyzing Spec Sheet...";
             btn.disabled = true;
 
-            // Updated Prompt with strict rules to force INCHES and ignore mm
+            // Updated Prompt with strict rules to strip out brand/collection names
             const prompt = `You are a data extractor. Read the following flooring specification sheet and extract ONLY the coordinating trims, moldings, and accessories (e.g., T-Mold, Reducer, Stairnose, Quarter Round, Baby Threshold, Stair Cap, etc.).
             
-            CRITICAL PRICING & MEASUREMENT INSTRUCTIONS: 
-            1. Look for dollar amounts in the text. If a price is specifically associated with a certain trim, apply it ONLY to that trim's "cost" field. If there is clearly only ONE universal trim price listed in the entire text, apply it to all trims. If you cannot confidently determine the price for a trim, leave its "cost" field null. Do not extract raw numbers as costs.
-            2. For the "length" field, ALWAYS extract the measurement in INCHES (e.g., "94 in" or "94"). If the text provides both inches and millimeters (mm), ignore the mm. Do NOT extract product thickness (e.g., 5.5mm) as the length.
+            CRITICAL NAMING & DATA INSTRUCTIONS: 
+            1. For the "name" field, extract ONLY the generic trim type (e.g., "T-Mold", "Baby Threshold", "Quarter Round"). You MUST strip out and IGNORE any manufacturer, brand, collection, style, or color names from this field.
+            2. Look for dollar amounts in the text. If a price is specifically associated with a certain trim, apply it ONLY to that trim's "cost" field. If there is clearly only ONE universal trim price listed in the entire text, apply it to all trims. If you cannot confidently determine the price for a trim, leave its "cost" field null. Do not extract raw numbers as costs.
+            3. For the "length" field, ALWAYS extract the measurement in INCHES (e.g., "94 in" or "94"). If the text provides both inches and millimeters (mm), ignore the mm. Do NOT extract product thickness (e.g., 5.5mm) as the length.
             
             Return ONLY a raw JSON array of objects. Do not use markdown tags like \`\`\`json.
             
             REQUIRED SCHEMA:
             [
                 {
-                    "name": "Trim Name (e.g. Overlap Stairnose)",
+                    "name": "Generic Trim Type ONLY (e.g. Baby Threshold)",
                     "sku": "SKU code",
                     "length": "Length in INCHES ONLY (e.g. 94 in)",
                     "cost": 15.99
@@ -2333,6 +2334,19 @@
                     window.customAlert("AI Error", "Could not format the response. Please try pasting the text again.");
                 }
             }
+        };
+
+        // Clears the staging area and input text safely
+        window.clearStagedTrims = () => {
+            window.stagedTrims = [];
+            const container = document.getElementById('ai-trim-staging');
+            if(container) {
+                container.innerHTML = '';
+                container.classList.add('hidden');
+            }
+            document.getElementById('ai-trim-text').value = '';
+            const list = document.getElementById('ai-trim-list');
+            if(list) list.innerHTML = '';
         };
 
 // NEW FUNCTION: Removes a single trim from the staging array and re-renders
