@@ -2549,7 +2549,11 @@
                     });
                     
                     if (duplicateCount > 0) {
-                        showToast(`${addedCount} trims linked! (${duplicateCount} existing trims safely reused)`);
+                        // CHANGED: Now uses a hard popup alert so you are explicitly warned about duplicates
+                        window.customAlert(
+                            "Duplicates Safely Linked", 
+                            `${addedCount} total trims were attached to this floor. ${duplicateCount} of these trims already existed in your database, so we safely reused them without overwriting your existing pricing!`
+                        );
                     } else {
                         showToast(`${addedCount} new trims created and linked successfully!`);
                     }
