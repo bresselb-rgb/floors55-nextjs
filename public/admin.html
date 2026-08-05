@@ -2414,6 +2414,7 @@
             container.classList.remove('hidden');
         };
 
+        // Clears the staging area and input text safely
         window.clearStagedTrims = () => {
             window.stagedTrims = [];
             const container = document.getElementById('ai-trim-staging');
@@ -2422,13 +2423,8 @@
                 container.classList.add('hidden');
             }
             document.getElementById('ai-trim-text').value = '';
-        };
-        // New function to instantly clear the staging area and input text
-        window.clearStagedTrims = () => {
-            window.stagedTrims = [];
-            document.getElementById('ai-trim-staging').classList.add('hidden');
-            document.getElementById('ai-trim-text').value = '';
-            document.getElementById('ai-trim-list').innerHTML = '';
+            const list = document.getElementById('ai-trim-list');
+            if(list) list.innerHTML = '';
         };
 
 // Instantly calculate and apply Wholesale Price based on a target margin
