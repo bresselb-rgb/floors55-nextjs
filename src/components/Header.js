@@ -42,6 +42,25 @@ const RESOURCE_PAGES = [
     { title: 'FAQ', path: '/faq', keywords: ['frequently asked questions', 'help', 'support', 'pad attached', 'questions', 'can i'] },
 ];
 
+// A component to wrap matching search text in your gold theme color
+const HighlightMatch = ({ text, query }) => {
+  if (!query || !text) return <>{text}</>;
+  const parts = text.toString().split(new RegExp(`(${query})`, 'gi'));
+  return (
+    <span>
+      {parts.map((part, index) => 
+        part.toLowerCase() === query.toLowerCase() ? (
+          <span key={index} className="text-gold font-black bg-gold/10 px-0.5 rounded">
+            {part}
+          </span>
+        ) : (
+          <span key={index}>{part}</span>
+        )
+      )}
+    </span>
+  );
+};
+
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -513,14 +532,26 @@ export default function Header() {
                               <div className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-50 border-b border-gray-100">Products</div>
                               {filteredSearchProducts.slice(0, 4).map(p => {
                                   const displayTitle = (p.usePrivateName && p.privateName) ? p.privateName : (p.name || 'Unnamed Product');
+                                  const isTrim = p.isAccessory || p.category === 'Trim & Molding';
+                                  
                                   return (
                                       <Link key={p.id} href={`/product/${p.id}`} onClick={() => { setIsSearchOpen(false); setHeaderSearchQuery(''); }} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100" style={{ textDecoration: 'none' }}>
-                                         <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200">
-                                            <img src={getSearchImgUrl(p)} className="w-full h-full object-cover" onError={e => e.target.src = getFbUrl('images/tbd.jpg')} alt={displayTitle} />
+                                         <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center">
+                                            {isTrim ? (
+                                                <div className="flex flex-col items-center justify-center text-gray-300">
+                                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+                                                </div>
+                                            ) : (
+                                                <img src={getSearchImgUrl(p)} className="w-full h-full object-cover" onError={e => e.target.src = getFbUrl('images/tbd.jpg')} alt={displayTitle} />
+                                            )}
                                          </div>
                                          <div>
-                                            <div className="text-base font-bold text-gray-900 mb-0.5">{displayTitle}</div>
-                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{p.category} &bull; <span className="font-mono">{p.sku}</span></div>
+                                            <div className="text-base font-bold text-gray-900 mb-0.5">
+                                                <HighlightMatch text={displayTitle} query={headerSearchQuery} />
+                                            </div>
+                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                                <HighlightMatch text={p.category || ''} query={headerSearchQuery} /> &bull; <span className="font-mono"><HighlightMatch text={p.sku || ''} query={headerSearchQuery} /></span>
+                                            </div>
                                          </div>
                                       </Link>
                                   );
@@ -536,7 +567,9 @@ export default function Header() {
                                   <Link key={r.path} href={r.path} onClick={() => { setIsSearchOpen(false); setHeaderSearchQuery(''); }} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100" style={{ textDecoration: 'none' }}>
                                      <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-lg shadow-sm shrink-0">📘</div>
                                      <div>
-                                        <div className="text-sm font-bold text-gray-900">{r.title}</div>
+                                        <div className="text-sm font-bold text-gray-900">
+                                            <HighlightMatch text={r.title} query={headerSearchQuery} />
+                                        </div>
                                         <div className="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">Resource Guide</div>
                                      </div>
                                   </Link>
