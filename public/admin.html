@@ -2518,7 +2518,7 @@
                 const autoDesc = `Length: ${length}. <a href="/hard-surface-transitions" target="_blank" style="text-decoration: underline; color: #c5a059;">View our Hard Surface Transitions guide here.</a>`;
 
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', newId), {
-                    name: name.trim(), 
+                    name: `${parentProd.manufacturer || ''} ${name}`.trim(), 
                     sku: sku,
                     length: length,
                     landedCost: cost,
