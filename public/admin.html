@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Console | Floors 55</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
         tailwind.config = { theme: { extend: { colors: { gold: '#c5a059' } } } }
     </script>
@@ -1049,6 +1050,124 @@
             });
         };
 
+window.downloadSellSheet = async (id) => {
+            const product = productsMaster.find(p => p.id === id);
+            if (!product) return;
+            
+            showToast("Generating Sell Sheet... Please wait.");
+            
+            // Generate the image URL logic specifically for the PDF
+            const safeName = (product.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            const safeSku = (product.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            let folderName = 'images'; 
+            if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+            else if (safeName) folderName = safeName;
+            folderName = folderName.replace(/-+$/, '');
+
+            const displaySku = product.colors?.[0]?.sku || '01';
+            const rawPath = `images/${folderName}/${product.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
+            const imgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+
+            // Format linked trims
+            let accHtml = '';
+            if (product.accessories && product.accessories.length > 0) {
+                const accProducts = product.accessories.map(accId => productsMaster.find(p => p.id === accId)).filter(Boolean);
+                accProducts.forEach(acc => {
+                    accHtml += `<div style="display:inline-block; width:31%; margin-right:2%; margin-bottom:12px; background:white; padding:10px; border:1px solid #e5e7eb; border-radius:6px;">
+                        <strong style="display:block; font-size:9.5pt; color:#111827; margin-bottom:3px;">${acc.name || 'Trim'}</strong>
+                        <span style="font-size:8pt; color:#6b7280; font-family:monospace;">${acc.sku || ''}</span>
+                    </div>`;
+                });
+            } else {
+                accHtml = '<p style="font-size:9pt; color:#6b7280; font-style:italic;">No trims currently linked to this floor.</p>';
+            }
+
+            // Format available colorways
+            let colorsHtml = '';
+            if (product.colors && product.colors.length > 0) {
+                product.colors.forEach(c => {
+                    colorsHtml += `<div style="display:inline-block; width:31%; margin-right:2%; margin-bottom:12px; background:white; padding:10px; border:1px solid #e5e7eb; border-radius:6px;">
+                        <strong style="display:block; font-size:9.5pt; color:#111827; margin-bottom:3px;">${c.name || 'Default Color'}</strong>
+                        <span style="font-size:8pt; color:#6b7280; font-family:monospace;">${c.sku || ''}</span>
+                    </div>`;
+                });
+            }
+
+            // Build the HTML document structure
+            const html = `
+                <div style="padding: 15mm; background-color: #fdfbf7; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827;">
+                    <table style="width: 100%; margin-bottom: 20px; border-bottom: 3px solid #c5a059; padding-bottom: 15px; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 50%; vertical-align: middle;"><h1 style="margin:0; font-size:28pt; font-weight:900; letter-spacing:2px; color:#111827;">FLOORS <span style="color:#c5a059;">55</span></h1></td>
+                            <td style="text-align: right; font-size: 9pt; text-transform: uppercase; letter-spacing: 1.5px; color: #6b7280; font-weight: bold; vertical-align: middle;">
+                                Product Specification<br><span style="color: #111827;">Premium Floor Portal</span>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <div style="width: 100%; height: 280px; background-color: #e5e7eb; border-radius: 8px; margin-bottom: 25px; overflow: hidden; position: relative;">
+                        <img src="${imgUrl}" style="width: 100%; height: 100%; object-fit: cover;" crossorigin="anonymous" onerror="this.src='https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ftbd.jpg?alt=media'" />
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <h2 style="margin: 0; font-size: 26pt; color: #111827; font-weight: 900;">${product.name || 'Unnamed Product'}</h2>
+                        <h3 style="margin: 4px 0 0 0; font-size: 13pt; color: #c5a059; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">${product.category || 'Flooring'} &bull; ${product.manufacturer || 'Brand'}</h3>
+                    </div>
+                    
+                    <p style="font-size: 10.5pt; line-height: 1.6; color: #4b5563; margin-bottom: 30px;">
+                        ${product.desc || 'Premium flooring selection expertly sourced by Floors 55.'}
+                    </p>
+                    
+                    <div style="display: block; width: 100%; margin-bottom: 25px;">
+                        <div style="display: inline-block; width: 48%; vertical-align: top;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt; width:45%;">Size</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.width || '-'} x ${product.length || '-'}</td></tr>
+                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Thickness</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.thickness || '-'}</td></tr>
+                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Carton Size</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.cartonSize ? product.cartonSize + ' sq ft' : '-'}</td></tr>
+                            </table>
+                        </div>
+                        <div style="display: inline-block; width: 48%; margin-left: 3%; vertical-align: top;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt; width:45%;">Base SKU</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold; font-family:monospace;">${product.sku || '-'}</td></tr>
+                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Coverage Unit</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.unit || 'sqft'}</td></tr>
+                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Warranty</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">See Manufacturer Spec</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 25px; page-break-inside: avoid;">
+                        <h4 style="font-size: 12pt; color: #111827; margin-bottom: 12px; border-bottom: 2px solid #c5a059; padding-bottom: 6px; display: inline-block; text-transform: uppercase;">Available Colorways</h4>
+                        <div style="display: block; width: 100%;">${colorsHtml}</div>
+                    </div>
+                    
+                    <div style="margin-top: 25px; page-break-inside: avoid;">
+                        <h4 style="font-size: 12pt; color: #111827; margin-bottom: 12px; border-bottom: 2px solid #c5a059; padding-bottom: 6px; display: inline-block; text-transform: uppercase;">Coordinating Trims</h4>
+                        <div style="display: block; width: 100%;">${accHtml}</div>
+                    </div>
+                    
+                    <div style="margin-top: 30px; text-align: center; font-size: 8.5pt; color: #9ca3af; padding-top: 15px; border-top: 1px solid #e5e7eb; font-weight: bold; letter-spacing: 1px;">
+                        &copy; ${new Date().getFullYear()} FLOORS 55 &bull; FLOORS55.COM &bull; SYSTEM GENERATED SPEC SHEET
+                    </div>
+                </div>
+            `;
+
+            const element = document.createElement('div');
+            element.innerHTML = html;
+            element.style.width = '800px';
+
+            const opt = {
+              margin:       0,
+              filename:     `${(product.name || 'Floors55_Product').replace(/\\s+/g, '_')}_Spec_Sheet.pdf`,
+              image:        { type: 'jpeg', quality: 0.98 },
+              html2canvas:  { scale: 2, useCORS: true }, // useCORS allows Firebase images to load into the PDF
+              jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                showToast("Spec Sheet Downloaded!");
+            });
+        };
+
         window.shareProduct = (id) => {
             const basePath = window.location.pathname.replace(/[^/]*$/, '');
             const url = window.location.origin + basePath + 'product/' + id;
@@ -1471,6 +1590,7 @@
                             </div>
                         </td>
                         <td class="px-4 py-1.5 align-middle text-right flex items-center justify-end gap-3 h-full pt-4">
+                            <button onclick="window.downloadSellSheet('${p.id}')" class="text-emerald-600 hover:text-emerald-800 text-[10px] font-bold uppercase tracking-wider transition-colors">📄 PDF</button>
                             <button onclick="window.shareProduct('${p.id}')" class="text-gold hover:text-black text-[10px] font-bold uppercase tracking-wider transition-colors">Share</button>
                             <button onclick="window.duplicateProduct('${p.id}')" class="text-blue-500 hover:text-blue-700 text-[10px] font-bold uppercase tracking-wider transition-colors">Copy</button>
                             <button onclick="window.openRelationsModal('${p.id}')" class="text-indigo-500 hover:text-indigo-700 text-[10px] font-bold uppercase tracking-wider transition-colors">🔗 Links</button>

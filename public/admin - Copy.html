@@ -424,7 +424,7 @@
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 pb-2 border-b border-gray-100">
                         <label class="flex items-center gap-2 text-[11px] font-bold text-gray-700 cursor-pointer">
                             <input type="checkbox" id="new-prod-use-private" class="accent-gold h-4 w-4">
                             Use Private Style Name as Public Default
@@ -441,6 +441,25 @@
                             <input type="checkbox" id="new-prod-contractor" class="accent-purple-600 h-4 w-4">
                             🛠️ Feature in Contractor Pro
                         </label>
+                        <label class="flex items-center gap-2 text-[11px] font-bold text-indigo-700 cursor-pointer md:col-span-2 bg-indigo-50 p-2 rounded">
+                            <input type="checkbox" id="new-prod-is-accessory" class="accent-indigo-600 h-4 w-4">
+                            🔗 Mark as Accessory (Hides from main catalog grids, keeps SKU searchable)
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-4 pt-2">
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-gray-400 mb-1">Length</label>
+                            <input type="text" id="new-prod-length" placeholder="e.g. 94 in" class="w-full px-3 py-2 border rounded focus:border-gold outline-none text-sm bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-gray-400 mb-1">Width</label>
+                            <input type="text" id="new-prod-width" placeholder="e.g. 2 in" class="w-full px-3 py-2 border rounded focus:border-gold outline-none text-sm bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black uppercase text-gray-400 mb-1">Thickness</label>
+                            <input type="text" id="new-prod-thickness" placeholder="e.g. 5.5mm" class="w-full px-3 py-2 border rounded focus:border-gold outline-none text-sm bg-white">
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
@@ -626,7 +645,7 @@
 
 <!-- PRODUCT RELATIONSHIPS MODAL -->
     <div id="relations-modal" class="hidden fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl p-6 w-full max-w-lg shadow-2xl">
+        <div class="bg-white rounded-xl p-6 w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 class="text-lg font-bold text-gray-900 mb-1">Link Related Products</h3>
             <p id="relations-product-name" class="text-xs text-gray-500 mb-4 font-bold text-gold"></p>
             
@@ -652,6 +671,38 @@
                     
                     <!-- Dynamic list of added accessories will render here -->
                     <ul id="accessories-list" class="space-y-2 max-h-32 overflow-y-auto"></ul>
+
+                    <!-- AI Trim Extractor -->
+                    <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg mt-6">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-xl">✨</span>
+                            <div>
+                                <h4 class="text-xs font-black uppercase tracking-widest text-blue-800">AI Trim Extractor</h4>
+                                <p class="text-[9px] text-blue-600">Paste raw PDF text. Gemini will extract trims and stage them for your approval.</p>
+                            </div>
+                        </div>
+                        <textarea id="ai-trim-text" class="w-full px-3 py-2 border border-blue-200 rounded text-xs outline-none focus:border-blue-400 mb-2 h-16 resize-none bg-white" placeholder="Paste COREtec (or other) spec sheet text here..."></textarea>
+                        <button type="button" onclick="window.extractTrimsAI()" id="btn-extract-trims" class="w-full bg-blue-600 text-white px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest hover:bg-blue-700 transition-colors">Extract Trims via Gemini</button>
+
+                        <!-- Editable Approval Staging Area -->
+                        <div id="ai-trim-staging" class="hidden mt-4 pt-4 border-t border-blue-200">
+                            <h5 class="text-[10px] font-bold text-gray-700 uppercase mb-2">Review & Set Pricing</h5>
+                            <div class="flex gap-2 text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">
+                                <div class="w-1/3">Name</div>
+                                <div class="w-1/4">SKU</div>
+                                <div class="w-[12%]">Length</div>
+                                <div class="w-[15%] text-center">Cost $</div>
+                                <div class="w-[15%] text-center">WS $</div>
+                            </div>
+                            <div id="ai-trim-list" class="space-y-2 max-h-48 overflow-y-auto pb-2"></div>
+                            
+                            <div class="flex gap-2 mt-2">
+                                <button type="button" onclick="window.clearStagedTrims()" class="w-1/4 bg-gray-200 text-gray-700 px-2 py-2 rounded text-[10px] font-bold uppercase tracking-widest hover:bg-gray-300 transition-colors">Clear</button>
+                                <button type="button" onclick="window.calculateWSPricing()" class="w-1/4 bg-blue-600 text-white px-2 py-2 rounded text-[10px] font-bold uppercase tracking-widest hover:bg-blue-700 transition-colors">Set Margin</button>
+                                <button type="button" onclick="window.approveAndCreateTrims()" id="btn-approve-trims" class="w-2/4 bg-black text-white px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest hover:bg-gold hover:text-black transition-colors">Approve, Create, & Link Items</button>
+                            </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -1325,7 +1376,15 @@
                         </td>
                         <td class="px-4 py-1.5 align-middle text-[10px]">
                             <div class="font-bold text-gray-500 mb-1">${p.category}</div>
-                            <input type="text" id="edit-img-prefix-${p.id}" value="${p.imgPrefix || ''}" placeholder="Prefix: mb915_" class="w-full px-1.5 py-0.5 border border-gray-200 rounded text-[9px] font-mono focus:ring-1 focus:ring-gold bg-white outline-none text-blue-600">
+                            <input type="text" id="edit-img-prefix-${p.id}" value="${p.imgPrefix || ''}" placeholder="Prefix: mb915_" class="w-full px-1.5 py-0.5 border border-gray-200 rounded text-[9px] font-mono focus:ring-1 focus:ring-gold bg-white outline-none text-blue-600 mb-1">
+                            <div class="flex gap-1 mb-1">
+                                <input type="text" id="edit-length-${p.id}" value="${p.length || ''}" placeholder="L (94in)" class="w-1/3 px-1.5 py-0.5 border border-gray-200 rounded text-[9px] focus:ring-1 focus:ring-gold outline-none">
+                                <input type="text" id="edit-width-${p.id}" value="${p.width || ''}" placeholder="W (2in)" class="w-1/3 px-1.5 py-0.5 border border-gray-200 rounded text-[9px] focus:ring-1 focus:ring-gold outline-none">
+                                <input type="text" id="edit-thickness-${p.id}" value="${p.thickness || ''}" placeholder="T (5mm)" class="w-1/3 px-1.5 py-0.5 border border-gray-200 rounded text-[9px] focus:ring-1 focus:ring-gold outline-none">
+                            </div>
+                            <label class="flex items-center gap-1 text-[9px] font-bold text-indigo-600 cursor-pointer">
+                                <input type="checkbox" id="edit-accessory-${p.id}" ${p.isAccessory ? 'checked' : ''} class="accent-indigo-600 h-3.3 w-3.5"> 🔗 Accessory
+                            </label>
                         </td>
                         <td class="px-4 py-1.5 align-middle">
                             <div class="flex items-center gap-2 mb-1">
@@ -1430,6 +1489,10 @@
         window.startEdit = (id) => { window.editingId = id; window.filterPricingTable(); };
         window.cancelEdit = () => { window.editingId = null; window.filterPricingTable(); };
         window.saveEdit = async (e, id) => {
+            const isAccessory = document.getElementById(`edit-accessory-${id}`)?.checked || false;
+            const length = document.getElementById(`edit-length-${id}`)?.value || '';
+            const width = document.getElementById(`edit-width-${id}`)?.value || '';
+            const thickness = document.getElementById(`edit-thickness-${id}`)?.value || '';
             const cost = parseFloat(document.getElementById(`edit-cost-${id}`).value);
             const ws = parseFloat(document.getElementById(`edit-ws-${id}`).value);
             const ret = parseFloat(document.getElementById(`edit-ret-${id}`).value);
@@ -1469,6 +1532,10 @@
                     isSale: isSale,
                     isPropMgt: isPropMgt,
                     isContractor: isContractor,
+                    isAccessory: isAccessory,
+                    length: length,
+                    width: width,
+                    thickness: thickness,
                     imgPrefix: imgPrefix
                 });
                 window.editingId = null; 
@@ -1604,6 +1671,10 @@
                         isSale: document.getElementById('new-prod-is-sale').checked,
                         isPropMgt: document.getElementById('new-prod-prop-mgt').checked,
                         isContractor: document.getElementById('new-prod-contractor').checked,
+                        isAccessory: document.getElementById('new-prod-is-accessory').checked,
+                        length: document.getElementById('new-prod-length').value,
+                        width: document.getElementById('new-prod-width').value,
+                        thickness: document.getElementById('new-prod-thickness').value,
                         category: cat, 
                         imgPrefix: document.getElementById('new-prod-img-prefix').value,
                         desc: document.getElementById('new-prod-desc').value,
@@ -1611,7 +1682,7 @@
                         price: parseFloat(document.getElementById('new-prod-price').value),
                         retailPrice: parseFloat(document.getElementById('new-prod-retail').value) || null,
                         unit: document.getElementById('new-prod-unit').value,
-                        cartonSize: isNaN(cSize) ? null : cSize, // Ensure it saves cleanly
+                        cartonSize: isNaN(cSize) ? null : cSize,
                         isVisible: true,
                         colors: [{sku:'01', name:'Default'}], views: ["MAIN"], specs: [], addedAt: new Date().toISOString()
                     });
@@ -2216,6 +2287,304 @@
             }
         };
 
+        // --- AI TRIM EXTRACTION & APPROVAL ---
+        window.stagedTrims = [];
+
+        window.extractTrimsAI = async () => {
+            const rawText = document.getElementById('ai-trim-text').value;
+            if(!rawText) return window.customAlert("Missing Text", "Please paste the raw PDF text first.");
+            
+            const btn = document.getElementById('btn-extract-trims');
+            btn.innerText = "Analyzing Spec Sheet...";
+            btn.disabled = true;
+
+            // Updated Prompt with strict rules to strip out brand/collection names
+            const prompt = `You are a data extractor. Read the following flooring specification sheet and extract ONLY the coordinating trims, moldings, and accessories (e.g., T-Mold, Reducer, Stairnose, Quarter Round, Baby Threshold, Stair Cap, etc.).
+            
+            CRITICAL NAMING & DATA INSTRUCTIONS: 
+            1. For the "name" field, extract ONLY the generic trim type (e.g., "T-Mold", "Baby Threshold", "Quarter Round"). You MUST strip out and IGNORE any manufacturer, brand, collection, style, or color names from this field.
+            2. Look for dollar amounts in the text. If a price is specifically associated with a certain trim, apply it ONLY to that trim's "cost" field. If there is clearly only ONE universal trim price listed in the entire text, apply it to all trims. If you cannot confidently determine the price for a trim, leave its "cost" field null. Do not extract raw numbers as costs.
+            3. For the "length" field, ALWAYS extract the measurement in INCHES (e.g., "94 in" or "94"). If the text provides both inches and millimeters (mm), ignore the mm. Do NOT extract product thickness (e.g., 5.5mm) as the length.
+            
+            Return ONLY a raw JSON array of objects. Do not use markdown tags like \`\`\`json.
+            
+            REQUIRED SCHEMA:
+            [
+                {
+                    "name": "Generic Trim Type ONLY (e.g. Baby Threshold)",
+                    "sku": "SKU code",
+                    "length": "Length in INCHES ONLY (e.g. 94 in)",
+                    "cost": 15.99
+                }
+            ]
+            
+            RAW TEXT:
+            ${rawText}`;
+
+            let result = await window.callGemini(prompt);
+            btn.innerText = "Extract Trims via Gemini";
+            btn.disabled = false;
+
+            if(result) {
+                try {
+                    let parsed = JSON.parse(result.replace(/```json/g, '').replace(/```/g, '').trim());
+                    window.stagedTrims = parsed;
+                    window.renderStagedTrims();
+                } catch(e) {
+                    window.customAlert("AI Error", "Could not format the response. Please try pasting the text again.");
+                }
+            }
+        };
+
+        // Clears the staging area and input text safely
+        window.clearStagedTrims = () => {
+            window.stagedTrims = [];
+            const container = document.getElementById('ai-trim-staging');
+            if(container) {
+                container.innerHTML = '';
+                container.classList.add('hidden');
+            }
+            document.getElementById('ai-trim-text').value = '';
+            const list = document.getElementById('ai-trim-list');
+            if(list) list.innerHTML = '';
+        };
+
+// NEW FUNCTION: Removes a single trim from the staging array and re-renders
+        window.removeStagedTrim = (index) => {
+            window.stagedTrims.splice(index, 1);
+            window.renderStagedTrims();
+        };
+
+        window.renderStagedTrims = () => {
+            const container = document.getElementById('ai-trim-staging');
+            
+            // If we deleted the last trim, hide the staging area entirely
+            if(!window.stagedTrims || window.stagedTrims.length === 0) {
+                container.innerHTML = '';
+                container.classList.add('hidden');
+                return;
+            }
+
+            let html = '<h4 class="font-bold text-gray-900 mb-3 text-sm uppercase tracking-widest">Review & Edit Extracted Trims</h4>';
+            html += '<div class="space-y-3 max-h-[60vh] overflow-y-auto pb-4 px-1">';
+
+            window.stagedTrims.forEach((trim, i) => {
+                // Font size updated to text-[13px] for the perfect middle ground
+                html += `
+                    <div class="grid grid-cols-[1fr_1fr_90px_90px_90px_auto] gap-3 items-center bg-white p-3 rounded-xl border border-gray-200 shadow-sm relative">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Name</label>
+                            <input type="text" id="stage-name-${i}" value="${trim.name || ''}" class="w-full p-2 border border-gray-300 rounded-lg text-[13px] font-bold text-gray-900 focus:border-gold outline-none bg-gray-50 focus:bg-white transition-colors" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">SKU</label>
+                            <input type="text" id="stage-sku-${i}" value="${trim.sku || ''}" class="w-full p-2 border border-gray-300 rounded-lg text-[13px] font-bold text-gray-900 focus:border-gold outline-none bg-gray-50 focus:bg-white transition-colors" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Length</label>
+                            <input type="text" id="stage-length-${i}" value="${trim.length || ''}" class="w-full p-2 border border-gray-300 rounded-lg text-[13px] font-bold text-gray-900 focus:border-gold outline-none bg-gray-50 focus:bg-white transition-colors" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Cost</label>
+                            <input type="number" step="0.01" id="stage-cost-${i}" value="${trim.cost || 0}" class="w-full p-2 border border-gray-300 rounded-lg text-[13px] font-bold text-gray-900 focus:border-gold outline-none bg-gray-50 focus:bg-white transition-colors text-right" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Price</label>
+                            <input type="number" step="0.01" id="stage-price-${i}" value="${trim.price || trim.cost || 0}" class="w-full p-2 border border-gray-300 rounded-lg text-[13px] font-bold text-gray-900 focus:border-gold outline-none bg-gray-50 focus:bg-white transition-colors text-right" />
+                        </div>
+                        <div class="pt-5 flex items-center justify-center">
+                            <button onclick="window.removeStagedTrim(${i})" class="text-red-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg font-black transition-colors cursor-pointer outline-none" title="Remove this trim">✕</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            
+            // Restore your utility buttons to the bottom of the container
+            html += `
+                <div class="mt-4 flex gap-2">
+                    <button type="button" onclick="window.clearStagedTrims()" class="w-1/4 bg-gray-200 text-gray-700 px-2 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-gray-300 transition-colors outline-none cursor-pointer">Clear</button>
+                    <button type="button" onclick="window.calculateWSPricing()" class="w-1/4 bg-blue-600 text-white px-2 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-blue-700 transition-colors outline-none cursor-pointer">Set Margin</button>
+                    <button type="button" onclick="window.approveAndCreateTrims()" id="btn-approve-trims" class="w-2/4 bg-black text-white px-4 py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-gold hover:text-black transition-colors outline-none cursor-pointer">Approve, Create, & Link</button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+            container.classList.remove('hidden');
+        };
+
+        // Clears the staging area and input text safely
+        window.clearStagedTrims = () => {
+            window.stagedTrims = [];
+            const container = document.getElementById('ai-trim-staging');
+            if(container) {
+                container.innerHTML = '';
+                container.classList.add('hidden');
+            }
+            document.getElementById('ai-trim-text').value = '';
+            const list = document.getElementById('ai-trim-list');
+            if(list) list.innerHTML = '';
+        };
+
+// Instantly calculate and apply Wholesale Price based on a target margin
+        window.calculateWSPricing = async () => {
+            // FIXED: Passed "25" as the 4th argument so it actually pre-fills the input box
+            const marginStr = await window.customPrompt(
+                "Set Wholesale Margin",
+                "Enter your desired margin percentage for these trims (e.g., 25 for 25%):",
+                "e.g. 25", 
+                "25"
+            );
+            
+            if (!marginStr) return; 
+            
+            const margin = parseFloat(marginStr);
+            if (isNaN(margin) || margin < 0 || margin >= 100) {
+                return window.customAlert("Invalid Margin", "Please enter a valid percentage between 0 and 99.");
+            }
+
+            let appliedCount = 0;
+
+            // Sync any manual text edits from the screen into our data array 
+            // so we don't lose them when the screen refreshes!
+            for (let i = 0; i < window.stagedTrims.length; i++) {
+                const costInput = document.getElementById(`stage-cost-${i}`);
+                const nameInput = document.getElementById(`stage-name-${i}`);
+                const skuInput = document.getElementById(`stage-sku-${i}`);
+                const lengthInput = document.getElementById(`stage-length-${i}`);
+                const priceInput = document.getElementById(`stage-price-${i}`);
+                
+                if (costInput) {
+                    const cost = parseFloat(costInput.value) || 0;
+                    
+                    // Sync text fields back to the master array
+                    window.stagedTrims[i].name = nameInput ? nameInput.value : window.stagedTrims[i].name;
+                    window.stagedTrims[i].sku = skuInput ? skuInput.value : window.stagedTrims[i].sku;
+                    window.stagedTrims[i].length = lengthInput ? lengthInput.value : window.stagedTrims[i].length;
+                    window.stagedTrims[i].cost = cost;
+                    
+                    // Calculate and set the new Wholesale Price
+                    if (cost > 0) {
+                        const wsPrice = cost / (1 - (margin / 100));
+                        window.stagedTrims[i].price = parseFloat(wsPrice.toFixed(2));
+                        appliedCount++;
+                    } else {
+                        // If there is no cost, fall back to whatever is in the price box
+                        window.stagedTrims[i].price = priceInput ? parseFloat(priceInput.value) || 0 : 0;
+                    }
+                }
+            }
+            
+            // Force a clean re-render with the newly calculated data
+            window.renderStagedTrims();
+
+            if (appliedCount > 0) {
+                showToast(`Margin of ${margin}% applied to ${appliedCount} trims!`);
+            } else {
+                window.customAlert("No Costs Found", "Please ensure the trims have a 'Cost $' entered before setting the margin.");
+            }
+        };
+
+        window.approveAndCreateTrims = async () => {
+            const btn = document.getElementById('btn-approve-trims');
+            btn.innerText = "Publishing to Database...";
+            btn.disabled = true;
+
+            // Get the parent product info
+            const parentId = document.getElementById('relations-id').value;
+            const parentProd = productsMaster.find(p => p.id === parentId) || {};
+
+            let addedCount = 0;
+            let duplicateCount = 0;
+
+            // Loop through staging area and create trims
+            for (let i = 0; i < window.stagedTrims.length; i++) {
+                const name = document.getElementById(`stage-name-${i}`).value;
+                const sku = document.getElementById(`stage-sku-${i}`).value;
+                const length = document.getElementById(`stage-length-${i}`).value;
+                const cost = parseFloat(document.getElementById(`stage-cost-${i}`).value) || 0;
+                const price = parseFloat(document.getElementById(`stage-price-${i}`).value) || 0;
+
+                if(!name || !sku) continue; 
+
+                // Format the SKU for the database ID
+                const newId = sku.trim().replace(/[^a-zA-Z0-9_-]/g, '');
+
+                // SAFETY CHECK: Does this trim already exist in the database?
+                const existingProduct = productsMaster.find(p => p.id === newId);
+
+                if (existingProduct) {
+                    // It's a duplicate. Skip creating it, but make sure it gets linked!
+                    if (!window.currentAccessories.includes(newId)) {
+                        window.currentAccessories.push(newId);
+                    }
+                    duplicateCount++;
+                    addedCount++;
+                    continue; 
+                }
+
+                // If it's brand new, create the description and save it
+                const autoDesc = `Length: ${length}. <a href="/hard-surface-transitions" target="_blank" style="text-decoration: underline; color: #c5a059;">View our Hard Surface Transitions guide here.</a>`;
+
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', newId), {
+                    name: `${parentProd.manufacturer || ''} ${name}`.trim(), 
+                    sku: sku,
+                    length: length,
+                    landedCost: cost,
+                    price: price,
+                    retailPrice: price * 2.2, 
+                    category: "Trim & Molding", 
+                    manufacturer: parentProd.manufacturer || '',
+                    desc: autoDesc, 
+                    colors: [{sku: '01', name: 'Default'}], 
+                    views: ["MAIN"],
+                    isAccessory: true, 
+                    isVisible: true,
+                    unit: 'pc',
+                    addedAt: new Date().toISOString()
+                });
+
+                if (!window.currentAccessories.includes(newId)) {
+                    window.currentAccessories.push(newId);
+                }
+                addedCount++;
+            }
+
+            if(addedCount > 0) {
+                // FORCE DIRECT UPDATE TO PARENT PRODUCT
+                try {
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', parentId), {
+                        accessories: window.currentAccessories
+                    });
+                    
+                    if (duplicateCount > 0) {
+                        // CHANGED: Now uses a hard popup alert so you are explicitly warned about duplicates
+                        window.customAlert(
+                            "Duplicates Safely Linked", 
+                            `${addedCount} total trims were attached to this floor. ${duplicateCount} of these trims already existed in your database, so we safely reused them without overwriting your existing pricing!`
+                        );
+                    } else {
+                        showToast(`${addedCount} new trims created and linked successfully!`);
+                    }
+                    
+                } catch (err) {
+                    console.error("Failed to link to parent:", err);
+                    window.customAlert("Linking Error", "Trims were processed, but failed to link to the main floor.");
+                }
+
+                // Clean up UI and close
+                window.renderAccessoriesList();
+                document.getElementById('ai-trim-staging').classList.add('hidden');
+                document.getElementById('ai-trim-text').value = '';
+                window.closeRelationsModal(); 
+            } else {
+                window.customAlert("Missing Data", "No trims were created. Make sure Name and SKU are filled out.");
+            }
+
+            btn.innerText = "Approve, Create, & Link Items";
+            btn.disabled = false;
+        };
         initAdmin();
     </script>
 </body>
