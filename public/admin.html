@@ -1056,7 +1056,7 @@
             
             showToast("Generating Sell Sheet... Please wait.");
             
-            // 1. Generate the image URL
+            // 1. Generate the image URLs
             const safeName = (product.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
             const safeSku = (product.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
             let folderName = 'images'; 
@@ -1066,46 +1066,45 @@
 
             const displaySku = product.colors?.[0]?.sku || '01';
             const rawPath = `images/${folderName}/${product.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
-            const firebaseUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+            
+            const productImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+            const fallbackImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ftbd.jpg?alt=media`;
+            
+            // Link directly to the Floors 55 logo in your Firebase storage
+            const logoUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media`;
 
-            // 2. PRE-FETCH IMAGE AS BASE64 TO PREVENT CORS LOCKUPS
-            let imgBase64 = '';
-            try {
-                const res = await fetch(firebaseUrl);
-                if (res.ok) {
+            // 2. Helper to fetch image as Base64 so html2pdf doesn't drop it!
+            const getBase64 = async (url) => {
+                try {
+                    const res = await fetch(url);
+                    if (!res.ok) return null;
                     const blob = await res.blob();
-                    imgBase64 = await new Promise((resolve) => {
+                    return await new Promise((resolve) => {
                         const reader = new FileReader();
                         reader.onloadend = () => resolve(reader.result);
                         reader.readAsDataURL(blob);
                     });
+                } catch (e) {
+                    return null;
                 }
-            } catch (e) {
-                console.warn("Could not load primary image, falling back to placeholder.");
-            }
+            };
 
-            // Fallback to placeholder if missing
-            if (!imgBase64) {
-                try {
-                    const fallbackRes = await fetch(`https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ftbd.jpg?alt=media`);
-                    if (fallbackRes.ok) {
-                        const fBlob = await fallbackRes.blob();
-                        imgBase64 = await new Promise((resolve) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => resolve(reader.result);
-                            reader.readAsDataURL(fBlob);
-                        });
-                    }
-                } catch(e) {
-                    imgBase64 = ''; 
-                }
-            }
+            // 3. Pre-fetch the images
+            let mainImgBase64 = await getBase64(productImgUrl);
+            if (!mainImgBase64) mainImgBase64 = await getBase64(fallbackImgUrl);
+            
+            let logoBase64 = await getBase64(logoUrl);
 
-            const imgTag = imgBase64 
-                ? `<img src="${imgBase64}" style="width: 100%; height: 100%; object-fit: cover;" />` 
+            // 4. Inject the converted images
+            const imgTag = mainImgBase64 
+                ? `<img src="${mainImgBase64}" style="width: 100%; height: 100%; object-fit: cover;" />` 
                 : `<div style="width:100%; height:100%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-weight:bold; font-size: 14pt;">Image Unavailable</div>`;
 
-            // 3. Format linked trims
+            const logoTag = logoBase64
+                ? `<img src="${logoBase64}" style="max-height: 50px; width: auto;" />`
+                : `<h1 style="margin:0; font-size:28pt; font-weight:900; letter-spacing:2px; color:#111827;">FLOORS <span style="color:#c5a059;">55</span></h1>`;
+
+            // 5. Format linked trims
             let accHtml = '';
             if (product.accessories && product.accessories.length > 0) {
                 const accProducts = product.accessories.map(accId => productsMaster.find(p => p.id === accId)).filter(Boolean);
@@ -1119,7 +1118,7 @@
                 accHtml = '<p style="font-size:9pt; color:#6b7280; font-style:italic;">No trims currently linked to this floor.</p>';
             }
 
-            // 4. Format available colorways
+            // 6. Format available colorways
             let colorsHtml = '';
             if (product.colors && product.colors.length > 0) {
                 product.colors.forEach(c => {
@@ -1130,12 +1129,14 @@
                 });
             }
 
-            // 5. Build the HTML document structure
+            // 7. Build the HTML document structure
             const html = `
                 <div style="padding: 15mm; background-color: #fdfbf7; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827;">
                     <table style="width: 100%; margin-bottom: 20px; border-bottom: 3px solid #c5a059; padding-bottom: 15px; border-collapse: collapse;">
                         <tr>
-                            <td style="width: 50%; vertical-align: middle;"><h1 style="margin:0; font-size:28pt; font-weight:900; letter-spacing:2px; color:#111827;">FLOORS <span style="color:#c5a059;">55</span></h1></td>
+                            <td style="width: 50%; vertical-align: middle;">
+                                ${logoTag}
+                            </td>
                             <td style="text-align: right; font-size: 9pt; text-transform: uppercase; letter-spacing: 1.5px; color: #6b7280; font-weight: bold; vertical-align: middle;">
                                 Product Specification<br><span style="color: #111827;">Premium Floor Portal</span>
                             </td>
@@ -1190,15 +1191,25 @@
 
             const opt = {
               margin:       0,
-              filename:     `${(product.name || 'Floors55_Product').replace(/\s+/g, '_')}_Spec_Sheet.pdf`,
+              filename:     `${(product.name || 'Floors55_Product').replace(/\\s+/g, '_')}_Spec_Sheet.pdf`,
               image:        { type: 'jpeg', quality: 0.98 },
               html2canvas:  { scale: 2, useCORS: true, logging: false },
               jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
             try {
-                // Pass the raw HTML string directly! html2pdf handles the background rendering natively without clipping.
-                await html2pdf().set(opt).from(html).save();
+                // 8. Safely construct the hidden DOM element
+                const element = document.createElement('div');
+                element.innerHTML = html;
+                element.style.position = 'absolute';
+                element.style.top = '-9999px';
+                element.style.left = '-9999px';
+                element.style.width = '800px'; // Crucial for correct layout scaling
+                document.body.appendChild(element);
+
+                await html2pdf().set(opt).from(element).save();
+                
+                document.body.removeChild(element);
                 showToast("Spec Sheet Downloaded!");
             } catch (err) {
                 console.error("PDF Generation Error:", err);
