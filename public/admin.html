@@ -1188,40 +1188,21 @@
                 </div>
             `;
 
-            const element = document.createElement('div');
-            element.innerHTML = html;
-            
-            // Appending safely off-screen to ensure the engine renders it without blocking the UI
-            element.style.position = 'absolute';
-            element.style.left = '-9999px';
-            document.body.appendChild(element);
-
             const opt = {
               margin:       0,
-              filename:     `${(product.name || 'Floors55_Product').replace(/\\s+/g, '_')}_Spec_Sheet.pdf`,
+              filename:     `${(product.name || 'Floors55_Product').replace(/\s+/g, '_')}_Spec_Sheet.pdf`,
               image:        { type: 'jpeg', quality: 0.98 },
               html2canvas:  { scale: 2, useCORS: true, logging: false },
               jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
             try {
-                await html2pdf().set(opt).from(element).save();
+                // Pass the raw HTML string directly! html2pdf handles the background rendering natively without clipping.
+                await html2pdf().set(opt).from(html).save();
                 showToast("Spec Sheet Downloaded!");
             } catch (err) {
                 console.error("PDF Generation Error:", err);
-                window.customAlert("PDF Error", "There was a problem generating the file. This is usually caused by an image loading error.");
-            } finally {
-                // Guarantee the temporary element is destroyed
-                if (document.body.contains(element)) {
-                    document.body.removeChild(element);
-                }
-                
-                // Failsafe: Destroy any invisible 'cloning' iframes left behind by a crash
-                document.querySelectorAll('iframe').forEach(iframe => {
-                    if (iframe.style.position === 'fixed' || iframe.style.visibility === 'hidden') {
-                        iframe.remove();
-                    }
-                });
+                window.customAlert("PDF Error", "There was a problem generating the file. Please check your console.");
             }
         };
 
