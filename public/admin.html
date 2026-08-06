@@ -1069,8 +1069,6 @@
             
             const productImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
             const fallbackImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ftbd.jpg?alt=media`;
-            
-            // Link directly to the Floors 55 logo in your Firebase storage
             const logoUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media`;
 
             // 2. Helper to fetch image as Base64 so html2pdf doesn't drop it!
@@ -1092,7 +1090,6 @@
             // 3. Pre-fetch the images
             let mainImgBase64 = await getBase64(productImgUrl);
             if (!mainImgBase64) mainImgBase64 = await getBase64(fallbackImgUrl);
-            
             let logoBase64 = await getBase64(logoUrl);
 
             // 4. Inject the converted images
@@ -1129,7 +1126,7 @@
                 });
             }
 
-            // 7. Build the HTML document structure (Now with explicit width baked in!)
+            // 7. Build the HTML document structure
             const html = `
                 <div style="width: 800px; box-sizing: border-box; padding: 15mm; background-color: #fdfbf7; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827;">
                     <table style="width: 100%; margin-bottom: 20px; border-bottom: 3px solid #c5a059; padding-bottom: 15px; border-collapse: collapse;">
@@ -1198,17 +1195,7 @@
             };
 
             try {
-                // Pass the raw HTML string directly! The explicit 800px width forces the layout to render beautifully.
-                await html2pdf().set(opt).from(html).save();
-                showToast("Spec Sheet Downloaded!");
-            } catch (err) {
-                console.error("PDF Generation Error:", err);
-                window.customAlert("PDF Error", "There was a problem generating the file. Please check your console.");
-            }
-        };
-
-            try {
-                // Wrap the HTML in an unattached element with a forced width so it doesn't collapse to 0x0
+                // 8. Safely construct the hidden DOM element with explicit width so it renders fully!
                 const container = document.createElement('div');
                 container.innerHTML = html;
                 container.style.width = '800px'; 
