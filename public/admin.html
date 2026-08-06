@@ -1066,9 +1066,17 @@
             const safeName = (product.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
             const safeSku = (product.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
             let folderName = 'images'; 
-            if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-            else if (safeName) folderName = safeName;
-            folderName = folderName.replace(/-+$/, '');
+
+            // ONE-FOLDER DUMP OVERRIDE FOR TILE PRODUCTS
+            if (product.category === 'Tile' && product.imgPrefix) {
+                folderName = product.imgPrefix.replace(/\/$/, ''); // Strips slash, making folder "FTAura"
+                product.imgPrefix = ''; // Clears prefix so it doesn't duplicate in the filename search
+            } else {
+                // Standard folder generation for everything else
+                if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                else if (safeName) folderName = safeName;
+                folderName = folderName.replace(/-+$/, '');
+            }
 
             const displaySku = product.colors?.[0]?.sku || '01';
 
