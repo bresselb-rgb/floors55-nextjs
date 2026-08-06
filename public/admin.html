@@ -1054,7 +1054,13 @@
             const product = productsMaster.find(p => p.id === id);
             if (!product) return;
             
-            showToast("Building Spec Sheet... This takes a few seconds.");
+            showToast("Generating Spec Sheet... Please wait.");
+            
+            // 0. Determine Public vs Private Label details for the text
+            const isPrivate = product.usePrivateName === true;
+            const displayName = (isPrivate && product.privateName) ? product.privateName : product.name;
+            const displayMfg = (isPrivate && product.privateManufacturer) ? product.privateManufacturer : product.manufacturer;
+            const displayBaseSku = (isPrivate && product.privateSku) ? product.privateSku : product.sku;
             
             // 1. Generate the Firebase image paths
             const safeName = (product.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -1065,118 +1071,200 @@
             folderName = folderName.replace(/-+$/, '');
 
             const displaySku = product.colors?.[0]?.sku || '01';
-            const rawPath = `images/${folderName}/${product.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
-            
-            const productImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
-            const fallbackImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ftbd.jpg?alt=media`;
-            const logoUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media`;
 
-            // 2. Dual Fetcher: Tries direct fetch first, then uses a robust proxy if blocked
-            const getBase64 = async (url) => {
-                try {
-                    const res = await fetch(url);
-                    if (!res.ok) throw new Error('Direct fetch failed');
-                    const blob = await res.blob();
-                    return await new Promise((resolve) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => resolve(reader.result);
-                        reader.readAsDataURL(blob);
-                    });
-                } catch (e) {
+            // 2. Smart Fetcher: Gracefully handles 404s and hunts for the correct image variation
+            const fetchImagePaths = async (pathsToTry) => {
+                for (const path of pathsToTry) {
+                    const fbUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path)}?alt=media`;
                     try {
-                        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-                        const res2 = await fetch(proxyUrl);
-                        if (!res2.ok) return null;
-                        const blob2 = await res2.blob();
-                        return await new Promise((resolve) => {
-                            const reader2 = new FileReader();
-                            reader2.onloadend = () => resolve(reader2.result);
-                            reader2.readAsDataURL(blob2);
-                        });
-                    } catch (err) {
-                        return null;
+                        const res = await fetch(fbUrl + '&cb=' + Date.now(), { mode: 'cors' });
+                        if (res.ok) {
+                            const blob = await res.blob();
+                            return await new Promise(r => { 
+                                const reader = new FileReader(); 
+                                reader.onloadend = () => r(reader.result); 
+                                reader.readAsDataURL(blob); 
+                            });
+                        }
+                    } catch(e) {
+                        // If Firebase strictly blocks the CORS request, fallback to WSRV proxy
+                        try {
+                            const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(fbUrl)}&output=jpg&q=80`;
+                            const res2 = await fetch(proxyUrl);
+                            if (res2.ok) {
+                                const blob2 = await res2.blob();
+                                return await new Promise(r => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob2); });
+                            }
+                        } catch(err) {}
                     }
                 }
+                return null;
             };
 
-            // 3. Pre-fetch primary images
-            let fallbackBase64 = await getBase64(fallbackImgUrl);
-            let mainImgBase64 = await getBase64(productImgUrl) || fallbackBase64;
-            let logoBase64 = await getBase64(logoUrl);
+            const fallbackImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ftbd.jpg?alt=media`;
+            let fallbackBase64 = await fetchImagePaths([`images/tbd.jpg`]);
+
+            const logoUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media`;
+            let logoBase64 = await fetchImagePaths([`images/f55-pros-logo.jpg`]);
+
+            let mainImgBase64 = await fetchImagePaths([
+                `images/${folderName}/${product.imgPrefix || ''}${displaySku}_room.jpg`.toLowerCase(),
+                `images/${folderName}/${displaySku}_room.jpg`.toLowerCase(),
+                `images/${folderName}/${product.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase(),
+                `images/${folderName}/${product.imgPrefix || ''}${displaySku}.jpg`.toLowerCase(),
+                `images/${folderName}/${displaySku}_main.jpg`.toLowerCase(),
+                `images/${folderName}/${displaySku}.jpg`.toLowerCase()
+            ]) || fallbackBase64;
+
+            // Find the display names for the active hero image
+            const activeColor = product.colors?.find(c => c.sku === displaySku) || {};
+            const heroColorName = activeColor.name || 'Default';
+            const heroColorSku = activeColor.sku || displaySku || '';
 
             const imgTag = mainImgBase64 
-                ? `<img src="${mainImgBase64}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;" />` 
-                : `<div style="width:100%; height:100%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-weight:bold; font-size: 14pt; border-radius: 8px;">Image Unavailable</div>`;
-
-            const logoTag = logoBase64
+                ? `<div style="width: 100%; height: 100%; background-image: url('${mainImgBase64}'); background-size: cover; background-position: center; background-repeat: no-repeat; border-radius: 8px; position: relative;">
+                       <div style="position: absolute; bottom: 20px; left: 20px; background-color: rgba(255, 255, 255, 0.95); padding: 12px 18px; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                           <div style="font-size: 14pt; font-weight: 900; color: #111827; margin-bottom: 2px; line-height: 1.1;">${heroColorName}</div>
+                           <div style="font-size: 10pt; font-family: monospace; color: #6b7280; font-weight: bold;">${heroColorSku}</div>
+                       </div>
+                   </div>` 
+                : `<div style="width:100%; height:100%; background-color:#e5e7eb; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-weight:bold; font-size:14pt;">Image Unavailable</div>`;
+            
+                const logoTag = logoBase64
                 ? `<img src="${logoBase64}" style="max-height: 50px; width: auto;" />`
                 : `<h1 style="margin:0; font-size:28pt; font-weight:900; letter-spacing:2px; color:#111827;">FLOORS <span style="color:#c5a059;">55</span></h1>`;
 
             // 4. Format Dynamic Technical Specifications Array
             let specsHtml = '';
             if (product.specs && product.specs.length > 0) {
-                specsHtml += '<h4 style="font-size: 12pt; color: #111827; margin-bottom: 12px; border-bottom: 2px solid #c5a059; padding-bottom: 6px; display: inline-block; text-transform: uppercase;">Technical Specifications</h4>';
-                specsHtml += '<div style="column-count: 2; column-gap: 40px; font-size: 9.5pt; line-height: 1.8; color: #4b5563; margin-bottom: 25px;">';
+                specsHtml += '<h4 style="font-size: 12pt; color: #111827; margin-bottom: 8px; border-bottom: 2px solid #c5a059; padding-bottom: 4px; display: inline-block; text-transform: uppercase;">Technical Specifications</h4>';
+                specsHtml += '<div style="column-count: 2; column-gap: 40px; font-size: 9.5pt; line-height: 1.4; color: #4b5563; margin-bottom: 15px;">';
                 product.specs.forEach(spec => {
                     const splitIdx = spec.indexOf(':');
                     if (splitIdx > -1) {
-                        specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;"><strong style="color: #111827;">${spec.substring(0, splitIdx).trim()}:</strong> ${spec.substring(splitIdx + 1).trim()}</div>`;
+                        specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 2px; margin-bottom: 2px;"><strong style="color: #111827;">${spec.substring(0, splitIdx).trim()}:</strong> ${spec.substring(splitIdx + 1).trim()}</div>`;
                     } else {
-                        specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;">&bull; ${spec}</div>`;
+                        specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 2px; margin-bottom: 2px;">&bull; ${spec}</div>`;
                     }
                 });
+                
                 const specStr = product.specs.join(' ').toLowerCase();
                 if (!specStr.includes('size') && !specStr.includes('width') && product.width && product.length) {
-                    specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;"><strong style="color: #111827;">Size:</strong> ${product.width} x ${product.length}</div>`;
+                    specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 2px; margin-bottom: 2px;"><strong style="color: #111827;">Size:</strong> ${product.width} x ${product.length}</div>`;
                 }
                 if (!specStr.includes('thickness') && product.thickness) {
-                    specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;"><strong style="color: #111827;">Thickness:</strong> ${product.thickness}</div>`;
+                    specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 2px; margin-bottom: 2px;"><strong style="color: #111827;">Thickness:</strong> ${product.thickness}</div>`;
                 }
                 if (!specStr.includes('carton') && product.cartonSize) {
-                    specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;"><strong style="color: #111827;">Carton Size:</strong> ${product.cartonSize} sq ft</div>`;
+                    specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 2px; margin-bottom: 2px;"><strong style="color: #111827;">Carton Size:</strong> ${product.cartonSize} sq ft</div>`;
                 }
                 specsHtml += '</div>';
+            } else {
+                specsHtml = `
+                    <div style="display: block; width: 100%; margin-bottom: 15px;">
+                        <div style="display: inline-block; width: 48%; vertical-align: top;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr><th style="padding:4px 0; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt; width:45%;">Size</th><td style="padding:4px 0; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.width || '-'} x ${product.length || '-'}</td></tr>
+                                <tr><th style="padding:4px 0; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Thickness</th><td style="padding:4px 0; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.thickness || '-'}</td></tr>
+                                <tr><th style="padding:4px 0; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Carton Size</th><td style="padding:4px 0; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.cartonSize ? product.cartonSize + ' sq ft' : '-'}</td></tr>
+                            </table>
+                        </div>
+                        <div style="display: inline-block; width: 48%; margin-left: 3%; vertical-align: top;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr><th style="padding:4px 0; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt; width:45%;">Base SKU</th><td style="padding:4px 0; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold; font-family:monospace;">${displayBaseSku || '-'}</td></tr>
+                                <tr><th style="padding:4px 0; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Coverage Unit</th><td style="padding:4px 0; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.unit || 'sqft'}</td></tr>
+                                <tr><th style="padding:4px 0; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Warranty</th><td style="padding:4px 0; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">See Manufacturer Spec</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                `;
             }
 
-            // 5. Format linked trims (Notice the complete removal of the buggy truncation CSS!)
+            const chunkArray = (arr, size) => {
+                const result = [];
+                for (let i = 0; i < arr.length; i += size) result.push(arr.slice(i, i + size));
+                return result;
+            };
+
+            // 5. Trims (Hide entirely if none exist)
             let accHtml = '';
             if (product.accessories && product.accessories.length > 0) {
+                accHtml += `
+                    <div style="margin-top: 25px; page-break-inside: avoid;">
+                        <h4 style="font-size: 12pt; color: #111827; margin-bottom: 12px; border-bottom: 2px solid #c5a059; padding-bottom: 6px; display: inline-block; text-transform: uppercase;">Coordinating Trims</h4>
+                        <table style="width: 100%; border-spacing: 12px; border-collapse: separate; margin-left: -12px; page-break-inside: avoid;">`;
+                
                 const accProducts = product.accessories.map(accId => productsMaster.find(p => p.id === accId)).filter(Boolean);
-                accProducts.forEach(acc => {
-                    let cleanName = acc.name || 'Trim';
-                    if (product.manufacturer) cleanName = cleanName.replace(new RegExp(product.manufacturer, 'ig'), '');
-                    if (product.name) cleanName = cleanName.replace(new RegExp(product.name.split(' ')[0], 'ig'), '');
-                    cleanName = cleanName.replace(/^-+|-+$/g, '').trim() || acc.name; 
+                const chunks = chunkArray(accProducts, 3);
+                
+                for (const row of chunks) {
+                    accHtml += '<tr>';
+                    for (const acc of row) {
+                        let cleanName = acc.name || 'Trim';
+                        if (product.manufacturer && cleanName.toLowerCase().includes(product.manufacturer.toLowerCase())) {
+                            cleanName = cleanName.replace(new RegExp(product.manufacturer, 'ig'), '').trim();
+                        }
+                        if (product.name && cleanName.toLowerCase().includes(product.name.toLowerCase())) {
+                            cleanName = cleanName.replace(new RegExp(product.name, 'ig'), '').trim();
+                        }
+                        cleanName = cleanName.replace(/^[-—\s]+|[-—\s]+$/g, '').trim();
+                        if (!cleanName || cleanName.length < 2) cleanName = acc.name; 
+                        
+                        const trimPaths = [
+                            `images/trims/${acc.sku}.jpg`.toLowerCase(),
+                            `images/trims/${product.imgPrefix || ''}${acc.sku}.jpg`.toLowerCase(),
+                            `images/${folderName}/${acc.sku}.jpg`.toLowerCase(),
+                            `images/${folderName}/${product.imgPrefix || ''}${acc.sku}.jpg`.toLowerCase()
+                        ];
+                        let trimB64 = await fetchImagePaths(trimPaths);
 
-                    accHtml += `<div style="display:inline-block; width:31%; margin-right:2%; margin-bottom:12px; background:white; padding:10px; border:1px solid #e5e7eb; border-radius:6px; vertical-align: top; box-sizing: border-box;">
-                        <strong style="display:block; font-size:9pt; color:#111827; margin-bottom:4px; line-height:1.3;">${cleanName}</strong>
-                        <span style="font-size:8pt; color:#6b7280; font-family:monospace;">${acc.sku || ''}</span>
-                    </div>`;
-                });
-            } else {
-                accHtml = '<p style="font-size:9pt; color:#6b7280; font-style:italic;">No trims currently linked to this floor.</p>';
-            }
-
-            // 6. Format available colorways (Fetching sequentially to prevent rate limits)
-            let colorsHtml = '';
-            if (product.colors && product.colors.length > 0) {
-                for (const c of product.colors) {
-                    const cRawPath = `images/${folderName}/${product.imgPrefix || ''}${c.sku}.jpg`.toLowerCase();
-                    const cImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(cRawPath)}?alt=media`;
-                    
-                    let b64 = await getBase64(cImgUrl) || fallbackBase64;
-                    
-                    colorsHtml += `<div style="display:inline-block; width:31%; margin-right:2%; margin-bottom:12px; background:white; padding:10px; border:1px solid #e5e7eb; border-radius:6px; text-align: center; vertical-align: top; box-sizing: border-box;">
-                        ${b64 ? `<img src="${b64}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 4px; margin-bottom: 8px; background-color: #f3f4f6;" />` : `<div style="width: 100%; height: 110px; background-color: #f3f4f6; margin-bottom: 8px; border-radius: 4px;"></div>`}
-                        <strong style="display:block; font-size:9pt; color:#111827; margin-bottom:4px; line-height:1.3;">${c.name || 'Color'}</strong>
-                        <span style="font-size:8pt; color:#6b7280; font-family:monospace;">${c.sku || ''}</span>
-                    </div>`;
+                        accHtml += `<td style="width: 33.3%; background: white; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; text-align: center; vertical-align: top;">
+                            ${trimB64 ? `<img src="${trimB64}" style="width: 100%; height: 90px; object-fit: cover; border-radius: 4px; margin-bottom: 8px; background-color: #f3f4f6;" />` : ''}
+                            <div style="font-weight: bold; font-size: 11px; color: #111827; margin-bottom: 4px; line-height: 1.3;">${cleanName}</div>
+                            <div style="font-size: 10px; color: #6b7280; font-family: monospace;">${acc.sku || ''}</div>
+                        </td>`;
+                    }
+                    for (let i = row.length; i < 3; i++) accHtml += '<td style="width: 33.3%;"></td>';
+                    accHtml += '</tr>';
                 }
+                accHtml += `
+                        </table>
+                    </div>`;
             }
 
-            // 7. Build the final HTML document structure
+            // 6. Colors (Table layout + Smart Fetcher - 5 Column)
+            let colorsHtml = '<table style="width: 100%; border-spacing: 10px; border-collapse: separate; margin-left: -10px; page-break-inside: avoid;">';
+            if (product.colors && product.colors.length > 0) {
+                const chunks = chunkArray(product.colors, 5); // Changed to 5 columns
+                for (const row of chunks) {
+                    colorsHtml += '<tr>';
+                    for (const c of row) {
+                        const colorPaths = [
+                            `images/${folderName}/${product.imgPrefix || ''}${c.sku}_main.jpg`.toLowerCase(),
+                            `images/${folderName}/${product.imgPrefix || ''}${c.sku}.jpg`.toLowerCase(),
+                            `images/${folderName}/${c.sku}.jpg`.toLowerCase()
+                        ];
+                        let b64 = await fetchImagePaths(colorPaths);
+                        if (!b64) b64 = fallbackBase64; 
+                        
+                        // Adjusted width to 20%, tightened padding to 8px, lowered height to 75px, smaller font
+                        colorsHtml += `<td style="width: 20%; background: white; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; text-align: center; vertical-align: top;">
+                            ${b64 ? `<img src="${b64}" style="width: 100%; height: 75px; object-fit: cover; border-radius: 4px; margin-bottom: 6px; background-color: #f3f4f6;" />` : `<div style="width: 100%; height: 75px; background-color: #f3f4f6; margin-bottom: 6px; border-radius: 4px;"></div>`}
+                            <div style="font-weight: bold; font-size: 10px; color: #111827; margin-bottom: 2px; line-height: 1.2;">${c.name || 'Color'}</div>
+                            <div style="font-size: 9px; color: #6b7280; font-family: monospace;">${c.sku || ''}</div>
+                        </td>`;
+                    }
+                    for (let i = row.length; i < 5; i++) colorsHtml += '<td style="width: 20%;"></td>'; // Pad empty cells up to 5
+                    colorsHtml += '</tr>';
+                }
+            } else {
+                colorsHtml += '<tr><td style="font-size:12px; color:#6b7280; font-style:italic;">No colorways added to this product.</td></tr>';
+            }
+            colorsHtml += '</table>';
+
+            // 7. Build HTML & Generate PDF
             const html = `
-                <div style="width: 800px; box-sizing: border-box; padding: 15mm; background-color: #fdfbf7; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827;">
+                <div style="width: 800px; box-sizing: border-box; padding: 0 15mm; background-color: #fdfbf7; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827;">
                     <table style="width: 100%; margin-bottom: 20px; border-bottom: 3px solid #c5a059; padding-bottom: 15px; border-collapse: collapse;">
                         <tr>
                             <td style="width: 50%; vertical-align: middle;">${logoTag}</td>
@@ -1186,14 +1274,14 @@
                         </tr>
                     </table>
                     
-                    <div style="width: 100%; height: 280px; margin-bottom: 25px;">${imgTag}</div>
+                    <div style="width: 100%; height: 450px; margin-bottom: 25px; border-radius: 8px; overflow: hidden; background-color: #e5e7eb;">${imgTag}</div>
                     
-                    <div style="margin-bottom: 20px;">
-                        <h2 style="margin: 0; font-size: 26pt; color: #111827; font-weight: 900;">${product.name || 'Unnamed Product'}</h2>
-                        <h3 style="margin: 4px 0 0 0; font-size: 13pt; color: #c5a059; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">${product.category || 'Flooring'} &bull; ${product.manufacturer || 'Brand'}</h3>
+                    <div style="margin-bottom: 10px;">
+                        <h2 style="margin: 0; font-size: 22pt; color: #111827; font-weight: 900; line-height: 1.1;">${displayName || 'Unnamed Product'}</h2>
+                        <h3 style="margin: 2px 0 0 0; font-size: 13pt; color: #c5a059; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">${product.category || 'Flooring'} &bull; ${displayMfg || 'Brand'}</h3>
                     </div>
                     
-                    <p style="font-size: 10.5pt; line-height: 1.6; color: #4b5563; margin-bottom: 30px;">
+                    <p style="font-size: 10.5pt; line-height: 1.5; color: #4b5563; margin-bottom: 15px;">
                         ${product.desc || 'Premium flooring selection expertly sourced by Floors 55.'}
                     </p>
                     
@@ -1201,13 +1289,10 @@
                     
                     <div style="margin-top: 25px; page-break-inside: avoid;">
                         <h4 style="font-size: 12pt; color: #111827; margin-bottom: 12px; border-bottom: 2px solid #c5a059; padding-bottom: 6px; display: inline-block; text-transform: uppercase;">Available Colorways</h4>
-                        <div style="display: block; width: 100%;">${colorsHtml}</div>
+                        ${colorsHtml}
                     </div>
                     
-                    <div style="margin-top: 25px; page-break-inside: avoid;">
-                        <h4 style="font-size: 12pt; color: #111827; margin-bottom: 12px; border-bottom: 2px solid #c5a059; padding-bottom: 6px; display: inline-block; text-transform: uppercase;">Coordinating Trims</h4>
-                        <div style="display: block; width: 100%;">${accHtml}</div>
-                    </div>
+                    ${accHtml}
                     
                     <div style="margin-top: 30px; text-align: center; font-size: 8.5pt; color: #9ca3af; padding-top: 15px; border-top: 1px solid #e5e7eb; font-weight: bold; letter-spacing: 1px;">
                         &copy; ${new Date().getFullYear()} FLOORS 55 &bull; FLOORS55.COM &bull; SYSTEM GENERATED SPEC SHEET
@@ -1216,25 +1301,27 @@
             `;
 
             const opt = {
-              margin:       0,
-              filename:     `${(product.name || 'Floors55_Product').replace(/\s+/g, '_')}_Spec_Sheet.pdf`,
+              margin:       [0.5, 0, 0.5, 0],
+              filename:     `${(displayName || 'Floors55_Product').replace(/[\s]+/g, '_')}_Spec_Sheet.pdf`,
               image:        { type: 'jpeg', quality: 0.98 },
-              html2canvas:  { scale: 2, useCORS: true, logging: false },
+              html2canvas:  { scale: 2, useCORS: true, logging: false, scrollY: 0 },
               jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
             try {
                 const container = document.createElement('div');
                 container.innerHTML = html;
+                
+                // NO CSS hiding tricks here. We append it normally so html2pdf can physically capture the bounds.
                 container.style.width = '800px'; 
                 container.style.padding = '0';
                 container.style.margin = '0';
                 
-                // Hide it off screen so it doesn't break the active layout
-                container.style.position = 'absolute';
-                container.style.top = '-9999px';
-                document.body.appendChild(container);
+                document.body.appendChild(container); 
                 
+                // Wait for the browser to render the DOM elements before capturing
+                await new Promise(r => setTimeout(r, 300));
+
                 await html2pdf().set(opt).from(container).save();
                 
                 document.body.removeChild(container);
