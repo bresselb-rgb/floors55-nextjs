@@ -1050,13 +1050,13 @@
             });
         };
 
-    window.downloadSellSheet = (id) => {
+    window.downloadSellSheet = async (id) => {
             const product = productsMaster.find(p => p.id === id);
             if (!product) return;
             
-            showToast("Opening Spec Sheet...");
+            showToast("Building Spec Sheet... This takes a few seconds.");
             
-            // 1. Generate URLs directly! No base64 or proxies needed!
+            // 1. Generate the Firebase image paths
             const safeName = (product.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
             const safeSku = (product.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
             let folderName = 'images'; 
@@ -1068,170 +1068,208 @@
             const rawPath = `images/${folderName}/${product.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
             
             const productImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+            const fallbackImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ftbd.jpg?alt=media`;
             const logoUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media`;
-            const fallbackUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ftbd.jpg?alt=media`;
 
-            // 2. Build Trims HTML (with aggressive stripping)
+            // 2. Dual Fetcher: Tries direct fetch first, then uses a robust proxy if blocked
+            const getBase64 = async (url) => {
+                try {
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error('Direct fetch failed');
+                    const blob = await res.blob();
+                    return await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(blob);
+                    });
+                } catch (e) {
+                    try {
+                        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+                        const res2 = await fetch(proxyUrl);
+                        if (!res2.ok) return null;
+                        const blob2 = await res2.blob();
+                        return await new Promise((resolve) => {
+                            const reader2 = new FileReader();
+                            reader2.onloadend = () => resolve(reader2.result);
+                            reader2.readAsDataURL(blob2);
+                        });
+                    } catch (err) {
+                        return null;
+                    }
+                }
+            };
+
+            // 3. Pre-fetch primary images
+            let fallbackBase64 = await getBase64(fallbackImgUrl);
+            let mainImgBase64 = await getBase64(productImgUrl) || fallbackBase64;
+            let logoBase64 = await getBase64(logoUrl);
+
+            const imgTag = mainImgBase64 
+                ? `<img src="${mainImgBase64}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;" />` 
+                : `<div style="width:100%; height:100%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-weight:bold; font-size: 14pt; border-radius: 8px;">Image Unavailable</div>`;
+
+            const logoTag = logoBase64
+                ? `<img src="${logoBase64}" style="max-height: 50px; width: auto;" />`
+                : `<h1 style="margin:0; font-size:28pt; font-weight:900; letter-spacing:2px; color:#111827;">FLOORS <span style="color:#c5a059;">55</span></h1>`;
+
+            // 4. Format Dynamic Technical Specifications Array
+            let specsHtml = '';
+            if (product.specs && product.specs.length > 0) {
+                specsHtml += '<h4 style="font-size: 12pt; color: #111827; margin-bottom: 12px; border-bottom: 2px solid #c5a059; padding-bottom: 6px; display: inline-block; text-transform: uppercase;">Technical Specifications</h4>';
+                specsHtml += '<div style="column-count: 2; column-gap: 40px; font-size: 9.5pt; line-height: 1.8; color: #4b5563; margin-bottom: 25px;">';
+                product.specs.forEach(spec => {
+                    const splitIdx = spec.indexOf(':');
+                    if (splitIdx > -1) {
+                        specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;"><strong style="color: #111827;">${spec.substring(0, splitIdx).trim()}:</strong> ${spec.substring(splitIdx + 1).trim()}</div>`;
+                    } else {
+                        specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;">&bull; ${spec}</div>`;
+                    }
+                });
+                const specStr = product.specs.join(' ').toLowerCase();
+                if (!specStr.includes('size') && !specStr.includes('width') && product.width && product.length) {
+                    specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;"><strong style="color: #111827;">Size:</strong> ${product.width} x ${product.length}</div>`;
+                }
+                if (!specStr.includes('thickness') && product.thickness) {
+                    specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;"><strong style="color: #111827;">Thickness:</strong> ${product.thickness}</div>`;
+                }
+                if (!specStr.includes('carton') && product.cartonSize) {
+                    specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;"><strong style="color: #111827;">Carton Size:</strong> ${product.cartonSize} sq ft</div>`;
+                }
+                specsHtml += '</div>';
+            }
+
+            // 5. Format linked trims (Notice the complete removal of the buggy truncation CSS!)
             let accHtml = '';
             if (product.accessories && product.accessories.length > 0) {
                 const accProducts = product.accessories.map(accId => productsMaster.find(p => p.id === accId)).filter(Boolean);
                 accProducts.forEach(acc => {
                     let cleanName = acc.name || 'Trim';
-                    
-                    // Strip the manufacturer and product name from the trim safely
-                    const toStrip = [product.name, product.manufacturer, product.privateName, product.styleFamily].filter(Boolean);
-                    toStrip.forEach(str => {
-                        const regex = new RegExp(str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'gi');
-                        cleanName = cleanName.replace(regex, '').trim();
-                    });
-                    
-                    cleanName = cleanName.replace(/^[-—\s]+|[-—\s]+$/g, '').trim();
-                    if (!cleanName || cleanName.length < 2) cleanName = acc.name; 
+                    if (product.manufacturer) cleanName = cleanName.replace(new RegExp(product.manufacturer, 'ig'), '');
+                    if (product.name) cleanName = cleanName.replace(new RegExp(product.name.split(' ')[0], 'ig'), '');
+                    cleanName = cleanName.replace(/^-+|-+$/g, '').trim() || acc.name; 
 
-                    accHtml += `
-                    <div class="card">
-                        <strong>${cleanName}</strong>
-                        <span>${acc.sku || ''}</span>
+                    accHtml += `<div style="display:inline-block; width:31%; margin-right:2%; margin-bottom:12px; background:white; padding:10px; border:1px solid #e5e7eb; border-radius:6px; vertical-align: top; box-sizing: border-box;">
+                        <strong style="display:block; font-size:9pt; color:#111827; margin-bottom:4px; line-height:1.3;">${cleanName}</strong>
+                        <span style="font-size:8pt; color:#6b7280; font-family:monospace;">${acc.sku || ''}</span>
                     </div>`;
                 });
             } else {
-                accHtml = '<p style="color:#6b7280; font-style:italic; font-size: 9pt; grid-column: 1 / -1;">No trims currently linked to this floor.</p>';
+                accHtml = '<p style="font-size:9pt; color:#6b7280; font-style:italic;">No trims currently linked to this floor.</p>';
             }
 
-            // 3. Build Colors HTML
+            // 6. Format available colorways (Fetching sequentially to prevent rate limits)
             let colorsHtml = '';
             if (product.colors && product.colors.length > 0) {
-                product.colors.forEach(c => {
+                for (const c of product.colors) {
                     const cRawPath = `images/${folderName}/${product.imgPrefix || ''}${c.sku}.jpg`.toLowerCase();
                     const cImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(cRawPath)}?alt=media`;
                     
-                    colorsHtml += `
-                    <div class="card" style="text-align: center;">
-                        <img src="${cImgUrl}" onerror="this.src='${fallbackUrl}';" />
-                        <strong>${c.name || 'Color'}</strong>
-                        <span>${c.sku || ''}</span>
+                    let b64 = await getBase64(cImgUrl) || fallbackBase64;
+                    
+                    colorsHtml += `<div style="display:inline-block; width:31%; margin-right:2%; margin-bottom:12px; background:white; padding:10px; border:1px solid #e5e7eb; border-radius:6px; text-align: center; vertical-align: top; box-sizing: border-box;">
+                        ${b64 ? `<img src="${b64}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 4px; margin-bottom: 8px; background-color: #f3f4f6;" />` : `<div style="width: 100%; height: 110px; background-color: #f3f4f6; margin-bottom: 8px; border-radius: 4px;"></div>`}
+                        <strong style="display:block; font-size:9pt; color:#111827; margin-bottom:4px; line-height:1.3;">${c.name || 'Color'}</strong>
+                        <span style="font-size:8pt; color:#6b7280; font-family:monospace;">${c.sku || ''}</span>
                     </div>`;
-                });
-            } else {
-                colorsHtml = '<p style="color:#6b7280; font-style:italic; font-size: 9pt; grid-column: 1 / -1;">No colorways added to this product.</p>';
+                }
             }
 
-            // 4. Build Specs HTML
-            let specsHtml = '<div class="specs-grid">';
-            if (product.specs && product.specs.length > 0) {
-                product.specs.forEach(spec => {
-                    const splitIdx = spec.indexOf(':');
-                    if (splitIdx > -1) {
-                        specsHtml += `<div><strong>${spec.substring(0, splitIdx).trim()}:</strong> ${spec.substring(splitIdx + 1).trim()}</div>`;
-                    } else {
-                        specsHtml += `<div>&bull; ${spec}</div>`;
-                    }
-                });
-            } else {
-                specsHtml += `<div><strong>Size:</strong> ${product.width || '-'} x ${product.length || '-'}</div>`;
-                specsHtml += `<div><strong>Thickness:</strong> ${product.thickness || '-'}</div>`;
-                specsHtml += `<div><strong>Carton Size:</strong> ${product.cartonSize || '-'} sq ft</div>`;
-                specsHtml += `<div><strong>Base SKU:</strong> ${product.sku || '-'}</div>`;
-                specsHtml += `<div><strong>Coverage Unit:</strong> ${product.unit || 'sqft'}</div>`;
-                specsHtml += `<div><strong>Warranty:</strong> See Manufacturer Spec</div>`;
-            }
-            specsHtml += '</div>';
-
-            // 5. Generate Print HTML Window
-            const printWindow = window.open('', '_blank');
-            if(!printWindow) {
-                window.customAlert("Popup Blocked", "Please allow popups for this site to generate Spec Sheets.");
-                return;
-            }
-
+            // 7. Build the final HTML document structure
             const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>${(product.name || 'Floors55_Product').replace(/\s+/g, '_')}_Spec_Sheet</title>
-                <style>
-                    @page { size: letter; margin: 0; }
-                    body { 
-                        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
-                        background-color: #fdfbf7; 
-                        color: #111827; 
-                        margin: 0; 
-                        padding: 15mm; 
-                        -webkit-print-color-adjust: exact !important; 
-                        print-color-adjust: exact !important; 
-                    }
-                    .header-table { width: 100%; margin-bottom: 20px; border-bottom: 3px solid #c5a059; padding-bottom: 15px; border-collapse: collapse; }
-                    .hero-img-container { width: 100%; height: 280px; background-color: #e5e7eb; border-radius: 8px; margin-bottom: 25px; overflow: hidden; }
-                    .hero-img-container img { width: 100%; height: 100%; object-fit: cover; }
-                    .title-section { margin-bottom: 20px; }
-                    .title-section h2 { margin: 0; font-size: 26pt; font-weight: 900; color: #111827; }
-                    .title-section h3 { margin: 4px 0 0 0; font-size: 13pt; color: #c5a059; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
-                    .desc { font-size: 10.5pt; line-height: 1.6; color: #4b5563; margin-bottom: 30px; }
-                    .section-title { font-size: 12pt; color: #111827; margin-bottom: 12px; border-bottom: 2px solid #c5a059; padding-bottom: 6px; display: inline-block; text-transform: uppercase; }
+                <div style="width: 800px; box-sizing: border-box; padding: 15mm; background-color: #fdfbf7; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827;">
+                    <table style="width: 100%; margin-bottom: 20px; border-bottom: 3px solid #c5a059; padding-bottom: 15px; border-collapse: collapse;">
+                        <tr>
+                            <td style="width: 50%; vertical-align: middle;">${logoTag}</td>
+                            <td style="text-align: right; font-size: 9pt; text-transform: uppercase; letter-spacing: 1.5px; color: #6b7280; font-weight: bold; vertical-align: middle;">
+                                Product Specification<br><span style="color: #111827;">Premium Floor Portal</span>
+                            </td>
+                        </tr>
+                    </table>
                     
-                    .specs-grid { column-count: 2; column-gap: 40px; font-size: 9.5pt; line-height: 1.8; color: #4b5563; margin-bottom: 25px; }
-                    .specs-grid div { break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px; }
-                    .specs-grid strong { color: #111827; }
+                    <div style="width: 100%; height: 280px; margin-bottom: 25px;">${imgTag}</div>
                     
-                    .grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px; }
-                    .card { background: white; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; break-inside: avoid; }
-                    .card img { width: 100%; height: 110px; object-fit: cover; border-radius: 4px; margin-bottom: 8px; background-color: #f3f4f6; }
-                    .card strong { display: block; font-size: 9.5pt; color: #111827; margin-bottom: 3px; line-height: 1.3; }
-                    .card span { font-size: 8pt; color: #6b7280; font-family: monospace; }
+                    <div style="margin-bottom: 20px;">
+                        <h2 style="margin: 0; font-size: 26pt; color: #111827; font-weight: 900;">${product.name || 'Unnamed Product'}</h2>
+                        <h3 style="margin: 4px 0 0 0; font-size: 13pt; color: #c5a059; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">${product.category || 'Flooring'} &bull; ${product.manufacturer || 'Brand'}</h3>
+                    </div>
                     
-                    .footer { margin-top: 30px; text-align: center; font-size: 8.5pt; color: #9ca3af; padding-top: 15px; border-top: 1px solid #e5e7eb; font-weight: bold; letter-spacing: 1px; }
-                </style>
-            </head>
-            <body>
-                <table class="header-table">
-                    <tr>
-                        <td style="width: 50%; vertical-align: middle;">
-                            <img src="${logoUrl}" style="max-height: 50px; width: auto;" onerror="this.outerHTML='<h1 style=\\'margin:0; font-size:28pt; font-weight:900; letter-spacing:2px; color:#111827;\\'>FLOORS <span style=\\'color:#c5a059;\\'>55</span></h1>'" />
-                        </td>
-                        <td style="text-align: right; font-size: 9pt; text-transform: uppercase; letter-spacing: 1.5px; color: #6b7280; font-weight: bold; vertical-align: middle;">
-                            Product Specification<br><span style="color: #111827;">Premium Floor Portal</span>
-                        </td>
-                    </tr>
-                </table>
-
-                <div class="hero-img-container">
-                    <img src="${productImgUrl}" onerror="this.src='${fallbackUrl}';" />
+                    <p style="font-size: 10.5pt; line-height: 1.6; color: #4b5563; margin-bottom: 30px;">
+                        ${product.desc || 'Premium flooring selection expertly sourced by Floors 55.'}
+                    </p>
+                    
+                    ${specsHtml}
+                    
+                    <div style="margin-top: 25px; page-break-inside: avoid;">
+                        <h4 style="font-size: 12pt; color: #111827; margin-bottom: 12px; border-bottom: 2px solid #c5a059; padding-bottom: 6px; display: inline-block; text-transform: uppercase;">Available Colorways</h4>
+                        <div style="display: block; width: 100%;">${colorsHtml}</div>
+                    </div>
+                    
+                    <div style="margin-top: 25px; page-break-inside: avoid;">
+                        <h4 style="font-size: 12pt; color: #111827; margin-bottom: 12px; border-bottom: 2px solid #c5a059; padding-bottom: 6px; display: inline-block; text-transform: uppercase;">Coordinating Trims</h4>
+                        <div style="display: block; width: 100%;">${accHtml}</div>
+                    </div>
+                    
+                    <div style="margin-top: 30px; text-align: center; font-size: 8.5pt; color: #9ca3af; padding-top: 15px; border-top: 1px solid #e5e7eb; font-weight: bold; letter-spacing: 1px;">
+                        &copy; ${new Date().getFullYear()} FLOORS 55 &bull; FLOORS55.COM &bull; SYSTEM GENERATED SPEC SHEET
+                    </div>
                 </div>
-
-                <div class="title-section">
-                    <h2>${product.name || 'Unnamed Product'}</h2>
-                    <h3>${product.category || 'Flooring'} &bull; ${product.manufacturer || 'Brand'}</h3>
-                </div>
-
-                <p class="desc">${product.desc || 'Premium flooring selection expertly sourced by Floors 55.'}</p>
-
-                <h4 class="section-title">Technical Specifications</h4>
-                ${specsHtml}
-
-                <h4 class="section-title">Available Colorways</h4>
-                <div class="grid-container">${colorsHtml}</div>
-
-                <h4 class="section-title">Coordinating Trims</h4>
-                <div class="grid-container">${accHtml}</div>
-
-                <div class="footer">&copy; ${new Date().getFullYear()} FLOORS 55 &bull; FLOORS55.COM &bull; SYSTEM GENERATED SPEC SHEET</div>
-
-                <script>
-                    // Wait for images to load, then open print dialog automatically
-                    window.onload = () => {
-                        setTimeout(() => {
-                            window.print();
-                        }, 500);
-                    };
-                </script>
-            </body>
-            </html>
             `;
 
-            printWindow.document.open();
-            printWindow.document.write(html);
-            printWindow.document.close();
+            const opt = {
+              margin:       0,
+              filename:     `${(product.name || 'Floors55_Product').replace(/\s+/g, '_')}_Spec_Sheet.pdf`,
+              image:        { type: 'jpeg', quality: 0.98 },
+              html2canvas:  { scale: 2, useCORS: true, logging: false },
+              jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            try {
+                const container = document.createElement('div');
+                container.innerHTML = html;
+                container.style.width = '800px'; 
+                container.style.padding = '0';
+                container.style.margin = '0';
+                
+                // Hide it off screen so it doesn't break the active layout
+                container.style.position = 'absolute';
+                container.style.top = '-9999px';
+                document.body.appendChild(container);
+                
+                await html2pdf().set(opt).from(container).save();
+                
+                document.body.removeChild(container);
+                showToast("Spec Sheet Downloaded!");
+            } catch (err) {
+                console.error("PDF Generation Error:", err);
+                window.customAlert("PDF Error", "There was a problem generating the file. Please check your console.");
+            }
         };
+
+        window.shareProduct = (id) => {
+            const basePath = window.location.pathname.replace(/[^/]*$/, '');
+            const url = window.location.origin + basePath + 'product/' + id;
+            
+            const fallbackCopy = () => {
+                const tempInput = document.createElement("input");
+                tempInput.value = url;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand("copy");
+                document.body.removeChild(tempInput);
+                showToast("Link copied to clipboard!");
+            };
+
+            if (navigator.share) {
+                navigator.share({ title: 'Floors 55 Product', url: url }).catch(() => fallbackCopy());
+            } else {
+                fallbackCopy();
+            }
+        };
+
+        async function initAdmin() {            
+            await new Promise(resolve => {
+                const unsub = onAuthStateChanged(auth, (user) => { unsub(); resolve(user); });
+            });
 
             onAuthStateChanged(auth, async (user) => {
                 if (user && !user.isAnonymous) {
