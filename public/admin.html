@@ -1054,9 +1054,9 @@
             const product = productsMaster.find(p => p.id === id);
             if (!product) return;
             
-            showToast("Generating Sell Sheet... Please wait.");
+            showToast("Generating Spec Sheet... This takes a few seconds.");
             
-            // 1. Generate the image URLs
+            // 1. Generate the Firebase image paths
             const safeName = (product.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
             const safeSku = (product.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
             let folderName = 'images'; 
@@ -1071,10 +1071,11 @@
             const fallbackImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ftbd.jpg?alt=media`;
             const logoUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media`;
 
-            // 2. Helper to fetch image as Base64 so html2pdf doesn't drop it!
-            const getBase64 = async (url) => {
+            // 2. Base64 Fetcher via WSRV CDN Proxy (Bypasses CORS and forces the PDF to wait for downloads!)
+            const getBase64 = async (rawUrl) => {
                 try {
-                    const res = await fetch(url);
+                    const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(rawUrl)}&output=webp&q=80`;
+                    const res = await fetch(proxyUrl);
                     if (!res.ok) return null;
                     const blob = await res.blob();
                     return await new Promise((resolve) => {
@@ -1087,12 +1088,11 @@
                 }
             };
 
-            // 3. Pre-fetch the images
-            let mainImgBase64 = await getBase64(productImgUrl);
-            if (!mainImgBase64) mainImgBase64 = await getBase64(fallbackImgUrl);
+            // 3. Pre-fetch primary images
+            let fallbackBase64 = await getBase64(fallbackImgUrl);
+            let mainImgBase64 = await getBase64(productImgUrl) || fallbackBase64;
             let logoBase64 = await getBase64(logoUrl);
 
-            // 4. Inject the converted images
             const imgTag = mainImgBase64 
                 ? `<img src="${mainImgBase64}" style="width: 100%; height: 100%; object-fit: cover;" />` 
                 : `<div style="width:100%; height:100%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:#9ca3af; font-weight:bold; font-size: 14pt;">Image Unavailable</div>`;
@@ -1101,13 +1101,71 @@
                 ? `<img src="${logoBase64}" style="max-height: 50px; width: auto;" />`
                 : `<h1 style="margin:0; font-size:28pt; font-weight:900; letter-spacing:2px; color:#111827;">FLOORS <span style="color:#c5a059;">55</span></h1>`;
 
-            // 5. Format linked trims
+            // 4. Format Dynamic Technical Specifications Array
+            let specsHtml = '';
+            if (product.specs && product.specs.length > 0) {
+                specsHtml += '<h4 style="font-size: 12pt; color: #111827; margin-bottom: 12px; border-bottom: 2px solid #c5a059; padding-bottom: 6px; display: inline-block; text-transform: uppercase;">Technical Specifications</h4>';
+                specsHtml += '<div style="column-count: 2; column-gap: 40px; font-size: 9.5pt; line-height: 1.8; color: #4b5563; margin-bottom: 25px;">';
+                
+                product.specs.forEach(spec => {
+                    const splitIdx = spec.indexOf(':');
+                    if (splitIdx > -1) {
+                        const label = spec.substring(0, splitIdx).trim();
+                        const val = spec.substring(splitIdx + 1).trim();
+                        specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;"><strong style="color: #111827;">${label}:</strong> ${val}</div>`;
+                    } else {
+                        specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;">&bull; ${spec}</div>`;
+                    }
+                });
+
+                // Failsafe: Ensure critical dimensions always print if the AI didn't catch them
+                const specStr = product.specs.join(' ').toLowerCase();
+                if (!specStr.includes('size') && !specStr.includes('width') && product.width && product.length) {
+                    specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;"><strong style="color: #111827;">Size:</strong> ${product.width} x ${product.length}</div>`;
+                }
+                if (!specStr.includes('thickness') && product.thickness) {
+                    specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;"><strong style="color: #111827;">Thickness:</strong> ${product.thickness}</div>`;
+                }
+                if (!specStr.includes('carton') && product.cartonSize) {
+                    specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;"><strong style="color: #111827;">Carton Size:</strong> ${product.cartonSize} sq ft</div>`;
+                }
+                
+                specsHtml += '</div>';
+            } else {
+                // Fallback table if the spec data is totally empty
+                specsHtml = `
+                    <div style="display: block; width: 100%; margin-bottom: 25px;">
+                        <div style="display: inline-block; width: 48%; vertical-align: top;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt; width:45%;">Size</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.width || '-'} x ${product.length || '-'}</td></tr>
+                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Thickness</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.thickness || '-'}</td></tr>
+                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Carton Size</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.cartonSize ? product.cartonSize + ' sq ft' : '-'}</td></tr>
+                            </table>
+                        </div>
+                        <div style="display: inline-block; width: 48%; margin-left: 3%; vertical-align: top;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt; width:45%;">Base SKU</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold; font-family:monospace;">${product.sku || '-'}</td></tr>
+                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Coverage Unit</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.unit || 'sqft'}</td></tr>
+                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Warranty</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">See Manufacturer Spec</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 5. Format linked trims (clean up the name to show the description clearly)
             let accHtml = '';
             if (product.accessories && product.accessories.length > 0) {
                 const accProducts = product.accessories.map(accId => productsMaster.find(p => p.id === accId)).filter(Boolean);
                 accProducts.forEach(acc => {
-                    accHtml += `<div style="display:inline-block; width:31%; margin-right:2%; margin-bottom:12px; background:white; padding:10px; border:1px solid #e5e7eb; border-radius:6px;">
-                        <strong style="display:block; font-size:9.5pt; color:#111827; margin-bottom:3px;">${acc.name || 'Trim'}</strong>
+                    // Strip the manufacturer name out so it just says "T-Mold" or "Reducer"
+                    let cleanName = acc.name || 'Trim';
+                    if (product.manufacturer && cleanName.includes(product.manufacturer)) {
+                        cleanName = cleanName.replace(product.manufacturer, '').trim();
+                    }
+                    
+                    accHtml += `<div style="display:inline-block; width:31%; margin-right:2%; margin-bottom:12px; background:white; padding:10px; border:1px solid #e5e7eb; border-radius:6px; break-inside: avoid;">
+                        <strong style="display:block; font-size:9.5pt; color:#111827; margin-bottom:3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${cleanName}</strong>
                         <span style="font-size:8pt; color:#6b7280; font-family:monospace;">${acc.sku || ''}</span>
                     </div>`;
                 });
@@ -1115,18 +1173,28 @@
                 accHtml = '<p style="font-size:9pt; color:#6b7280; font-style:italic;">No trims currently linked to this floor.</p>';
             }
 
-            // 6. Format available colorways
+            // 6. Pre-fetch and Format available colorways WITH IMAGES
             let colorsHtml = '';
             if (product.colors && product.colors.length > 0) {
-                product.colors.forEach(c => {
-                    colorsHtml += `<div style="display:inline-block; width:31%; margin-right:2%; margin-bottom:12px; background:white; padding:10px; border:1px solid #e5e7eb; border-radius:6px;">
-                        <strong style="display:block; font-size:9.5pt; color:#111827; margin-bottom:3px;">${c.name || 'Default Color'}</strong>
+                const colorPromises = product.colors.map(async (c) => {
+                    const cRawPath = `images/${folderName}/${product.imgPrefix || ''}${c.sku}.jpg`.toLowerCase();
+                    const cImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(cRawPath)}?alt=media`;
+                    
+                    let b64 = await getBase64(cImgUrl);
+                    if (!b64) b64 = fallbackBase64;
+                    
+                    return `<div style="display:inline-block; width:31%; margin-right:2%; margin-bottom:12px; background:white; padding:10px; border:1px solid #e5e7eb; border-radius:6px; text-align: center; box-sizing: border-box; break-inside: avoid;">
+                        ${b64 ? `<img src="${b64}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 4px; margin-bottom: 8px; background-color: #f3f4f6;" />` : `<div style="width: 100%; height: 110px; background-color: #f3f4f6; margin-bottom: 8px; border-radius: 4px;"></div>`}
+                        <strong style="display:block; font-size:9.5pt; color:#111827; margin-bottom:3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name || 'Default Color'}</strong>
                         <span style="font-size:8pt; color:#6b7280; font-family:monospace;">${c.sku || ''}</span>
                     </div>`;
                 });
+                
+                const colorwayBlocks = await Promise.all(colorPromises);
+                colorsHtml = colorwayBlocks.join('');
             }
 
-            // 7. Build the HTML document structure
+            // 7. Build the final HTML document structure
             const html = `
                 <div style="width: 800px; box-sizing: border-box; padding: 15mm; background-color: #fdfbf7; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827;">
                     <table style="width: 100%; margin-bottom: 20px; border-bottom: 3px solid #c5a059; padding-bottom: 15px; border-collapse: collapse;">
@@ -1153,22 +1221,7 @@
                         ${product.desc || 'Premium flooring selection expertly sourced by Floors 55.'}
                     </p>
                     
-                    <div style="display: block; width: 100%; margin-bottom: 25px;">
-                        <div style="display: inline-block; width: 48%; vertical-align: top;">
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt; width:45%;">Size</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.width || '-'} x ${product.length || '-'}</td></tr>
-                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Thickness</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.thickness || '-'}</td></tr>
-                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Carton Size</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.cartonSize ? product.cartonSize + ' sq ft' : '-'}</td></tr>
-                            </table>
-                        </div>
-                        <div style="display: inline-block; width: 48%; margin-left: 3%; vertical-align: top;">
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt; width:45%;">Base SKU</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold; font-family:monospace;">${product.sku || '-'}</td></tr>
-                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Coverage Unit</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">${product.unit || 'sqft'}</td></tr>
-                                <tr><th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left; color:#6b7280; font-weight:bold; text-transform:uppercase; font-size:8.5pt;">Warranty</th><td style="padding:10px; border-bottom:1px solid #e5e7eb; font-size:9.5pt; font-weight:bold;">See Manufacturer Spec</td></tr>
-                            </table>
-                        </div>
-                    </div>
+                    ${specsHtml}
                     
                     <div style="margin-top: 25px; page-break-inside: avoid;">
                         <h4 style="font-size: 12pt; color: #111827; margin-bottom: 12px; border-bottom: 2px solid #c5a059; padding-bottom: 6px; display: inline-block; text-transform: uppercase;">Available Colorways</h4>
@@ -1195,16 +1248,19 @@
             };
 
             try {
-                // 8. Safely construct the hidden DOM element with explicit width so it renders fully!
                 const container = document.createElement('div');
                 container.innerHTML = html;
                 container.style.width = '800px'; 
                 container.style.padding = '0';
                 container.style.margin = '0';
+                document.body.appendChild(container); // Temporarily attach it!
+                
+                // Allow exactly 100ms for the DOM to register the images before capture
+                await new Promise(r => setTimeout(r, 100));
 
-                // Hand the unattached element directly to the engine
                 await html2pdf().set(opt).from(container).save();
                 
+                document.body.removeChild(container);
                 showToast("Spec Sheet Downloaded!");
             } catch (err) {
                 console.error("PDF Generation Error:", err);
