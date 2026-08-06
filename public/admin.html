@@ -1129,9 +1129,9 @@
                 });
             }
 
-            // 7. Build the HTML document structure
+            // 7. Build the HTML document structure (Now with explicit width baked in!)
             const html = `
-                <div style="padding: 15mm; background-color: #fdfbf7; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827;">
+                <div style="width: 800px; box-sizing: border-box; padding: 15mm; background-color: #fdfbf7; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #111827;">
                     <table style="width: 100%; margin-bottom: 20px; border-bottom: 3px solid #c5a059; padding-bottom: 15px; border-collapse: collapse;">
                         <tr>
                             <td style="width: 50%; vertical-align: middle;">
@@ -1191,25 +1191,33 @@
 
             const opt = {
               margin:       0,
-              filename:     `${(product.name || 'Floors55_Product').replace(/\\s+/g, '_')}_Spec_Sheet.pdf`,
+              filename:     `${(product.name || 'Floors55_Product').replace(/\s+/g, '_')}_Spec_Sheet.pdf`,
               image:        { type: 'jpeg', quality: 0.98 },
               html2canvas:  { scale: 2, useCORS: true, logging: false },
               jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
             try {
-                // 8. Safely construct the hidden DOM element
-                const element = document.createElement('div');
-                element.innerHTML = html;
-                element.style.position = 'absolute';
-                element.style.top = '-9999px';
-                element.style.left = '-9999px';
-                element.style.width = '800px'; // Crucial for correct layout scaling
-                document.body.appendChild(element);
+                // Pass the raw HTML string directly! The explicit 800px width forces the layout to render beautifully.
+                await html2pdf().set(opt).from(html).save();
+                showToast("Spec Sheet Downloaded!");
+            } catch (err) {
+                console.error("PDF Generation Error:", err);
+                window.customAlert("PDF Error", "There was a problem generating the file. Please check your console.");
+            }
+        };
 
-                await html2pdf().set(opt).from(element).save();
+            try {
+                // Wrap the HTML in an unattached element with a forced width so it doesn't collapse to 0x0
+                const container = document.createElement('div');
+                container.innerHTML = html;
+                container.style.width = '800px'; 
+                container.style.padding = '0';
+                container.style.margin = '0';
+
+                // Hand the unattached element directly to the engine
+                await html2pdf().set(opt).from(container).save();
                 
-                document.body.removeChild(element);
                 showToast("Spec Sheet Downloaded!");
             } catch (err) {
                 console.error("PDF Generation Error:", err);
