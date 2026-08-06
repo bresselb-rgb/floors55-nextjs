@@ -1063,16 +1063,15 @@
             const displayBaseSku = (isPrivate && product.privateSku) ? product.privateSku : product.sku;
             
             // 1. Generate the Firebase image paths
-            const safeName = (product.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-            const safeSku = (product.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
             let folderName = 'images'; 
 
-            // ONE-FOLDER DUMP OVERRIDE FOR TILE PRODUCTS
-            if (product.category === 'Tile' && product.imgPrefix) {
-                folderName = product.imgPrefix.replace(/\/$/, ''); // Strips slash, making folder "FTAura"
-                product.imgPrefix = ''; // Clears prefix so it doesn't duplicate in the filename search
+            if (product.imageFolder) {
+                // If the JSON explicitly dictates a folder path, use it exactly as written
+                folderName = product.imageFolder;
             } else {
-                // Standard folder generation for everything else
+                // Otherwise, fall back to the standard Name-SKU folder structure for older products
+                const safeName = (product.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                const safeSku = (product.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                 if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
                 else if (safeName) folderName = safeName;
                 folderName = folderName.replace(/-+$/, '');
