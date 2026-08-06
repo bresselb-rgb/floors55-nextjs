@@ -1071,10 +1071,10 @@
             const fallbackImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ftbd.jpg?alt=media`;
             const logoUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media`;
 
-            // 2. Base64 Fetcher via WSRV CDN Proxy (Bypasses CORS and forces the PDF to wait for downloads!)
+            // 2. Base64 Fetcher via AllOrigins Proxy (Highly reliable, bypasses CORS blocks)
             const getBase64 = async (rawUrl) => {
                 try {
-                    const proxyUrl = `https://wsrv.nl/?url=${encodeURIComponent(rawUrl)}&output=webp&q=80`;
+                    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`;
                     const res = await fetch(proxyUrl);
                     if (!res.ok) return null;
                     const blob = await res.blob();
@@ -1118,7 +1118,6 @@
                     }
                 });
 
-                // Failsafe: Ensure critical dimensions always print if the AI didn't catch them
                 const specStr = product.specs.join(' ').toLowerCase();
                 if (!specStr.includes('size') && !specStr.includes('width') && product.width && product.length) {
                     specsHtml += `<div style="break-inside: avoid; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; margin-bottom: 4px;"><strong style="color: #111827;">Size:</strong> ${product.width} x ${product.length}</div>`;
@@ -1132,7 +1131,6 @@
                 
                 specsHtml += '</div>';
             } else {
-                // Fallback table if the spec data is totally empty
                 specsHtml = `
                     <div style="display: block; width: 100%; margin-bottom: 25px;">
                         <div style="display: inline-block; width: 48%; vertical-align: top;">
@@ -1153,16 +1151,20 @@
                 `;
             }
 
-            // 5. Format linked trims (clean up the name to show the description clearly)
+            // 5. Format linked trims (Aggressively strip out the manufacturer and product name so only the description remains)
             let accHtml = '';
             if (product.accessories && product.accessories.length > 0) {
                 const accProducts = product.accessories.map(accId => productsMaster.find(p => p.id === accId)).filter(Boolean);
                 accProducts.forEach(acc => {
-                    // Strip the manufacturer name out so it just says "T-Mold" or "Reducer"
                     let cleanName = acc.name || 'Trim';
-                    if (product.manufacturer && cleanName.includes(product.manufacturer)) {
-                        cleanName = cleanName.replace(product.manufacturer, '').trim();
-                    }
+                    const toStrip = [product.name, product.manufacturer, product.privateName, product.styleFamily].filter(Boolean);
+                    
+                    toStrip.forEach(str => {
+                        cleanName = cleanName.replace(new RegExp(str, 'ig'), '').trim();
+                    });
+                    
+                    cleanName = cleanName.replace(/^-+|-+$/g, '').trim();
+                    if (!cleanName) cleanName = 'Trim'; 
                     
                     accHtml += `<div style="display:inline-block; width:31%; margin-right:2%; margin-bottom:12px; background:white; padding:10px; border:1px solid #e5e7eb; border-radius:6px; break-inside: avoid;">
                         <strong style="display:block; font-size:9.5pt; color:#111827; margin-bottom:3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${cleanName}</strong>
@@ -1173,25 +1175,22 @@
                 accHtml = '<p style="font-size:9pt; color:#6b7280; font-style:italic;">No trims currently linked to this floor.</p>';
             }
 
-            // 6. Pre-fetch and Format available colorways WITH IMAGES
+            // 6. Pre-fetch colorway images SEQUENTIALLY to guarantee the proxy doesn't block the request!
             let colorsHtml = '';
             if (product.colors && product.colors.length > 0) {
-                const colorPromises = product.colors.map(async (c) => {
+                for (const c of product.colors) {
                     const cRawPath = `images/${folderName}/${product.imgPrefix || ''}${c.sku}.jpg`.toLowerCase();
                     const cImgUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(cRawPath)}?alt=media`;
                     
                     let b64 = await getBase64(cImgUrl);
                     if (!b64) b64 = fallbackBase64;
                     
-                    return `<div style="display:inline-block; width:31%; margin-right:2%; margin-bottom:12px; background:white; padding:10px; border:1px solid #e5e7eb; border-radius:6px; text-align: center; box-sizing: border-box; break-inside: avoid;">
+                    colorsHtml += `<div style="display:inline-block; width:31%; margin-right:2%; margin-bottom:12px; background:white; padding:10px; border:1px solid #e5e7eb; border-radius:6px; text-align: center; box-sizing: border-box; break-inside: avoid;">
                         ${b64 ? `<img src="${b64}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 4px; margin-bottom: 8px; background-color: #f3f4f6;" />` : `<div style="width: 100%; height: 110px; background-color: #f3f4f6; margin-bottom: 8px; border-radius: 4px;"></div>`}
                         <strong style="display:block; font-size:9.5pt; color:#111827; margin-bottom:3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name || 'Default Color'}</strong>
                         <span style="font-size:8pt; color:#6b7280; font-family:monospace;">${c.sku || ''}</span>
                     </div>`;
-                });
-                
-                const colorwayBlocks = await Promise.all(colorPromises);
-                colorsHtml = colorwayBlocks.join('');
+                }
             }
 
             // 7. Build the final HTML document structure
