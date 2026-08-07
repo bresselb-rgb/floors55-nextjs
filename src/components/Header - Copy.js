@@ -68,7 +68,6 @@ export default function Header() {
   // Search States
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [headerSearchQuery, setHeaderSearchQuery] = useState('');
-  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [allProducts, setAllProducts] = useState([]);
 
   const [user, setUser] = useState(null);
@@ -518,7 +517,7 @@ export default function Header() {
                 type="text" 
                 placeholder="Search products, colors, or resources..." 
                 value={headerSearchQuery} 
-                onChange={e => { setHeaderSearchQuery(e.target.value); setIsSearchExpanded(false); }}
+                onChange={e => setHeaderSearchQuery(e.target.value)}
                 className="w-full bg-white text-gray-900 text-lg md:text-xl rounded-2xl px-6 py-5 outline-none focus:ring-4 focus:ring-gold shadow-2xl"
               />
               <span className="absolute right-6 top-5 text-2xl opacity-50 pointer-events-none">🔍</span>
@@ -533,7 +532,7 @@ export default function Header() {
                       {filteredSearchProducts.length > 0 && (
                           <div>
                               <div className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-50 border-b border-gray-100">Products</div>
-                              {filteredSearchProducts.slice(0, isSearchExpanded ? 15 : 4).map(p => {
+                              {filteredSearchProducts.slice(0, 4).map(p => {
                                   const displayTitle = (p.usePrivateName && p.privateName) ? p.privateName : (p.name || 'Unnamed Product');
                                   const isTrim = p.isAccessory || p.category === 'Trim & Molding';
                                   
@@ -594,19 +593,11 @@ export default function Header() {
                           </div>
                       )}
 
-                      {filteredSearchProducts.length > 4 && !isSearchExpanded && (
-                         <button onClick={() => setIsSearchExpanded(true)} className="p-4 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer w-full border-none outline-none block">
-                            <span className="text-xs font-black text-black uppercase tracking-widest hover:text-gold transition-colors block w-full">
-                               View more product results ▾
-                            </span>
-                         </button>
-                      )}
-                      
-                      {isSearchExpanded && filteredSearchProducts.length > 15 && (
-                         <div className="p-4 text-center bg-gray-50 border-t border-gray-100">
-                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                               Showing top 15 of {filteredSearchProducts.length} results. Please refine your search to see more.
-                            </span>
+                      {filteredSearchProducts.length > 4 && (
+                         <div className="p-4 text-center bg-gray-50 hover:bg-gray-100 transition-colors">
+                            <Link href={`/category?search=${encodeURIComponent(headerSearchQuery)}`} onClick={() => { setIsSearchOpen(false); setHeaderSearchQuery(''); }} className="text-xs font-black text-black uppercase tracking-widest hover:text-gold transition-colors block w-full" style={{ textDecoration: 'none' }}>
+                              View all {filteredSearchProducts.length} {' '} product results &rarr;
+                            </Link>
                          </div>
                       )}
                    </div>

@@ -312,7 +312,13 @@ function CategoryViewerContent({ initialCategory }) {
   const [showProPicks, setShowProPicks] = useState(false);
 
   // Raw input states (for the UI)
-  const [searchQueryInput, setSearchQueryInput] = useState('');
+  const [searchQueryInput, setSearchQueryInput] = useState(() => {
+      if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search);
+          return params.get('search') || '';
+      }
+      return '';
+  });
   const [maxPriceInput, setMaxPriceInput] = useState(10000); 
 
   // Debounced states (for the heavy filter logic)
@@ -1359,10 +1365,12 @@ function CategoryViewerContent({ initialCategory }) {
                             
                             const safeName = (p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                             const safeSku = (p.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                            let folderName = 'images'; 
-                            if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-                            else if (safeName) folderName = safeName;
-                            folderName = folderName.replace(/-+$/, '');
+                            let folderName = p.imageFolder ? p.imageFolder : 'images'; 
+                            if (!p.imageFolder) {
+                                if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                                else if (safeName) folderName = safeName;
+                                folderName = folderName.replace(/-+$/, '');
+                            }
 
                             const mainType = p.category === 'Carpet' ? 'main' : 'main';
                             const rawPath = `images/${folderName}/${safePrefix}${displaySku}_${mainType}.jpg`.toLowerCase();
