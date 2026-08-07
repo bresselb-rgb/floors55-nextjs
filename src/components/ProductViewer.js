@@ -338,7 +338,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
-        if (productData.isAccessory && !productData.imgPrefix) return FALLBACK_IMG;
+        // Allow accessories with an imageFolder to bypass the generic molding graphic
+        if (productData.isAccessory && !productData.imageFolder && !productData.imgPrefix) return FALLBACK_IMG;
 
         const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
         const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
