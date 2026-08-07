@@ -147,7 +147,7 @@ export default async function ProductPageServer({ params, searchParams }) {
           const seriesQuery = query(
               collection(db, 'artifacts', appId, 'public', 'data', 'pricing'),
               where('styleFamily', '==', data.styleFamily),
-              limit(10)
+              limit(25)
           );
           const seriesSnap = await getDocs(seriesQuery);
           seriesSnap.forEach((doc) => {
@@ -221,7 +221,9 @@ export default async function ProductPageServer({ params, searchParams }) {
       }
   }
   
-  const displaySimilar = similarProducts.slice(0, 4);
+  const displaySimilar = (data.category === 'Tile' && data.styleFamily) 
+      ? similarProducts 
+      : similarProducts.slice(0, 4);
 
   const productSchema = {
     "@context": "https://schema.org",

@@ -52,7 +52,7 @@ export default function SimilarProducts({ products, isPrivate, title }) {
             <div className="max-w-[1400px] mx-auto px-4">
                 {/* Dynamically display the title passed from page.js */}
                 <h3 className="text-2xl font-black text-gray-900 mb-8 uppercase tracking-tight">{title || 'Similar Options'}</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="flex overflow-x-auto gap-4 md:gap-6 pb-6 snap-x snap-mandatory scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {products.map((product) => {
                         const simTitle = (isPrivate || product.usePrivateName) 
                             ? (product.privateName || 'Custom Collection') 
@@ -81,7 +81,7 @@ export default function SimilarProducts({ products, isPrivate, title }) {
                             <Link 
                                 key={product.id} 
                                 href={`/product/${product.id}${isPrivate ? '?private=true' : ''}`} 
-                                className="group block" 
+                                className="group block shrink-0 w-36 md:w-56 snap-start" 
                                 style={{ textDecoration: 'none' }}
                             >
                                 <div className="bg-gray-50 rounded-xl aspect-square mb-4 overflow-hidden border border-gray-100">
