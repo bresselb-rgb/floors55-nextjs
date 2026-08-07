@@ -77,8 +77,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     
     const [availablePads, setAvailablePads] = useState([]);
 
-    // DYNAMIC FALLBACK IMAGE: Uses your uploaded mouldings.png for accessories
-    const FALLBACK_IMG = productData?.isAccessory 
+    // DYNAMIC FALLBACK IMAGE: Uses your uploaded mouldings.png for accessories (excluding Tile)
+    const FALLBACK_IMG = (productData?.isAccessory && productData?.category !== 'Tile')
         ? `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/moldings.png')}?alt=media`
         : `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
@@ -338,8 +338,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
-        // Allow accessories with an imageFolder to bypass the generic molding graphic
-        if (productData.isAccessory && !productData.imageFolder && !productData.imgPrefix) return FALLBACK_IMG;
+        // Bypass the generic molding graphic for Tile accessories or items with specific folders
+        if (productData.isAccessory && !productData.imageFolder && !productData.imgPrefix && productData.category !== 'Tile') return FALLBACK_IMG;
 
         const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
         const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
