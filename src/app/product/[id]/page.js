@@ -17,11 +17,13 @@ const authenticateServer = async () => {
 
 const getGridImgUrl = (data) => {
   const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const safeSku = (data.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  let folderName = 'images'; 
-  if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-  else if (safeName) folderName = safeName;
-  folderName = folderName.replace(/-+$/, '');
+const safeSku = (data.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+let folderName = data.imageFolder ? data.imageFolder : 'images'; 
+if (!data.imageFolder) {
+    if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+    else if (safeName) folderName = safeName;
+    folderName = folderName.replace(/-+$/, '');
+}
 
   const displaySku = data.colors?.[0]?.sku || '01';
   const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();

@@ -1359,10 +1359,12 @@ function CategoryViewerContent({ initialCategory }) {
                             
                             const safeName = (p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                             const safeSku = (p.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                            let folderName = 'images'; 
-                            if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-                            else if (safeName) folderName = safeName;
-                            folderName = folderName.replace(/-+$/, '');
+                            let folderName = p.imageFolder ? p.imageFolder : 'images'; 
+                            if (!p.imageFolder) {
+                                if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                                else if (safeName) folderName = safeName;
+                                folderName = folderName.replace(/-+$/, '');
+                            }
 
                             const mainType = p.category === 'Carpet' ? 'main' : 'main';
                             const rawPath = `images/${folderName}/${safePrefix}${displaySku}_${mainType}.jpg`.toLowerCase();

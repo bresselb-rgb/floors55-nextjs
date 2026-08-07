@@ -342,10 +342,12 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
         const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
         const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        let folderName = 'images';
-        if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-        else if (safeName) folderName = safeName;
-        folderName = folderName.replace(/-+$/, '');
+        let folderName = productData.imageFolder ? productData.imageFolder : 'images';
+        if (!productData.imageFolder) {
+            if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+            else if (safeName) folderName = safeName;
+            folderName = folderName.replace(/-+$/, '');
+        }
 
         const prefix = productData.imgPrefix || '';
         let path = '';
@@ -553,10 +555,12 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             // Construct the thumbnail URL
             const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
             const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-            let folderName = 'images';
-            if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-            else if (safeName) folderName = safeName;
-            folderName = folderName.replace(/-+$/, '');
+            let folderName = productData.imageFolder ? productData.imageFolder : 'images';
+            if (!productData.imageFolder) {
+                if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                else if (safeName) folderName = safeName;
+                folderName = folderName.replace(/-+$/, '');
+            }
             
             const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
             const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${activeColor?.sku || '01'}_${swatchType}.jpg`.toLowerCase();
@@ -725,13 +729,15 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 }>
                     {productData?.colors?.map(c => {
                         const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
+
                         const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                         const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                        let folderName = 'images';
-                        if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-                        else if (safeName) folderName = safeName;
-                        folderName = folderName.replace(/-+$/, '');
-
+                        let folderName = productData.imageFolder ? productData.imageFolder : 'images';
+                        if (!productData.imageFolder) {
+                            if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                            else if (safeName) folderName = safeName;
+                            folderName = folderName.replace(/-+$/, '');
+                        }
                         const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${c.sku}_${swatchType}.jpg`.toLowerCase();
                         const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
 
