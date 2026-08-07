@@ -139,7 +139,29 @@ export default async function ProductPageServer({ params, searchParams }) {
   let similarProducts = [];
   let similarTitle = "Similar Options"; // Default Title
 
-  if (data.isAccessory) {
+  // 1. TILE SERIES INTERCEPT (Bypasses Price Rules & Updates Title)
+  if (data.category === 'Tile' && data.styleFamily) {
+      similarTitle = `Other Formats in the ${data.name?.split(' ')[0] || 'Tile'} Series`;
+      
+      try {
+          const seriesQuery = query(
+              collection(db, 'artifacts', appId, 'public', 'data', 'pricing'),
+              where('styleFamily', '==', data.styleFamily),
+              limit(10)
+          );
+          const seriesSnap = await getDocs(seriesQuery);
+          seriesSnap.forEach((doc) => {
+              const simData = doc.data();
+              if (doc.id !== id && simData.isVisible !== false) {
+                  similarProducts.push({ id: doc.id, ...simData });
+              }
+          });
+      } catch (error) {
+          console.error("Error fetching tile series:", error);
+      }
+      
+  // 2. EXISTING TRIM & STANDARD LOGIC
+  } else if (data.isAccessory) {
       // It's a trim! Do a reverse lookup to find the parent floor.
       try {
           const parentQuery = query(

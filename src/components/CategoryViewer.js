@@ -1434,7 +1434,7 @@ function CategoryViewerContent({ initialCategory }) {
                                         <div className={isListView ? "flex items-center justify-center sm:justify-start gap-2 mt-4 sm:mt-0" : "space-y-1 mb-4"}>
                                             <div className={isListView ? "flex items-center gap-2" : "flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider"}>
                                                 <span className={isListView ? "text-[10px] font-black text-gold uppercase tracking-widest" : ""}>{p.category}</span>
-                                                {!isClientMode && !isPrivateLabel && <span className={isListView ? "text-[10px] text-gray-400 font-bold uppercase font-mono" : ""}>{p.sku}</span>}
+                                                {!isClientMode && !isPrivateLabel && !isTileFamily && <span className={isListView ? "text-[10px] text-gray-400 font-bold uppercase font-mono" : ""}>{p.sku}</span>}
                                             </div>
                                             {!isListView && (
                                                 <>
@@ -1475,8 +1475,8 @@ function CategoryViewerContent({ initialCategory }) {
                                         <div className={isListView ? "w-full sm:w-44 border-t sm:border-t-0 sm:border-l border-gray-100 pt-4 sm:pt-0 sm:pl-6 text-center sm:text-right shrink-0 flex flex-col justify-center" : "space-y-3 pt-3 border-t border-gray-50"}>
                                             
                                             {isTileFamily ? (
-                                                <div className="flex justify-between items-center h-full">
-                                                    <div className="text-[11px] font-bold text-gray-500 italic w-full text-center sm:text-right my-2">Multiple Formats & Finishes</div>
+                                                <div className="flex-1 flex items-end justify-center sm:justify-end">
+                                                    <div className="text-[11px] font-bold text-gray-500 italic w-full text-center sm:text-right mb-2">Multiple Formats & Finishes</div>
                                                 </div>
                                             ) : (
                                                 <>
