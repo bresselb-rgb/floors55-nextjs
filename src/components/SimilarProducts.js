@@ -36,8 +36,11 @@ export default function SimilarProducts({ products, isPrivate, title }) {
     const isClientMode = clientMargin !== null;
 
     const getGridImgUrl = (data, index = 0) => {
-        // Use specific images for Tile accessories, but keep the generic moldings graphic for all other categories
-        if (data.isAccessory && !data.imgPrefix && data.category !== 'Tile') {
+        // Return specific generic graphics for accessories lacking a dedicated folder/prefix
+        if (data.isAccessory && !data.imgPrefix && !data.imageFolder) {
+            if (data.category === 'Tile') {
+                return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/bullnose.jpg')}?alt=media`;
+            }
             return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/moldings.png')}?alt=media`;
         }
 
@@ -113,6 +116,13 @@ export default function SimilarProducts({ products, isPrivate, title }) {
                                 <div className="bg-gray-50 rounded-xl aspect-square mb-4 overflow-hidden border border-gray-100">
                                     <img 
                                         src={getGridImgUrl(product, index)} 
+                                        onError={(e) => {
+                                            e.currentTarget.src = product.isAccessory 
+                                                ? (product.category === 'Tile' 
+                                                    ? `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/bullnose.jpg')}?alt=media` 
+                                                    : `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/moldings.png')}?alt=media`)
+                                                : `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
+                                        }}
                                         alt={simTitle} 
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                                     />
