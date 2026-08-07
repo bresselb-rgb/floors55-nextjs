@@ -29,6 +29,7 @@ export default function Home() {
                 alt="Floors 55 Premium Flooring" 
                 fill
                 priority
+                fetchPriority="high"
                 sizes="100vw"
                 className="object-cover object-center" 
             />
