@@ -43,16 +43,24 @@ try {
 }
 
 // Standardizes the labels on the left side of the colon
-const normalizeSpecKey = (rawKey) => {
+const normalizeSpecKey = (rawKey, category = '') => {
     const k = rawKey.toLowerCase().trim();
-    if (k === 'core' || k === 'construction' || k === 'core material' || k === 'core type') return 'Construction / Core';
-    if (k === 'pad' || k === 'cushion' || k === 'underlayment' || k === 'attached pad') return 'Attached Pad';
-    if (k === 'style' || k === 'pattern' || k === 'style type') return 'Style Type';
-    if (k === 'wearlayer' || k === 'wear layer') return 'Wear Layer';
-    if (k === 'overall thickness' || k === 'total thickness' || k === 'thickness') return 'Thickness';
-    if (k === 'waterproof' || k === 'water resistance') return 'Waterproof';
-    if (k === 'face weight' || k === 'ounce weight' || k === 'fiber weight' || k === 'weight' || k === 'oz weight') return 'Face Weight';
-    if (k === 'fiber' || k === 'fiber type' || k === 'yarn' || k === 'material') return 'Fiber Type';
+    if (k.includes('core') || k.includes('construction')) return 'Construction / Core';
+    if (k.includes('pad') || k.includes('cushion') || k.includes('underlayment')) return 'Attached Pad';
+    if (k.includes('style') || k.includes('pattern') || k.includes('visual')) return 'Style Type';
+    
+    // Force Laminate wear layers to group under AC Rating
+    if (category === 'Laminate' && (k.includes('wear') || k.includes('ac rating') || k.includes('ac class'))) return 'AC Rating';
+    
+    if (k.includes('wear layer') || k.includes('wearlayer') || k.includes('veneer')) return 'Wear Layer';
+    if (k.includes('ac rating') || k.includes('ac class')) return 'AC Rating';
+    if (k.includes('thickness') && !k.includes('wear')) return 'Thickness'; 
+    if (k.includes('waterproof') || k.includes('water resistant') || k.includes('water resistance') || k.includes('moisture')) {
+        return category === 'Laminate' ? 'Water Resistant' : 'Waterproof';
+    }
+    if (k.includes('weight')) return 'Face Weight';
+    if (k.includes('fiber') || k.includes('yarn') || k.includes('material')) return 'Fiber Type';
+    if (k.includes('species')) return 'Species';
     return rawKey.trim();
 };
 
@@ -62,6 +70,62 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     const lowerVal = val.toLowerCase();
 
     if (key.toLowerCase() === "thickness") {
+        // EXCLUSIVELY for Hardwood inch bucketing
+        if (category === 'Hardwood') {
+            let num = 0;
+            
+            if (val.includes("1/4")) num = 0.25;
+            else if (val.includes("5/16")) num = 0.3125;
+            else if (val.includes("3/8")) num = 0.375;
+            else if (val.includes("7/16")) num = 0.4375;
+            else if (val.includes("1/2")) num = 0.5;
+            else if (val.includes("9/16")) num = 0.5625;
+            else if (val.includes("5/8")) num = 0.625;
+            else if (val.includes("3/4")) num = 0.75;
+            else {
+                const inchMatch = val.match(/([\d.]+)\s*(?:"|''|in|inch)/i);
+                if (inchMatch) {
+                    num = parseFloat(inchMatch[1]);
+                } else {
+                    const mmMatch = val.match(/([\d.]+)\s*mm/i);
+                    if (mmMatch) {
+                        num = parseFloat(mmMatch[1]) / 25.4;
+                    } else {
+                        const match = val.match(/([\d.]+)/);
+                        if (match) {
+                            num = parseFloat(match[1]);
+                            if (num > 2) num = num / 25.4;
+                        }
+                    }
+                }
+            }
+
+            // Strict Hardwood Buckets
+            if (num > 0) {
+                if (num < 0.40625) return "3/8\"";
+                if (num >= 0.40625 && num < 0.46875) return "7/16\"";
+                if (num >= 0.46875 && num < 0.53125) return "1/2\"";
+                if (num >= 0.53125 && num < 0.59375) return "9/16\"";
+                if (num >= 0.59375 && num < 0.6875) return "5/8\"";
+                return "3/4\"+";
+            }
+            return val;
+        }
+
+        // EXCLUSIVELY for Laminate mm bucketing
+        if (category === 'Laminate') {
+            const match = val.match(/[\d.]+/);
+            if (match) {
+                const num = parseFloat(match[0]);
+                if (num < 8) return "< 8mm";
+                if (num >= 8 && num < 10) return "8mm";
+                if (num >= 10 && num < 12) return "10mm";
+                if (num >= 12) return "12mm+";
+            }
+            return val;
+        }
+        
+        // LVP, Tile fallback (Standard mm bucketing)
         const match = val.match(/[\d.]+/);
         if (match) {
             const num = parseFloat(match[0]);
@@ -73,33 +137,78 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     }
 
     if (key.toLowerCase() === "construction / core") {
-        if (category === 'Luxury Vinyl (LVP)' && lowerVal.includes("solid")) return "SPC";
-        if (lowerVal.includes("solid")) return "Solid";
-        if (lowerVal.includes("wpc")) return "WPC";
-        if (lowerVal.includes("spc") || lowerVal.includes("rigid")) return "SPC";
-        if (lowerVal.includes("engineered") || lowerVal.includes("ply") || lowerVal.includes("hdf") || lowerVal.includes("veneer") || lowerVal.includes("multi")) return "Engineered";
+        // Hardwood strict bucketing (Must be checked before SPC to prevent 'solid' hijack)
+        if (category === 'Hardwood') {
+            if (lowerVal.includes("solid")) return "Solid";
+            return "Engineered"; 
+        }
+
+        // Explicitly catch COREtec's patent phrasing and WPC
+        if (lowerVal.includes("wpc") || lowerVal.includes("wood foamed") || lowerVal.includes("wood plastic")) return "WPC";
+        if (lowerVal.includes("spc") || lowerVal.includes("rigid") || lowerVal.includes("solid") || lowerVal.includes("stone")) return "SPC";
+        if (category === 'Luxury Vinyl (LVP)') return "SPC"; // Strict fallback
         return val;
     }
 
     if (key.toLowerCase() === "attached pad" || key.toLowerCase() === "pad") {
         if (lowerVal.includes("cork")) return "Attached Cork";
         if (lowerVal.includes("no") || lowerVal === "none" || lowerVal === "n/a" || lowerVal === "false") return "None";
-        return "Attached Pad"; 
+        return "Attached Pad"; // Forces anything else into 'Attached Pad'
     }
 
-    if (key.toLowerCase() === "style type") {
-        if ((lowerVal.includes("texture") || lowerVal.includes("cut pile")) && !lowerVal.includes("loop")) return "Texture / Cut Pile";
-        if (lowerVal.includes("pattern") || (lowerVal.includes("cut") && lowerVal.includes("loop"))) return "Pattern / Cut & Loop";
-        if (lowerVal.includes("loop") || lowerVal.includes("berber")) return "Loop";
-    }
+    if (key.toLowerCase() === "style type" || key.toLowerCase() === "visual") {
+        
+        // 1. EXCLUSIVELY for Carpet style bucketing
+        if (category === 'Carpet') {
+            // Must check 'cut and loop' first so it doesn't get prematurely grabbed by just 'cut' or 'loop'
+            if (lowerVal.includes("cut and loop") || lowerVal.includes("cut & loop") || lowerVal.includes("pattern")) return "Cut and Loop";
+            if (lowerVal.includes("loop") || lowerVal.includes("berber/Loop")) return "Loop";
+            if (lowerVal.includes("cut") || lowerVal.includes("texture") || lowerVal.includes("plush") || lowerVal.includes("frieze") || lowerVal.includes("tonal") || lowerVal.includes("twist")) return "Cut Pile";
+            
+            // Return "None" to instantly vaporize random dimensions and style numbers!
+            return "None"; 
+        }
 
-    if (key.toLowerCase() === "wear layer") {
-         const match = val.match(/(\d+)/);
-         if (match) return `${match[1]} mil`;
+        // 2. Hard Surface visual bucketing (LVP, Laminate, Hardwood, Tile)
+        if (lowerVal.includes("tile") || lowerVal.includes("stone") || lowerVal.includes("slate") || lowerVal.includes("concrete") || lowerVal.includes("marble")) return "Tile Visual";
+        return "Wood Visual"; 
     }
     
-    if (key.toLowerCase() === "waterproof") {
+    if (key.toLowerCase() === "wear layer" || key.toLowerCase() === "ac rating") {
+         // EXCLUSIVELY for Hardwood mm bucketing
+         if (category === 'Hardwood') {
+             const match = val.match(/([\d.]+)/);
+             if (match) {
+                 const num = parseFloat(match[1]);
+                 if (num < 2) return "1mm - 2mm";
+                 if (num >= 2 && num < 3) return "2mm - 3mm";
+                 return "3mm+";
+             }
+         }
+         
+         // EXCLUSIVELY for Laminate AC Ratings
+         if (category === 'Laminate') {
+             if (lowerVal.includes("ac3") || lowerVal.includes("ac 3") || lowerVal.includes("ac-3")) return "AC3";
+             if (lowerVal.includes("ac4") || lowerVal.includes("ac 4") || lowerVal.includes("ac-4")) return "AC4";
+             if (lowerVal.includes("ac5") || lowerVal.includes("ac 5") || lowerVal.includes("ac-5")) return "AC5";
+             // Fallback if they just type the number
+             if (val.includes("3")) return "AC3";
+             if (val.includes("4")) return "AC4";
+             if (val.includes("5")) return "AC5";
+             return "None"; // Hide if it doesn't match an AC rating
+         }
+         
+         // LVP fallback (Defaults back to standard mil processing)
+         if (key.toLowerCase() === "wear layer") {
+             const match = val.match(/(\d+)/);
+             if (match) return `${match[1]} mil`;
+         }
+         return val;
+    }
+    
+    if (key.toLowerCase() === "waterproof" || key.toLowerCase() === "water resistant") {
         if (lowerVal.includes("no") || lowerVal === "false") return "None";
+        if (category === 'Laminate') return "Water Resistant";
         return "100% Waterproof";
     }
 
@@ -115,19 +224,48 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
         const match = val.match(/[\d.]+/);
         if (match) {
             const num = parseFloat(match[0]);
-            if (num < 30) return "< 30 oz";
-            if (num >= 30 && num < 40) return "30 - 40 oz";
-            if (num >= 40 && num < 50) return "40 - 50 oz";
-            if (num >= 50 && num < 60) return "50 - 60 oz";
-            if (num >= 60) return "60+ oz";
+            if (num < 15) return "< 15 oz";
+            if (num >= 15 && num < 20) return "15 - 20 oz";
+            if (num >= 20 && num < 25) return "20 - 25 oz";
+            if (num >= 25 && num < 35) return "25 - 35 oz";
+            if (num >= 35 && num < 45) return "35 - 45 oz";
+            if (num >= 45 && num < 55) return "45 - 55 oz";
+            if (num >= 55 && num < 65) return "55 - 65 oz";
+            if (num >= 65) return "65+ oz";
         }
+    }
+
+    if (key.toLowerCase() === "species") {
+        if (lowerVal.includes("oak")) return "Oak";
+        if (lowerVal.includes("hickory") || lowerVal.includes("pecan")) return "Hickory";
+        if (lowerVal.includes("maple")) return "Maple";
+        if (lowerVal.includes("pine")) return "Pine";
+        if (lowerVal.includes("walnut")) return "Walnut";
+        if (lowerVal.includes("chestnut")) return "Chestnut";
+        if (lowerVal.includes("elm")) return "Elm";
+        if (lowerVal.includes("acacia")) return "Acacia";
+        if (lowerVal.includes("birch")) return "Birch";
+        return val;
     }
 
     return val;
 };
 
-const THICKNESS_ORDER = { "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4 };
-const FACE_WEIGHT_ORDER = { "< 30 oz": 1, "30 - 40 oz": 2, "40 - 50 oz": 3, "50 - 60 oz": 4, "60+ oz": 5 };
+const THICKNESS_ORDER = { 
+    "< 5mm": 1, "5mm - 7mm": 2, "7mm - 10mm": 3, "10mm+": 4,
+    "< 8mm": 4.1, "8mm": 4.2, "10mm": 4.3, "12mm+": 4.4,
+    "3/8\"": 5, "7/16\"": 6, "1/2\"": 7, "9/16\"": 8, "5/8\"": 9, "3/4\"+": 10
+};
+const FACE_WEIGHT_ORDER = { 
+    "< 15 oz": 1, 
+    "15 - 20 oz": 2, 
+    "20 - 25 oz": 3, 
+    "25 - 35 oz": 4, 
+    "35 - 45 oz": 5, 
+    "45 - 55 oz": 6, 
+    "55 - 65 oz": 7, 
+    "65+ oz": 8 
+};
 
 // Custom hook to debounce high-frequency state changes
 function useDebounce(value, delay) {
@@ -149,25 +287,7 @@ function CategoryViewerContent({ initialCategory }) {
   const [user, setUser] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   
-  // NEW: Store the blueprint from FilterManager
-  const [filterBlueprint, setFilterBlueprint] = useState({});
-
-  useEffect(() => {
-      const fetchFilters = async () => {
-          if (!db) return;
-          try {
-              const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'filterConfig');
-              const snap = await getDoc(docRef);
-              if (snap.exists()) {
-                  setFilterBlueprint(snap.data());
-              }
-          } catch (error) {
-              console.error("Failed to load filter blueprint:", error);
-          }
-      };
-      fetchFilters();
-  }, [db]);
-  
+  // NEW: State for active curation session
   const [activeBoardId, setActiveBoardId] = useState(null);
   const [activeBoardName, setActiveBoardName] = useState('');
   
@@ -187,13 +307,15 @@ function CategoryViewerContent({ initialCategory }) {
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  const [userFavorites, setUserFavorites] = useState([]); 
+  const [userFavorites, setUserFavorites] = useState([]); // Array of product IDs
   const [proFavorites, setProFavorites] = useState([]); 
   const [showProPicks, setShowProPicks] = useState(false);
 
+  // Raw input states (for the UI)
   const [searchQueryInput, setSearchQueryInput] = useState('');
   const [maxPriceInput, setMaxPriceInput] = useState(10000); 
 
+  // Debounced states (for the heavy filter logic)
   const searchQuery = useDebounce(searchQueryInput, 300);
   const maxPrice = useDebounce(maxPriceInput, 300);
 
@@ -241,6 +363,7 @@ function CategoryViewerContent({ initialCategory }) {
       let finalUrl = `${window.location.origin}/s/${shortCode}`;
       
       try {
+          // Changed to use getDoc and setDoc from firestore properly
           const { doc, setDoc } = require("firebase/firestore");
           await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'short_links', shortCode), {
               target: targetPath,
@@ -256,6 +379,7 @@ function CategoryViewerContent({ initialCategory }) {
       const plainText = `${title}\n${finalUrl}`;
       
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const isDesktop = !isMobile;
 
       if (navigator.share && isMobile) {
           navigator.share({ title: title, text: title, url: finalUrl }).catch(console.error);
@@ -287,6 +411,7 @@ function CategoryViewerContent({ initialCategory }) {
       const isFav = userFavorites.includes(productId);
       const newFavs = isFav ? userFavorites.filter(id => id !== productId) : [...userFavorites, productId];
       
+      // Optimistic UI update
       setUserFavorites(newFavs);
 
       try {
@@ -300,6 +425,7 @@ function CategoryViewerContent({ initialCategory }) {
           }
       } catch (err) {
           console.error("Failed to update favorites:", err);
+          // Revert on failure
           setUserFavorites(userFavorites);
           showToast("Error updating favorites.");
       }
@@ -314,6 +440,9 @@ function CategoryViewerContent({ initialCategory }) {
 
           const hasMagicParams = proParam || cmParam || cbParam || plParam;
 
+          // THE ULTIMATE FIX: Wait for a valid Firebase User before processing custom links.
+          // In a fresh Incognito window, triggering a reload before anonymous auth completes 
+          // aborts the network request, kills the link parameters, and breaks the page.
           if (hasMagicParams && !user) return;
 
           const prog = searchParams.get('program');
@@ -427,8 +556,9 @@ function CategoryViewerContent({ initialCategory }) {
 
           if (sessionStorage.getItem('magic_link_client') === 'true') setIsMagicLink(true);
       }
-  }, [searchParams, user]); 
-
+  }, [searchParams, user]); // CRITICAL FIX: Updated dependency array to listen for the user!
+  
+  // NEW: Check for an active curation session
   useEffect(() => {
       if (typeof window !== 'undefined') {
           const bId = sessionStorage.getItem('active_curation_board_id');
@@ -439,7 +569,7 @@ function CategoryViewerContent({ initialCategory }) {
           }
       }
   }, []);
-
+  
   useEffect(() => {
     let isMounted = true;
     const initAuth = async () => {
@@ -469,6 +599,7 @@ function CategoryViewerContent({ initialCategory }) {
     };
   }, []);
 
+  // Listen for user favorites
   useEffect(() => {
       if (!user || user.isAnonymous || !db) {
           setUserFavorites([]);
@@ -516,20 +647,77 @@ function CategoryViewerContent({ initialCategory }) {
           const hasSpec = (targetKey) => {
               return existingSpecs.some(s => {
                   const parts = s.split(':');
-                  return parts.length > 1 && normalizeSpecKey(parts[0]) === targetKey;
+                  return parts.length > 1 && normalizeSpecKey(parts[0], data.category) === targetKey;
               });
           };
           
           if (data.category === 'Luxury Vinyl (LVP)') {
-              if (!hasSpec('Waterproof')) existingSpecs.push('Waterproof: 100% Waterproof');
+              // 1. Purge unwanted DB tags (Nuke Waterproof AND old Species data to force a clean rebuild)
+              existingSpecs = existingSpecs.filter(s => {
+                  const k = s.toLowerCase();
+                  return !k.includes('waterproof') && !k.includes('species');
+              });
+
+              // 2. Attached Pad
               if (!hasSpec('Attached Pad')) {
                   if (fullDesc.includes('cork')) existingSpecs.push('Attached Pad: Attached Cork');
                   else existingSpecs.push('Attached Pad: Attached Pad');
               }
+              
+              // 3. Construction / Core (with COREtec WPC safety net)
               if (!hasSpec('Construction / Core')) {
-                  if (fullDesc.includes('wpc')) existingSpecs.push('Construction / Core: WPC');
-                  else if (fullDesc.includes('spc') || fullDesc.includes('rigid') || fullDesc.includes('solid')) existingSpecs.push('Construction / Core: SPC');
+                  if (fullDesc.includes('wpc') || fullDesc.includes('wood foamed') || fullDesc.includes('wood plastic') || data.displayTitle.toLowerCase().includes('coretec originals')) {
+                      existingSpecs.push('Construction / Core: WPC');
+                  } else {
+                      existingSpecs.push('Construction / Core: SPC'); // Default LVP to SPC
+                  }
               }
+
+              // 4. Species Extraction (Forced Rebuild from Names, Desc, and Colors)
+              const searchNet = `${data.displayTitle} ${fullDesc} ${(data.colors || []).map(c => c.name || '').join(' ')}`.toLowerCase();
+              
+              if (searchNet.includes('oak')) existingSpecs.push('Species: Oak');
+              else if (searchNet.includes('hickory') || searchNet.includes('pecan')) existingSpecs.push('Species: Hickory');
+              else if (searchNet.includes('maple')) existingSpecs.push('Species: Maple');
+              else if (searchNet.includes('pine')) existingSpecs.push('Species: Pine');
+              else if (searchNet.includes('walnut')) existingSpecs.push('Species: Walnut');
+              else if (searchNet.includes('chestnut')) existingSpecs.push('Species: Chestnut');
+              else if (searchNet.includes('elm')) existingSpecs.push('Species: Elm');
+              else if (searchNet.includes('acacia')) existingSpecs.push('Species: Acacia');
+              else if (searchNet.includes('birch')) existingSpecs.push('Species: Birch');
+
+              // 5. Visual / Style Type
+              if (!hasSpec('Style Type')) {
+                  let widthValue = 0;
+                  
+                  // 1. Try to find an explicit "Width" or "Wide" spec
+                  const widthSpec = existingSpecs.find(s => s.toLowerCase().includes('width') || s.toLowerCase().includes('wide'));
+                  if (widthSpec) {
+                      const match = widthSpec.match(/([\d.]+)/);
+                      if (match) widthValue = parseFloat(match[1]);
+                  }
+                  
+                  // 2. If no width found, aggressively parse Dimensions anywhere in the specs or description
+                  // This easily jumps over quotes and words: matches 12x24, 12" x 24", 12" Wide x 24", etc.
+                  if (widthValue === 0) {
+                      const searchTarget = existingSpecs.join(' ') + ' ' + fullDesc;
+                      const dimMatch = searchTarget.match(/([\d.]+)\s*(?:"|''|in|inch|inches)?\s*(?:wide|w)?\s*(?:x|\*|by)\s*[\d.]+/);
+                      if (dimMatch) widthValue = parseFloat(dimMatch[1]);
+                  }
+
+                  // Safeguard: If the number is huge (e.g., 300mm), mathematically convert it back to inches
+                  if (widthValue > 50) {
+                      widthValue = widthValue / 25.4; 
+                  }
+
+                  // Only LVP products strictly wider than 11.5" become Tile Visuals
+                  if (widthValue > 11.5) {
+                       existingSpecs.push('Style Type: Tile Visual');
+                  } else {
+                       existingSpecs.push('Style Type: Wood Visual');
+                  }
+              }
+
           } else if (data.category === 'Hardwood') {
               if (!hasSpec('Construction / Core')) {
                   if (fullDesc.includes('solid') || data.displayTitle.toLowerCase().includes('solid')) {
@@ -544,6 +732,23 @@ function CategoryViewerContent({ initialCategory }) {
                   else if (fullDesc.includes('triexta') || fullDesc.includes('smartstrand') || fullDesc.includes('sorona')) existingSpecs.push('Fiber Type: Triexta');
                   else if (fullDesc.includes('wool')) existingSpecs.push('Fiber Type: Wool');
                   else if (fullDesc.includes('polyester') || fullDesc.includes(' pet ')) existingSpecs.push('Fiber Type: Polyester');
+              }
+          } else if (data.category === 'Laminate') {
+              // 1. Aggressively scan description and ALL specs for hidden pad references
+              if (!hasSpec('Attached Pad')) {
+                  const searchNet = `${fullDesc} ${existingSpecs.join(' ')}`.toLowerCase();
+                  if (searchNet.includes('cork')) {
+                      existingSpecs.push('Attached Pad: Attached Cork');
+                  } else if (searchNet.includes('pad') || searchNet.includes('underlayment') || searchNet.includes('cushion')) {
+                      existingSpecs.push('Attached Pad: Attached Pad');
+                  }
+              }
+              
+              // 2. Aggressively scan description for any moisture/water claims if no spec exists
+              if (!hasSpec('Water Resistant')) {
+                  if (fullDesc.includes('waterproof') || fullDesc.includes('water resistant') || fullDesc.includes('moisture resistant') || fullDesc.includes('water proof') || fullDesc.includes('topically water')) {
+                      existingSpecs.push('Water Resistant: Water Resistant');
+                  }
               }
           } else {
               if (fullDesc.includes('cork') && !hasSpec('Attached Pad')) {
@@ -577,6 +782,7 @@ function CategoryViewerContent({ initialCategory }) {
   const isWholesale = user && !user.isAnonymous;
   const isClientMode = clientMargin !== null;
 
+  // Memoize the price bounds so we only recalculate them when the raw data or category changes
   const priceBounds = useMemo(() => {
     let min = 0; let max = 15;
     
@@ -600,7 +806,14 @@ function CategoryViewerContent({ initialCategory }) {
     return { min, max };
   }, [liveProductsRaw, activeCategory, isWholesale, isClientMode, clientMargin]);
 
-const dynamicBrands = useMemo(() => {
+  // Synchronize the input and debounced states when category changes
+  useEffect(() => {
+     if (liveProductsRaw.length > 0) {
+         setMaxPriceInput(priceBounds.max);
+     }
+  }, [priceBounds.max, activeCategory]);
+
+  const dynamicBrands = useMemo(() => {
       const brands = new Set();
       const relevantProducts = liveProductsRaw.filter(p => 
           (activeCategory === "All Products" && p.category !== 'Carpet Cushion') || 
@@ -620,23 +833,92 @@ const dynamicBrands = useMemo(() => {
       return [...brands].sort();
   }, [liveProductsRaw, activeCategory, isPrivateLabel]);
 
-  // NEW: Combine Global and Category-Specific Blueprints
-  const activeSidebarBlocks = useMemo(() => {
-      const globalFilters = filterBlueprint['global'] || [];
-      
-      let currentSlug = activeCategory.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      if (activeCategory === 'Luxury Vinyl (LVP)') currentSlug = 'luxury-vinyl';
-      
-      const specificFilters = filterBlueprint[currentSlug] || [];
-      
-      return [...globalFilters, ...specificFilters];
-  }, [filterBlueprint, activeCategory]);
+  const dynamicSpecs = useMemo(() => {
+      let TARGET_SPECS = [
+          "Waterproof",
+          "Construction / Core",
+          "Thickness",
+          "Wear Layer",
+          "AC Rating",
+          "Attached Pad",
+          //"Species",
+          "Style Type",
+          "Fiber Type",
+          "Face Weight"
+      ];
 
-  useEffect(() => {
-     if (liveProductsRaw.length > 0) {
-         setMaxPriceInput(priceBounds.max);
-     }
-  }, [priceBounds.max, activeCategory]);
+      if (activeCategory === 'Carpet' || activeCategory === 'Carpet Cushion') {
+          TARGET_SPECS = TARGET_SPECS.filter(s => 
+              s !== "Construction / Core" && 
+              s !== "Thickness" && 
+              s !== "Waterproof" && 
+              s !== "Wear Layer" &&
+              s !== "AC Rating"
+          );
+      } else if (['Luxury Vinyl (LVP)', 'Hardwood', 'Laminate', 'Tile'].includes(activeCategory)) {
+              // Strictly eliminate carpet specs from hard surface categories
+              TARGET_SPECS = TARGET_SPECS.filter(s => 
+                  s !== "Face Weight" && 
+                  s !== "Fiber Type"
+              );
+              if (activeCategory !== 'Laminate') {
+                  TARGET_SPECS = TARGET_SPECS.filter(s => s !== "AC Rating");
+              } else {
+                  // Laminate category: remove Wear Layer, Construction, and Style Type, swap Waterproof to Water Resistant
+                  TARGET_SPECS = TARGET_SPECS.filter(s => s !== "Wear Layer" && s !== "Construction / Core" && s !== "Style Type");
+                  TARGET_SPECS = TARGET_SPECS.map(s => s === "Waterproof" ? "Water Resistant" : s);
+              }
+          }
+      
+      const specMap = {}; 
+      
+      const relevantProducts = liveProductsRaw.filter(p => 
+          (activeCategory === "All Products" && p.category !== 'Carpet Cushion') || 
+          (activeCategory === "Hot Buys" && p.isSale) || 
+          p.category === activeCategory
+      );
+
+      relevantProducts.forEach(p => {
+          (p.specs || []).forEach(s => {
+              const parts = s.split(':');
+              if (parts.length >= 2) {
+                  const rawKey = parts[0].trim();
+                  const val = parts.slice(1).join(':').trim();
+                  
+                  const key = normalizeSpecKey(rawKey, p.category);
+                  const matchedSpec = TARGET_SPECS.find(t => t.toLowerCase() === key.toLowerCase());
+                  
+                  if (matchedSpec && val.length > 0 && val.length < 40) {
+                      const normalizedVal = normalizeSpecValue(matchedSpec, val, p.category);
+                      
+                      if (normalizedVal !== "None") {
+                          if (!specMap[matchedSpec]) specMap[matchedSpec] = new Set();
+                          specMap[matchedSpec].add(normalizedVal);
+                      }
+                  }
+              }
+          });
+      });
+
+      const result = {};
+      TARGET_SPECS.forEach(specName => {
+          if (specMap[specName] && specMap[specName].size > 0) { 
+              result[specName] = [...specMap[specName]].sort((a, b) => {
+                  if (specName === "Thickness") {
+                      return (THICKNESS_ORDER[a] || 99) - (THICKNESS_ORDER[b] || 99);
+                  }
+                  if (specName === "Face Weight") {
+                      return (FACE_WEIGHT_ORDER[a] || 99) - (FACE_WEIGHT_ORDER[b] || 99);
+                  }
+                  const numA = parseFloat(a);
+                  const numB = parseFloat(b);
+                  if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                  return a.localeCompare(b);
+              });
+          }
+      });
+      return result;
+  }, [liveProductsRaw, activeCategory]);
 
   const handleProgramToggle = (val) => {
       setSelectedPrograms(prev => prev.includes(val) ? prev.filter(p => p !== val) : [...prev, val]);
@@ -662,10 +944,12 @@ const dynamicBrands = useMemo(() => {
       });
   };
 
+  // Uses the debounced searchQuery and maxPrice to prevent rapid re-rendering stutter!
   const filteredProducts = useMemo(() => {
     const searchVal = searchQuery.toLowerCase().trim();
     
     return liveProductsRaw.filter(p => {
+        // FAST FAIL: Favorite Filter
         if (showOnlyFavorites && !userFavorites.includes(p.id)) return false;
         if (showProPicks && !proFavorites.includes(p.id)) return false;
 
@@ -695,6 +979,7 @@ const dynamicBrands = useMemo(() => {
                               colorsTextCombined.includes(searchVal) ||
                               hiddenKeywords.includes(searchVal);
 
+        // Bypasses the category restriction if a user wants to view a global list of curated favorites
         const matchesCategory = showOnlyFavorites || showProPicks || 
                                 (activeCategory === "All Products" && (searchVal !== '' || p.category !== 'Carpet Cushion')) || 
                                 (activeCategory === "Hot Buys" && p.isSale === true) || 
@@ -727,12 +1012,11 @@ const dynamicBrands = useMemo(() => {
                         const rawKey = parts[0].trim();
                         const pVal = parts.slice(1).join(':').trim();
                         
-                        const pKey = normalizeSpecKey(rawKey);
+                        const pKey = normalizeSpecKey(rawKey, p.category);
                         
-                        // Fallback logic mapping the visual UI changes
-                        if (pKey.toLowerCase().replace(/[^a-z0-9]+/g, '') === key.toLowerCase() || pKey.toLowerCase() === key.toLowerCase()) {
+                        if (pKey.toLowerCase() === key.toLowerCase()) {
                             const normalizedPVal = normalizeSpecValue(key, pVal, p.category);
-                            return vals.includes(normalizedPVal) || vals.includes(pVal);
+                            return vals.includes(normalizedPVal);
                         }
                     }
                     return false;
@@ -793,11 +1077,9 @@ const dynamicBrands = useMemo(() => {
       router.push(getCategorySlug(catName), { scroll: true });
   };
 
-  // NEW: Refactored Spec Renderer to use Firebase Blueprint + Dynamic Brands
   const renderSpecFilters = () => {
       return (
           <>
-            {/* 1. AUTO-GENERATED BRANDS (Hardcoded to pull dynamically from live products) */}
             {dynamicBrands.length > 0 && !isPrivateLabel && (
                 <div className="pt-4 mt-4 border-t border-gray-100">
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-3">Brands & Manufacturers</label>
@@ -817,25 +1099,31 @@ const dynamicBrands = useMemo(() => {
                 </div>
             )}
 
-            {/* 2. FIREBASE BLUEPRINT FILTERS (Wear Layer, Core Type, etc. built in FilterManager) */}
-            {activeSidebarBlocks.map((block) => (
-                <div key={block.id} className="pt-4 mt-4 border-t border-gray-100">
-                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-3">{block.label}</label>
-                    <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
-                        {block.options.map(opt => (
-                            <label key={opt} className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer hover:text-gold transition">
-                                <input 
-                                    type="checkbox" 
-                                    checked={selectedSpecs[block.id]?.includes(opt) || false}
-                                    onChange={() => handleSpecToggle(block.id, opt)}
-                                    className="accent-gold h-3.5 w-3.5 rounded border-gray-300" 
-                                /> 
-                                <span className="truncate">{opt}</span>
-                            </label>
+            {Object.keys(dynamicSpecs).length > 0 && activeCategory !== 'All Products' && activeCategory !== 'Hot Buys' && (
+                <div className="pt-4 mt-4 border-t border-gray-100">
+                    <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-3">Specifications</label>
+                    <div className="space-y-4">
+                        {Object.entries(dynamicSpecs).map(([specKey, specVals]) => (
+                            <div key={specKey}>
+                                <div className="text-[10px] font-bold text-gray-700 uppercase tracking-widest mb-2">{specKey}</div>
+                                <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+                                    {specVals.map(val => (
+                                        <label key={val} className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer hover:text-gold transition">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={selectedSpecs[specKey]?.includes(val) || false}
+                                                onChange={() => handleSpecToggle(specKey, val)}
+                                                className="accent-gold h-3.5 w-3.5 rounded border-gray-300" 
+                                            /> 
+                                            <span className="truncate">{val}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
                         ))}
                     </div>
                 </div>
-            ))}
+            )}
           </>
       );
   };
@@ -885,6 +1173,7 @@ const dynamicBrands = useMemo(() => {
           </button>
       )}
 
+      {/* NEW: ACTIVE CURATION SESSION BANNER */}
       {activeBoardId && (
           <div className="bg-gray-900 text-white px-6 py-3 sticky top-[80px] z-30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl border-b-4 border-x-4 border-t-0 border-gold w-[95%] md:w-1/2 mx-auto rounded-b-2xl">
               <div className="flex items-center gap-3">
@@ -896,6 +1185,7 @@ const dynamicBrands = useMemo(() => {
               </div>
               <button 
                   onClick={() => {
+                      // Clear the active session and route them back to the boards tab
                       sessionStorage.removeItem('active_curation_board_id');
                       sessionStorage.removeItem('active_curation_board_name');
                       sessionStorage.removeItem('client_margin');
@@ -903,12 +1193,16 @@ const dynamicBrands = useMemo(() => {
                   }}
                   className="relative overflow-hidden bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-colors w-full sm:w-auto text-center cursor-pointer outline-none shrink-0 shadow-[0_0_15px_rgba(239,68,68,0.5)] group"
               >
+                  {/* The Twinkle Stars */}
                   <span className="absolute top-1 left-2 text-[10px] animate-ping opacity-75">✨</span>
                   <span className="absolute bottom-1 right-2 text-[10px] animate-pulse opacity-75">✨</span>
+                  
+                  {/* The Button Text */}
                   <span className="relative z-10 px-2">Finish & Return</span>
               </button>
           </div>
       )}
+      
       <header 
         className="relative min-h-[250px] md:min-h-[320px] py-12 flex items-center justify-center text-center text-white transition-all duration-500"
         style={{ 
@@ -930,7 +1224,7 @@ const dynamicBrands = useMemo(() => {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Search Catalog</label>
                     <div className="relative">
-                        <input type="text" value={searchQueryInput} onChange={(e) => setSearchQueryInput(e.target.value)} placeholder="Product, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
+                        <input type="text" value={searchQueryInput} onChange={(e) => setSearchQueryInput(e.target.value)} placeholder="Product, Species, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
                         <span className="absolute right-3 top-3 text-gray-400 text-xs">🔍</span>
                     </div>
                 </div>
@@ -939,6 +1233,7 @@ const dynamicBrands = useMemo(() => {
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
                         
+                        {/* MY FAVORITES FILTER (Pro View) */}
                         {!isClientMode && user && !user.isAnonymous && (
                             <button onClick={() => { setShowOnlyFavorites(!showOnlyFavorites); setIsMobileDrawerOpen(false); }} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showOnlyFavorites ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
                                 <svg className="w-4 h-4" fill={showOnlyFavorites ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
@@ -946,6 +1241,7 @@ const dynamicBrands = useMemo(() => {
                             </button>
                         )}
                         
+                        {/* PRO'S TOP PICKS FILTER (Client View) */}
                         {isClientMode && proFavorites.length > 0 && (
                             <button onClick={() => { setShowProPicks(!showProPicks); setIsMobileDrawerOpen(false); }} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showProPicks ? 'bg-gold text-black font-black border-yellow-300' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
                                 <span className="text-base">⭐</span> View Pro's Top Picks
@@ -955,7 +1251,10 @@ const dynamicBrands = useMemo(() => {
                         {['All Products', 'Hot Buys', 'Property Management', 'Pro Select', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Tile', 'Carpet Cushion'].map(cat => {
                             const isSpecial = cat === 'Hot Buys' || cat === 'Property Management' || cat === 'Pro Select';
                             
+                            // Hide these special categories from standard retail clients
                             if (isSpecial && (!isWholesale || isClientMode)) return null;
+                            
+                            // Auto-hide Hot Buys if nothing is currently on sale
                             if (cat === 'Hot Buys' && !liveProductsRaw.some(p => p.isSale)) return null;
                             
                             let label = cat;
@@ -1002,6 +1301,7 @@ const dynamicBrands = useMemo(() => {
                             <span>⚙️</span> Filters
                         </button>
                         
+                        {/* Mobile-only inline search bar */}
                         <div className="relative flex-1 lg:hidden">
                             <input 
                                 type="text" 
@@ -1081,6 +1381,7 @@ const dynamicBrands = useMemo(() => {
                                         </div>
                                     )}
 
+                                    {/* HEART BUTTON OVERLAY */}
                                     {!isClientMode && (
                                         <button 
                                             onClick={(e) => handleToggleFavorite(e, p.id)}
@@ -1220,13 +1521,14 @@ const dynamicBrands = useMemo(() => {
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Search Catalog</label>
                     <div className="relative">
-                        <input type="text" value={searchQueryInput} onChange={(e) => setSearchQueryInput(e.target.value)} placeholder="Product, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
+                        <input type="text" value={searchQueryInput} onChange={(e) => setSearchQueryInput(e.target.value)} placeholder="Product, Species, SKU, specs..." className="w-full bg-gray-50 border border-gray-200 text-xs rounded-xl pl-3 pr-8 py-2.5 outline-none focus:border-gold" />
                     </div>
                 </div>
 
                 <div>
                     <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Collections</label>
                     <div className="space-y-1.5 flex flex-col">
+                        {/* MY FAVORITES FILTER (Pro View) */}
                         {!isClientMode && user && !user.isAnonymous && (
                             <button onClick={() => { setShowOnlyFavorites(!showOnlyFavorites); setTimeout(() => setIsMobileDrawerOpen(false), 50); }} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showOnlyFavorites ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
                                 <svg className="w-4 h-4" fill={showOnlyFavorites ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
@@ -1234,6 +1536,7 @@ const dynamicBrands = useMemo(() => {
                             </button>
                         )}
                         
+                        {/* PRO'S TOP PICKS FILTER (Client View) */}
                         {isClientMode && proFavorites.length > 0 && (
                             <button onClick={() => { setShowProPicks(!showProPicks); setTimeout(() => setIsMobileDrawerOpen(false), 50); }} className={`flex items-center gap-2 text-left py-2.5 px-3 rounded-xl text-xs font-bold transition-all outline-none cursor-pointer mb-2 border ${showProPicks ? 'bg-gold text-black font-black border-yellow-300' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-transparent'}`}>
                                 <span className="text-base">⭐</span> View Pro's Top Picks
@@ -1242,7 +1545,10 @@ const dynamicBrands = useMemo(() => {
                         {['All Products', 'Hot Buys', 'Property Management', 'Pro Select', 'Luxury Vinyl (LVP)', 'Hardwood', 'Carpet', 'Laminate', 'Tile', 'Carpet Cushion'].map(cat => {
                             const isSpecial = cat === 'Hot Buys' || cat === 'Property Management' || cat === 'Pro Select';
                             
+                            // Hide these special categories from standard retail clients
                             if (isSpecial && (!isWholesale || isClientMode)) return null;
+                            
+                            // Auto-hide Hot Buys if nothing is currently on sale
                             if (cat === 'Hot Buys' && !liveProductsRaw.some(p => p.isSale)) return null;
                             
                             let label = cat;

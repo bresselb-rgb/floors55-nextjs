@@ -77,7 +77,10 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     
     const [availablePads, setAvailablePads] = useState([]);
 
-    const TBD_IMG = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
+    // DYNAMIC FALLBACK IMAGE: Uses your uploaded mouldings.png for accessories
+    const FALLBACK_IMG = productData?.isAccessory 
+        ? `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/moldings.png')}?alt=media`
+        : `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -335,6 +338,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
+        if (productData.isAccessory && !productData.imgPrefix) return FALLBACK_IMG;
+
         const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
         const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
         let folderName = 'images';
@@ -700,47 +705,52 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         </div>
     );
 
-    const renderColorSwatches = (isDesktop) => (
-        <div className={`${isDesktop ? 'hidden lg:block my-6' : 'block lg:hidden mt-8'}`}>
-            <div className="flex justify-between items-end mb-4 pr-2">
-                <h2 className="text-xl font-bold">Select a Color: {activeColor?.name}</h2>
-                {!isDesktop && (productData?.colors?.length > 3) && (
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1 animate-pulse">
-                        Swipe <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                    </span>
-                )}
-            </div>
-            <div className={isDesktop 
-                ? "grid grid-cols-[repeat(auto-fill,minmax(85px,1fr))] gap-3 mb-6" 
-                : "flex overflow-x-auto gap-3 pb-4 snap-x snap-mandatory scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pr-6"
-            }>
-                {productData?.colors?.map(c => {
-                    const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
-                    const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    let folderName = 'images';
-                    if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-                    else if (safeName) folderName = safeName;
-                    folderName = folderName.replace(/-+$/, '');
+    const renderColorSwatches = (isDesktop) => {
+        // Automatically hide the color swatches if the product is an accessory/trim
+        if (productData?.isAccessory) return null;
 
-                    const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${c.sku}_${swatchType}.jpg`.toLowerCase();
-                    const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+        return (
+            <div className={`${isDesktop ? 'hidden lg:block my-6' : 'block lg:hidden mt-8'}`}>
+                <div className="flex justify-between items-end mb-4 pr-2">
+                    <h2 className="text-xl font-bold">Select a Color: {activeColor?.name}</h2>
+                    {!isDesktop && (productData?.colors?.length > 3) && (
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1 animate-pulse">
+                            Swipe <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                        </span>
+                    )}
+                </div>
+                <div className={isDesktop 
+                    ? "grid grid-cols-[repeat(auto-fill,minmax(85px,1fr))] gap-3 mb-6" 
+                    : "flex overflow-x-auto gap-3 pb-4 snap-x snap-mandatory scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pr-6"
+                }>
+                    {productData?.colors?.map(c => {
+                        const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
+                        const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                        const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                        let folderName = 'images';
+                        if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                        else if (safeName) folderName = safeName;
+                        folderName = folderName.replace(/-+$/, '');
 
-                    return (
-                        <div key={c.sku} className={`cursor-pointer text-center group ${!isDesktop ? 'snap-start shrink-0 w-[85px]' : ''}`} onClick={() => {
-                            router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
-                            setActiveColor(c);
-                        }}>
-                            <div className={`relative w-full aspect-square border-2 rounded-md transition duration-200 bg-gray-100 overflow-hidden ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`}>
-                                <img src={fbPath} alt={c.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = TBD_IMG; }} />
+                        const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${c.sku}_${swatchType}.jpg`.toLowerCase();
+                        const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+
+                        return (
+                            <div key={c.sku} className={`cursor-pointer text-center group ${!isDesktop ? 'snap-start shrink-0 w-[85px]' : ''}`} onClick={() => {
+                                router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
+                                setActiveColor(c);
+                            }}>
+                                <div className={`relative w-full aspect-square border-2 rounded-md transition duration-200 bg-gray-100 overflow-hidden ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`}>
+                                    <img src={fbPath} alt={c.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} />
+                                </div>
+                                <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
                             </div>
-                            <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
-                        </div>
-                    );
-                })}
+                        );
+                    })}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     if (!productData) return null;
 
@@ -790,7 +800,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 {activeView === 'VIDEO' ? (
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
-                    <img src={getMediaPath(activeView) || TBD_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = TBD_IMG; }} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
+                    <img src={getMediaPath(activeView) || FALLBACK_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
                 )}
             </div>
 
@@ -808,12 +818,12 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                                  />
                              )}
                              <img 
-                                src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || TBD_IMG)} 
+                                src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || FALLBACK_IMG)} 
                                 className={`w-[75px] h-[75px] min-w-[75px] shrink-0 object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} 
                                 onClick={() => setActiveView(v)} 
                                 onError={(e) => { 
                                     handleViewError(v); 
-                                    e.currentTarget.src = TBD_IMG; 
+                                    e.currentTarget.src = FALLBACK_IMG; 
                                 }} 
                                 alt={`View ${v}`} 
                              />
@@ -826,7 +836,9 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 {!isClientMode && (
                     <Link href={`/quote?product=${encodeURIComponent(activeTitle || '')}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-black text-white text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-gold transition-colors border-2 border-black hover:border-gold" style={{ textDecoration: 'none' }}>Get A Quote</Link>
                 )}
-                <Link href={`/order-sample?product=${encodeURIComponent(activeTitle || '')}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
+                {!productData?.isAccessory && (
+                    <Link href={`/order-sample?product=${encodeURIComponent(activeTitle || '')}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
+                )}
             </div>
 
             {renderColorSwatches(false)}
@@ -836,7 +848,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
           <div className="flex-1 w-full lg:min-w-[400px]">
             {renderTitleBlock(true)}
 
-            <p className="text-[1.05rem] text-gray-500 mb-6 italic mt-4 lg:mt-0">{productData?.desc || 'Premium flooring collection.'}</p>
+            <div className="text-[1.05rem] text-gray-500 mb-6 italic mt-4 lg:mt-0 leading-relaxed" dangerouslySetInnerHTML={{ __html: productData?.desc || 'Premium flooring collection.' }} />
 
             <div className="my-5 p-4 border-l-4 border-gold bg-[#fdfdfd] relative overflow-hidden">
                 {isClientMode ? (
@@ -1133,11 +1145,11 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                       onTouchEnd={() => setZoomPos({x:50, y:50})}
                   >
                       <img 
-                          src={getMediaPath(activeView) || TBD_IMG} 
+                          src={getMediaPath(activeView) || FALLBACK_IMG} 
                           alt="Zoomed Product" 
                           className="w-full h-full object-contain transition-transform duration-150 ease-out hover:scale-[2.2]"
                           style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }}
-                          onError={(e) => { e.currentTarget.src = TBD_IMG; }}
+                          onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }}
                       />
                   </div>
               </div>
