@@ -312,7 +312,13 @@ function CategoryViewerContent({ initialCategory }) {
   const [showProPicks, setShowProPicks] = useState(false);
 
   // Raw input states (for the UI)
-  const [searchQueryInput, setSearchQueryInput] = useState('');
+  const [searchQueryInput, setSearchQueryInput] = useState(() => {
+      if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search);
+          return params.get('search') || '';
+      }
+      return '';
+  });
   const [maxPriceInput, setMaxPriceInput] = useState(10000); 
 
   // Debounced states (for the heavy filter logic)

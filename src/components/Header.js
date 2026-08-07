@@ -156,10 +156,12 @@ export default function Header() {
   const getSearchImgUrl = (p) => {
     const safeName = (p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const safeSku = (p.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    let folderName = 'images'; 
-    if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-    else if (safeName) folderName = safeName;
-    folderName = folderName.replace(/-+$/, '');
+    let folderName = p.imageFolder ? p.imageFolder : 'images'; 
+    if (!p.imageFolder) {
+        if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+        else if (safeName) folderName = safeName;
+        folderName = folderName.replace(/-+$/, '');
+    }
 
     const displaySku = p.colors?.[0]?.sku || '01';
     const mainType = p.category === 'Carpet' ? 'main' : 'main';
@@ -593,8 +595,8 @@ export default function Header() {
 
                       {filteredSearchProducts.length > 4 && (
                          <div className="p-4 text-center bg-gray-50 hover:bg-gray-100 transition-colors">
-                            <Link href="/category" onClick={() => { setIsSearchOpen(false); setHeaderSearchQuery(''); }} className="text-xs font-black text-black uppercase tracking-widest hover:text-gold transition-colors block w-full" style={{ textDecoration: 'none' }}>
-                               View all {filteredSearchProducts.length} product results &rarr;
+                            <Link href={`/category?search=${encodeURIComponent(headerSearchQuery)}`} onClick={() => { setIsSearchOpen(false); setHeaderSearchQuery(''); }} className="text-xs font-black text-black uppercase tracking-widest hover:text-gold transition-colors block w-full" style={{ textDecoration: 'none' }}>
+                              View all {filteredSearchProducts.length} {' '} product results &rarr;
                             </Link>
                          </div>
                       )}
