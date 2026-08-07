@@ -35,7 +35,7 @@ export default function SimilarProducts({ products, isPrivate, title }) {
     const isWholesale = user && !user.isAnonymous;
     const isClientMode = clientMargin !== null;
 
-    const getGridImgUrl = (data) => {
+    const getGridImgUrl = (data, index = 0) => {
         // Automatically return the moldings graphic if it's a trim without a specific image
         if (data.isAccessory && !data.imgPrefix) {
             return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/moldings.png')}?alt=media`;
