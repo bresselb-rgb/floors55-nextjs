@@ -605,7 +605,7 @@ export default function Header() {
                       {isSearchExpanded && filteredSearchProducts.length > 15 && (
                          <div className="p-4 text-center bg-gray-50 border-t border-gray-100">
                             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                               Showing top 15 of {filteredSearchProducts.length} results. Please refine your search to additional options.
+                               Showing top 15 of {filteredSearchProducts.length} results. Please refine your search to see additional options.
                             </span>
                          </div>
                       )}

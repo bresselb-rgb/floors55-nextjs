@@ -1348,7 +1348,15 @@ function CategoryViewerContent({ initialCategory }) {
                     <div className="text-center py-20 text-gray-400 text-sm italic bg-white border border-gray-200 rounded-2xl">No products matched your currently selected active filters.</div>
                 ) : (
                     <div className={isListView ? "flex flex-col gap-4" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"}>
-                        {filteredProducts.map(p => {
+                        {filteredProducts.filter((p, index, self) => {
+                            // FAST FILTER: Find the first instance of a styleFamily and hide the duplicates
+                            if (p.category === 'Tile' && p.styleFamily) {
+                                return self.findIndex(s => s.styleFamily === p.styleFamily) === index;
+                            }
+                            return true;
+                        }).map(p => {
+                            const isTileFamily = p.category === 'Tile' && p.styleFamily;
+                            
                             const finalPrice = isClientMode 
                                 ? (p.price * (1 + clientMargin / 100)).toFixed(2)
                                 : (isWholesale ? p.price.toFixed(2) : (p.retailPrice ? parseFloat(p.retailPrice).toFixed(2) : (p.price * 2.2).toFixed(2)));
@@ -1430,7 +1438,11 @@ function CategoryViewerContent({ initialCategory }) {
                                             </div>
                                             {!isListView && (
                                                 <>
-                                                <h3 className="text-lg font-bold text-gray-900 truncate"><Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} style={{ textDecoration: 'none', color: 'inherit' }}>{displayTitle}</Link></h3>
+                                                <h3 className="text-lg font-bold text-gray-900 truncate">
+                                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                                        {isTileFamily ? `${displayTitle.split(' ')[0]} Series` : displayTitle}
+                                                    </Link>
+                                                </h3>
                                                 <p className="text-gray-500 text-xs line-clamp-2">{safeDesc}</p>
                                                 </>
                                             )}
@@ -1438,7 +1450,11 @@ function CategoryViewerContent({ initialCategory }) {
 
                                         {isListView && (
                                             <>
-                                                <h3 className="text-lg font-bold text-gray-900 truncate"><Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} style={{ textDecoration: 'none', color: 'inherit' }}>{displayTitle}</Link></h3>
+                                                <h3 className="text-lg font-bold text-gray-900 truncate">
+                                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                                        {isTileFamily ? `${displayTitle.split(' ')[0]} Series` : displayTitle}
+                                                    </Link>
+                                                </h3>
                                                 <p className="text-gray-500 text-xs line-clamp-2">{safeDesc}</p>
                                                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1.5">
                                                     {colors.slice(0, 6).map(c => {
@@ -1458,50 +1474,60 @@ function CategoryViewerContent({ initialCategory }) {
 
                                         <div className={isListView ? "w-full sm:w-44 border-t sm:border-t-0 sm:border-l border-gray-100 pt-4 sm:pt-0 sm:pl-6 text-center sm:text-right shrink-0 flex flex-col justify-center" : "space-y-3 pt-3 border-t border-gray-50"}>
                                             
-                                            {isClientMode ? (
-                                                isListView ? (
-                                                    <>
-                                                        <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-0.5">Price</div>
-                                                        <div className="text-xl font-black text-gray-950 mb-3 font-mono">${finalPrice} <span className="text-xs font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></div>
-                                                    </>
-                                                ) : (
-                                                    <div className="flex justify-between items-baseline mt-1">
-                                                        <span className="text-[10px] text-gray-400 uppercase font-black tracking-wider">Price</span>
-                                                        <span className="text-base font-black text-gray-900 font-mono">${finalPrice} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
-                                                    </div>
-                                                )
-                                            ) : isWholesale ? (
-                                                isListView ? (
-                                                    <>
-                                                        <div className="text-[10px] text-gold font-bold uppercase tracking-wider mb-0.5">Wholesale</div>
-                                                        <div className="text-xl font-black text-gray-950 mb-0 font-mono">${wholesalePriceFormatted} <span className="text-xs font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></div>
-                                                        <div className="text-[9px] text-gray-400 line-through mb-2">Retail: ${retailPriceFormatted}</div>
-                                                    </>
-                                                ) : (
-                                                    <div className="flex flex-col mt-1">
-                                                        <span className="text-[9px] text-gray-400 line-through self-end mb-0.5">Retail: ${retailPriceFormatted}</span>
-                                                        <div className="flex justify-between items-baseline">
-                                                            <span className="text-[10px] text-gold uppercase font-black tracking-wider">Wholesale</span>
-                                                            <span className="text-base font-black text-gray-900 font-mono">${wholesalePriceFormatted} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
-                                                        </div>
-                                                    </div>
-                                                )
+                                            {isTileFamily ? (
+                                                <div className="flex justify-between items-center h-full">
+                                                    <div className="text-[11px] font-bold text-gray-500 italic w-full text-center sm:text-right my-2">Multiple Formats & Finishes</div>
+                                                </div>
                                             ) : (
-                                                isListView ? (
-                                                    <>
-                                                        <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-0.5">Est. Retail Price</div>
-                                                        <div className="text-xl font-black text-gray-950 mb-3 font-mono">${retailPriceFormatted} <span className="text-xs font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></div>
-                                                    </>
+                                                <>
+                                                {isClientMode ? (
+                                                    isListView ? (
+                                                        <>
+                                                            <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-0.5">Price</div>
+                                                            <div className="text-xl font-black text-gray-950 mb-3 font-mono">${finalPrice} <span className="text-xs font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex justify-between items-baseline mt-1">
+                                                            <span className="text-[10px] text-gray-400 uppercase font-black tracking-wider">Price</span>
+                                                            <span className="text-base font-black text-gray-900 font-mono">${finalPrice} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
+                                                        </div>
+                                                    )
+                                                ) : isWholesale ? (
+                                                    isListView ? (
+                                                        <>
+                                                            <div className="text-[10px] text-gold font-bold uppercase tracking-wider mb-0.5">Wholesale</div>
+                                                            <div className="text-xl font-black text-gray-950 mb-0 font-mono">${wholesalePriceFormatted} <span className="text-xs font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></div>
+                                                            <div className="text-[9px] text-gray-400 line-through mb-2">Retail: ${retailPriceFormatted}</div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex flex-col mt-1">
+                                                            <span className="text-[9px] text-gray-400 line-through self-end mb-0.5">Retail: ${retailPriceFormatted}</span>
+                                                            <div className="flex justify-between items-baseline">
+                                                                <span className="text-[10px] text-gold uppercase font-black tracking-wider">Wholesale</span>
+                                                                <span className="text-base font-black text-gray-900 font-mono">${wholesalePriceFormatted} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
+                                                            </div>
+                                                        </div>
+                                                    )
                                                 ) : (
-                                                    <div className="flex justify-between items-baseline">
-                                                        <span className="text-[10px] text-gray-400 uppercase font-black tracking-wider">Retail Price</span>
-                                                        <span className="text-base font-black text-gray-900 font-mono">${retailPriceFormatted} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
-                                                    </div>
-                                                )
+                                                    isListView ? (
+                                                        <>
+                                                            <div className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-0.5">Est. Retail Price</div>
+                                                            <div className="text-xl font-black text-gray-950 mb-3 font-mono">${retailPriceFormatted} <span className="text-xs font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex justify-between items-baseline">
+                                                            <span className="text-[10px] text-gray-400 uppercase font-black tracking-wider">Retail Price</span>
+                                                            <span className="text-base font-black text-gray-900 font-mono">${retailPriceFormatted} <span className="text-[10px] font-bold text-gray-400 font-sans">/{p.unit || 'sqft'}</span></span>
+                                                        </div>
+                                                    )
+                                                )}
+                                                </>
                                             )}
 
                                             <div className={`flex gap-2 w-full ${isListView ? 'mt-2' : ''}`}>
-                                                <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} className={isListView ? "flex-1 w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-2 rounded-lg transition text-[10px] tracking-widest" : "flex-1 w-full block text-center border border-black hover:bg-black text-black hover:text-white font-black uppercase py-2.5 rounded-xl transition text-[10px] tracking-widest"} style={{ textDecoration: 'none' }}>View Details</Link>
+                                                <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} className={isListView ? "flex-1 w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-2 rounded-lg transition text-[10px] tracking-widest" : "flex-1 w-full block text-center border border-black hover:bg-black text-black hover:text-white font-black uppercase py-2.5 rounded-xl transition text-[10px] tracking-widest"} style={{ textDecoration: 'none' }}>
+                                                    {isTileFamily ? "View Series Options" : "View Details"}
+                                                </Link>
                                                 <button onClick={(e) => handleShare(e, p)} className={`shrink-0 flex items-center justify-center border border-gray-200 text-gray-500 hover:text-gold hover:border-gold transition-colors cursor-pointer outline-none ${isListView ? 'w-9 rounded-lg' : 'w-10 rounded-xl'}`} title="Share Product">
                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316M15 12a3 3 0 100 6 3 3 0 000-6zm0-6a3 3 0 100 6 3 3 0 000-6z"></path></svg>
                                                 </button>
