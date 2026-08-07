@@ -50,7 +50,11 @@ export default function SimilarProducts({ products, isPrivate, title }) {
             folderName = folderName.replace(/-+$/, '');
         }
 
-        const displaySku = data.colors?.[0]?.sku || '01';
+        // Use the index to evenly cycle through available colors for Tile products
+        const colorCount = data.colors?.length || 1;
+        const colorIndex = data.category === 'Tile' ? (index % colorCount) : 0;
+        const displaySku = data.colors?.[colorIndex]?.sku || '01';
+        
         const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
         return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
     };
@@ -75,7 +79,7 @@ export default function SimilarProducts({ products, isPrivate, title }) {
                 </div>
 
                 <div ref={scrollContainerRef} className="flex overflow-x-auto gap-4 md:gap-6 pb-6 snap-x snap-mandatory scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {products.map((product) => {
+                    {products.map((product, index) => {
                         const simTitle = (isPrivate || product.usePrivateName) 
                             ? (product.privateName || 'Custom Collection') 
                             : (product.name || 'Unnamed Product');
@@ -108,7 +112,7 @@ export default function SimilarProducts({ products, isPrivate, title }) {
                             >
                                 <div className="bg-gray-50 rounded-xl aspect-square mb-4 overflow-hidden border border-gray-100">
                                     <img 
-                                        src={getGridImgUrl(product)} 
+                                        src={getGridImgUrl(product, index)} 
                                         alt={simTitle} 
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                                     />
