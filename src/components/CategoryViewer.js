@@ -636,8 +636,9 @@ function CategoryViewerContent({ initialCategory }) {
       if (!isMounted) return;
       const arr = [];
       snap.forEach(d => {
-        const data = d.data();
-        if (data.isVisible !== false) {
+              try {
+                const data = d.data();
+                if (data.isVisible !== false) {
           data.displayTitle = (data.usePrivateName && data.privateName) ? data.privateName : (data.name || 'Unnamed Product');
           
           let cat = (data.category || '').trim();
@@ -648,14 +649,22 @@ function CategoryViewerContent({ initialCategory }) {
           }
 
           const fullDesc = (data.desc || '').toLowerCase();
-          let existingSpecs = data.specs || [];
-          
-          const hasSpec = (targetKey) => {
-              return existingSpecs.some(s => {
-                  const parts = s.split(':');
-                  return parts.length > 1 && normalizeSpecKey(parts[0], data.category) === targetKey;
-              });
-          };
+                
+                // BULLETPROOF SAFEGUARD: Handle formatting hallucinations where specs is an object instead of an array
+                let existingSpecs = [];
+                if (Array.isArray(data.specs)) {
+                    existingSpecs = data.specs.filter(s => typeof s === 'string');
+                } else if (typeof data.specs === 'object' && data.specs !== null) {
+                    existingSpecs = Object.entries(data.specs).map(([k, v]) => `${k}: ${v}`);
+                }
+                
+                const hasSpec = (targetKey) => {
+                    return existingSpecs.some(s => {
+                        if (typeof s !== 'string') return false;
+                        const parts = s.split(':');
+                        return parts.length > 1 && normalizeSpecKey(parts[0], data.category) === targetKey;
+                    });
+                };
           
           if (data.category === 'Luxury Vinyl (LVP)') {
               // 1. Purge unwanted DB tags (Nuke Waterproof AND old Species data to force a clean rebuild)
@@ -767,10 +776,13 @@ function CategoryViewerContent({ initialCategory }) {
           }
 
           data.specs = existingSpecs;
-          arr.push({ id: d.id, ...data });
-        }
-      });
-      setLiveProductsRaw(arr);
+                    arr.push({ id: d.id, ...data });
+                  }
+              } catch (err) {
+                  console.error("Failed to parse product:", d.id, err);
+              }
+            });
+            setLiveProductsRaw(arr);
       setIsDataLoaded(true);
       clearTimeout(failsafeTimeout);
     }, (error) => {
