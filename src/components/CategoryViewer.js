@@ -54,7 +54,7 @@ const normalizeSpecKey = (rawKey, category = '') => {
         if (k.includes('dimension') || k === 'size' || k.includes('tile size')) return 'Tile Size';
         if (k.includes('composition') || k.includes('material') || k === 'type') return 'Material';
         if (k.includes('format')) return 'Tile Format';
-        if (k.includes('finish') || k.includes('glaze')) return 'Finish';
+        if (k.includes('finish')) return 'Finish'; // 'glaze' removed to prevent 5 and 7 from showing up
         if (k.includes('edge')) return 'Edge';
         if (k.includes('shade') || k.includes('variation')) return 'Shade Variation';
     }
@@ -259,17 +259,20 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     }
 
     if (key.toLowerCase() === "tile size") {
-        const match = lowerVal.match(/([\d.]+)\s*(?:"|in|inch|'')?\s*x\s*([\d.]+)/i);
+        // Upgraded regex to catch quotation marks like 12"x24"
+        const match = lowerVal.match(/([\d.]+)\s*(?:"|in|inch|''|”)?\s*[xX*]\s*([\d.]+)/);
         if (match) return `${match[1]}" x ${match[2]}"`;
         return val;
     }
 
     if (key.toLowerCase() === "material") {
+        // Strictly limits outputs to your requested list
         if (lowerVal.includes('porcelain')) return "Porcelain";
         if (lowerVal.includes('ceramic')) return "Ceramic";
         if (lowerVal.includes('glass')) return "Glass";
-        if (lowerVal.includes('stone') || lowerVal.includes('marble') || lowerVal.includes('travertine')) return "Natural Stone";
-        return val;
+        if (lowerVal.includes('mosaic') || lowerVal.includes('mesh')) return "Mosaic (Mesh Mt)";
+        if (lowerVal.includes('deco')) return "Deco";
+        return "None"; // Vaporizes any other materials from showing up
     }
 
     if (key.toLowerCase() === "tile format") {
@@ -283,7 +286,7 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
         if (lowerVal.includes('gloss') || lowerVal.includes('polished') || lowerVal.includes('brilho')) return "Glossy";
         if (lowerVal.includes('matte') || lowerVal.includes('honed')) return "Matte";
         if (lowerVal.includes('texture') || lowerVal.includes('slip')) return "Textured";
-        return val;
+        return "None"; // Eliminates 5, 7, and random text
     }
 
     if (key.toLowerCase() === "edge") {
@@ -820,12 +823,13 @@ function CategoryViewerContent({ initialCategory }) {
           } else if (data.category === 'Tile') {
               const searchNet = `${data.displayTitle} ${fullDesc} ${(data.colors || []).map(c => c.name || '').join(' ')} ${existingSpecs.join(' ')}`.toLowerCase();
 
-              // 1. Material
+              // 1. Material (Strict list)
               if (!hasSpec('Material')) {
                   if (searchNet.includes('porcelain')) existingSpecs.push('Material: Porcelain');
                   else if (searchNet.includes('ceramic')) existingSpecs.push('Material: Ceramic');
                   else if (searchNet.includes('glass')) existingSpecs.push('Material: Glass');
-                  else if (searchNet.includes('stone') || searchNet.includes('marble')) existingSpecs.push('Material: Natural Stone');
+                  else if (searchNet.includes('mosaic') || searchNet.includes('mesh')) existingSpecs.push('Material: Mosaic (Mesh Mt)');
+                  else if (searchNet.includes('deco')) existingSpecs.push('Material: Deco');
               }
 
               // 2. Tile Format
@@ -842,9 +846,9 @@ function CategoryViewerContent({ initialCategory }) {
                   else if (searchNet.includes('matte') || searchNet.includes('honed')) existingSpecs.push('Finish: Matte');
               }
 
-              // 4. Tile Size (Dimensions)
+              // 4. Tile Size (Dimensions) with quote support
               if (!hasSpec('Tile Size')) {
-                  const dimMatch = data.displayTitle.match(/([\d.]+)\s*(?:in|inch|'')?\s*[x*]\s*([\d.]+)/i);
+                  const dimMatch = data.displayTitle.match(/([\d.]+)\s*(?:"|in|inch|''|”)?\s*[xX*]\s*([\d.]+)/);
                   if (dimMatch) {
                       existingSpecs.push(`Tile Size: ${dimMatch[1]}" x ${dimMatch[2]}"`);
                   }
