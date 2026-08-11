@@ -49,16 +49,6 @@ const normalizeSpecKey = (rawKey, category = '') => {
     if (k.includes('pad') || k.includes('cushion') || k.includes('underlayment')) return 'Attached Pad';
     if (k.includes('style') || k.includes('pattern') || k.includes('visual')) return 'Style Type';
     
-    // NEW TILE MAPPINGS
-    if (category === 'Tile') {
-        if (k.includes('dimension') || k === 'size' || k.includes('tile size')) return 'Tile Size';
-        if (k.includes('composition') || k.includes('material') || k === 'type') return 'Material';
-        if (k.includes('format')) return 'Tile Format';
-        if (k.includes('finish') || k.includes('glaze')) return 'Finish';
-        if (k.includes('edge')) return 'Edge';
-        if (k.includes('shade') || k.includes('variation')) return 'Shade Variation';
-    }
-    
     // Force Laminate wear layers to group under AC Rating
     if (category === 'Laminate' && (k.includes('wear') || k.includes('ac rating') || k.includes('ac class'))) return 'AC Rating';
     
@@ -255,48 +245,6 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
         if (lowerVal.includes("elm")) return "Elm";
         if (lowerVal.includes("acacia")) return "Acacia";
         if (lowerVal.includes("birch")) return "Birch";
-        return val;
-    }
-
-    if (key.toLowerCase() === "tile size") {
-        const match = lowerVal.match(/([\d.]+)\s*(?:"|in|inch|'')?\s*x\s*([\d.]+)/i);
-        if (match) return `${match[1]}" x ${match[2]}"`;
-        return val;
-    }
-
-    if (key.toLowerCase() === "material") {
-        if (lowerVal.includes('porcelain')) return "Porcelain";
-        if (lowerVal.includes('ceramic')) return "Ceramic";
-        if (lowerVal.includes('glass')) return "Glass";
-        if (lowerVal.includes('stone') || lowerVal.includes('marble') || lowerVal.includes('travertine')) return "Natural Stone";
-        return val;
-    }
-
-    if (key.toLowerCase() === "tile format") {
-        if (lowerVal.includes('mosaic') || lowerVal.includes('mesh')) return "Mosaic";
-        if (lowerVal.includes('bullnose') || lowerVal.includes('trim') || lowerVal.includes('base') || lowerVal.includes('cove')) return "Trim & Bullnose";
-        if (lowerVal.includes('deco')) return "Deco";
-        return "Field Tile";
-    }
-
-    if (key.toLowerCase() === "finish") {
-        if (lowerVal.includes('gloss') || lowerVal.includes('polished') || lowerVal.includes('brilho')) return "Glossy";
-        if (lowerVal.includes('matte') || lowerVal.includes('honed')) return "Matte";
-        if (lowerVal.includes('texture') || lowerVal.includes('slip')) return "Textured";
-        return val;
-    }
-
-    if (key.toLowerCase() === "edge") {
-        if (lowerVal.includes('rectified')) return "Rectified";
-        if (lowerVal.includes('pressed')) return "Pressed";
-        return val;
-    }
-
-    if (key.toLowerCase() === "shade variation") {
-        if (lowerVal.includes('uniform') || lowerVal.includes('v1')) return "V1 - Uniform";
-        if (lowerVal.includes('slight') || lowerVal.includes('v2')) return "V2 - Slight";
-        if (lowerVal.includes('moderate') || lowerVal.includes('v3')) return "V3 - Moderate";
-        if (lowerVal.includes('substantial') || lowerVal.includes('random') || lowerVal.includes('v4')) return "V4 - Substantial/Random";
         return val;
     }
 
@@ -817,38 +765,6 @@ function CategoryViewerContent({ initialCategory }) {
                       existingSpecs.push('Water Resistant: Water Resistant');
                   }
               }
-          } else if (data.category === 'Tile') {
-              const searchNet = `${data.displayTitle} ${fullDesc} ${(data.colors || []).map(c => c.name || '').join(' ')} ${existingSpecs.join(' ')}`.toLowerCase();
-
-              // 1. Material
-              if (!hasSpec('Material')) {
-                  if (searchNet.includes('porcelain')) existingSpecs.push('Material: Porcelain');
-                  else if (searchNet.includes('ceramic')) existingSpecs.push('Material: Ceramic');
-                  else if (searchNet.includes('glass')) existingSpecs.push('Material: Glass');
-                  else if (searchNet.includes('stone') || searchNet.includes('marble')) existingSpecs.push('Material: Natural Stone');
-              }
-
-              // 2. Tile Format
-              if (!hasSpec('Tile Format')) {
-                  if (searchNet.includes('mosaic') || searchNet.includes('mesh') || data.displayTitle.toLowerCase().includes('m12')) existingSpecs.push('Tile Format: Mosaic');
-                  else if (searchNet.includes('bullnose') || searchNet.includes('trim') || data.isAccessory) existingSpecs.push('Tile Format: Trim & Bullnose');
-                  else if (searchNet.includes('deco') || searchNet.includes('decorative')) existingSpecs.push('Tile Format: Deco');
-                  else existingSpecs.push('Tile Format: Field Tile');
-              }
-
-              // 3. Finish
-              if (!hasSpec('Finish')) {
-                  if (searchNet.includes('gloss') || searchNet.includes('polished')) existingSpecs.push('Finish: Glossy');
-                  else if (searchNet.includes('matte') || searchNet.includes('honed')) existingSpecs.push('Finish: Matte');
-              }
-
-              // 4. Tile Size (Dimensions)
-              if (!hasSpec('Tile Size')) {
-                  const dimMatch = data.displayTitle.match(/([\d.]+)\s*(?:in|inch|'')?\s*[x*]\s*([\d.]+)/i);
-                  if (dimMatch) {
-                      existingSpecs.push(`Tile Size: ${dimMatch[1]}" x ${dimMatch[2]}"`);
-                  }
-              }
           } else {
               if (fullDesc.includes('cork') && !hasSpec('Attached Pad')) {
                   existingSpecs.push('Attached Pad: Attached Cork');
@@ -943,15 +859,10 @@ function CategoryViewerContent({ initialCategory }) {
           "Wear Layer",
           "AC Rating",
           "Attached Pad",
+          //"Species",
           "Style Type",
           "Fiber Type",
-          "Face Weight",
-          "Tile Size",
-          "Tile Format",
-          "Material",
-          "Finish",
-          "Edge",
-          "Shade Variation"
+          "Face Weight"
       ];
 
       if (activeCategory === 'Carpet' || activeCategory === 'Carpet Cushion') {
@@ -960,13 +871,7 @@ function CategoryViewerContent({ initialCategory }) {
               s !== "Thickness" && 
               s !== "Waterproof" && 
               s !== "Wear Layer" &&
-              s !== "AC Rating" &&
-              s !== "Tile Size" &&
-              s !== "Tile Format" &&
-              s !== "Material" &&
-              s !== "Finish" &&
-              s !== "Edge" &&
-              s !== "Shade Variation"
+              s !== "AC Rating"
           );
       } else if (['Luxury Vinyl (LVP)', 'Hardwood', 'Laminate', 'Tile'].includes(activeCategory)) {
               // Strictly eliminate carpet specs from hard surface categories
@@ -974,42 +879,12 @@ function CategoryViewerContent({ initialCategory }) {
                   s !== "Face Weight" && 
                   s !== "Fiber Type"
               );
-              
-              if (activeCategory === 'Tile') {
-                  // Keep Tile-specific specs and generic ones like Thickness
-                  TARGET_SPECS = TARGET_SPECS.filter(s => 
-                      s !== "Wear Layer" && 
-                      s !== "Construction / Core" && 
-                      s !== "Attached Pad" && 
-                      s !== "Waterproof" && 
-                      s !== "AC Rating" && 
-                      s !== "Style Type"
-                  );
-              } else if (activeCategory === 'Laminate') {
-                  // Laminate category rules
-                  TARGET_SPECS = TARGET_SPECS.filter(s => 
-                      s !== "Wear Layer" && 
-                      s !== "Construction / Core" && 
-                      s !== "Style Type" &&
-                      s !== "Tile Size" &&
-                      s !== "Tile Format" &&
-                      s !== "Material" &&
-                      s !== "Finish" &&
-                      s !== "Edge" &&
-                      s !== "Shade Variation"
-                  );
-                  TARGET_SPECS = TARGET_SPECS.map(s => s === "Waterproof" ? "Water Resistant" : s);
+              if (activeCategory !== 'Laminate') {
+                  TARGET_SPECS = TARGET_SPECS.filter(s => s !== "AC Rating");
               } else {
-                  // LVP and Hardwood rules
-                  TARGET_SPECS = TARGET_SPECS.filter(s => 
-                      s !== "AC Rating" &&
-                      s !== "Tile Size" &&
-                      s !== "Tile Format" &&
-                      s !== "Material" &&
-                      s !== "Finish" &&
-                      s !== "Edge" &&
-                      s !== "Shade Variation"
-                  );
+                  // Laminate category: remove Wear Layer, Construction, and Style Type, swap Waterproof to Water Resistant
+                  TARGET_SPECS = TARGET_SPECS.filter(s => s !== "Wear Layer" && s !== "Construction / Core" && s !== "Style Type");
+                  TARGET_SPECS = TARGET_SPECS.map(s => s === "Waterproof" ? "Water Resistant" : s);
               }
           }
       
@@ -1023,7 +898,6 @@ function CategoryViewerContent({ initialCategory }) {
 
       relevantProducts.forEach(p => {
           (p.specs || []).forEach(s => {
-              if (typeof s !== 'string') return;
               const parts = s.split(':');
               if (parts.length >= 2) {
                   const rawKey = parts[0].trim();
@@ -1053,13 +927,6 @@ function CategoryViewerContent({ initialCategory }) {
                   }
                   if (specName === "Face Weight") {
                       return (FACE_WEIGHT_ORDER[a] || 99) - (FACE_WEIGHT_ORDER[b] || 99);
-                  }
-                  if (specName === "Tile Size") {
-                      const matchA = a.match(/([\d.]+)/);
-                      const matchB = b.match(/([\d.]+)/);
-                      const numA = matchA ? parseFloat(matchA[1]) : 999;
-                      const numB = matchB ? parseFloat(matchB[1]) : 999;
-                      if (numA !== numB) return numA - numB;
                   }
                   const numA = parseFloat(a);
                   const numB = parseFloat(b);
@@ -1496,8 +1363,12 @@ function CategoryViewerContent({ initialCategory }) {
                         {filteredProducts.filter((p, index, self) => {
                             // FAST FILTER: Smart group Tile Families by prioritizing Field Tiles over Accessories
                             if (p.category === 'Tile' && p.styleFamily) {
+                                // Find the first product in this family that is NOT an accessory
                                 const mainRepIndex = self.findIndex(s => s.styleFamily === p.styleFamily && s.isAccessory !== true);
+                                
+                                // Fallback to the very first item if no main field tile exists for some reason
                                 const targetIndex = mainRepIndex !== -1 ? mainRepIndex : self.findIndex(s => s.styleFamily === p.styleFamily);
+                                
                                 return index === targetIndex;
                             }
                             return true;
