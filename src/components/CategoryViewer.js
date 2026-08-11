@@ -270,7 +270,6 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
         if (lowerVal.includes('porcelain')) return "Porcelain";
         if (lowerVal.includes('ceramic')) return "Ceramic";
         if (lowerVal.includes('glass')) return "Glass";
-        if (lowerVal.includes('mosaic') || lowerVal.includes('mesh')) return "Mosaic (Mesh Mt)";
         if (lowerVal.includes('deco')) return "Deco";
         return "None"; // Vaporizes any other materials from showing up
     }
@@ -828,7 +827,6 @@ function CategoryViewerContent({ initialCategory }) {
                   if (searchNet.includes('porcelain')) existingSpecs.push('Material: Porcelain');
                   else if (searchNet.includes('ceramic')) existingSpecs.push('Material: Ceramic');
                   else if (searchNet.includes('glass')) existingSpecs.push('Material: Glass');
-                  else if (searchNet.includes('mosaic') || searchNet.includes('mesh')) existingSpecs.push('Material: Mosaic (Mesh Mt)');
                   else if (searchNet.includes('deco')) existingSpecs.push('Material: Deco');
               }
 
