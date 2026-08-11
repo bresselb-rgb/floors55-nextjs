@@ -1361,9 +1361,15 @@ function CategoryViewerContent({ initialCategory }) {
                 ) : (
                     <div className={isListView ? "flex flex-col gap-4" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"}>
                         {filteredProducts.filter((p, index, self) => {
-                            // FAST FILTER: Find the first instance of a styleFamily and hide the duplicates
+                            // FAST FILTER: Smart group Tile Families by prioritizing Field Tiles over Accessories
                             if (p.category === 'Tile' && p.styleFamily) {
-                                return self.findIndex(s => s.styleFamily === p.styleFamily) === index;
+                                // Find the first product in this family that is NOT an accessory
+                                const mainRepIndex = self.findIndex(s => s.styleFamily === p.styleFamily && s.isAccessory !== true);
+                                
+                                // Fallback to the very first item if no main field tile exists for some reason
+                                const targetIndex = mainRepIndex !== -1 ? mainRepIndex : self.findIndex(s => s.styleFamily === p.styleFamily);
+                                
+                                return index === targetIndex;
                             }
                             return true;
                         }).map(p => {
