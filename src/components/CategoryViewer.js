@@ -295,10 +295,15 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
     }
 
     if (key.toLowerCase() === "shade variation") {
-        if (lowerVal.includes('uniform') || lowerVal.includes('v1')) return "V1 - Uniform";
-        if (lowerVal.includes('slight') || lowerVal.includes('v2')) return "V2 - Slight";
-        if (lowerVal.includes('moderate') || lowerVal.includes('v3')) return "V3 - Moderate";
-        if (lowerVal.includes('substantial') || lowerVal.includes('random') || lowerVal.includes('v4')) return "V4 - Substantial/Random";
+        // Find any number 1-4, with or without a V, and force it to be strictly V1, V2, etc.
+        const match = lowerVal.match(/v?([1-4])/i);
+        if (match) return `V${match[1]}`;
+        
+        // Fallback catchers if the DB only contains words
+        if (lowerVal.includes('uniform')) return "V1";
+        if (lowerVal.includes('slight')) return "V2";
+        if (lowerVal.includes('moderate')) return "V3";
+        if (lowerVal.includes('substantial') || lowerVal.includes('random')) return "V4";
         return val;
     }
 
