@@ -400,6 +400,25 @@ function CategoryViewerContent({ initialCategory }) {
       setTimeout(() => setToastMessage(''), 3000);
   };
 
+  // 1. Helper function to save the exact scroll pixel before leaving the page
+  const saveScrollPosition = () => {
+      sessionStorage.setItem('categoryScrollPosition', window.scrollY);
+  };
+
+  // 2. Automatically restore the scroll position once Firebase finishes loading the grid
+  useEffect(() => {
+      if (isDataLoaded) {
+          const savedScroll = sessionStorage.getItem('categoryScrollPosition');
+          if (savedScroll) {
+              // A tiny 100ms delay ensures the DOM has fully painted the images before scrolling
+              setTimeout(() => {
+                  window.scrollTo(0, parseInt(savedScroll, 10));
+                  sessionStorage.removeItem('categoryScrollPosition');
+              }, 100);
+          }
+      }
+  }, [isDataLoaded]);
+
   const handleShare = async (e, p) => {
       e.preventDefault();
       const displaySku = activePreviews[p.id] || (p.colors?.[0]?.sku || '01');
@@ -1564,7 +1583,7 @@ function CategoryViewerContent({ initialCategory }) {
                                         </button>
                                     )}
 
-                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
+                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} onClick={saveScrollPosition} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
                                         <img src={fbPath} className="w-full h-full object-cover transition duration-300 hover:scale-105" onError={e => e.target.src=TBD_IMG} />
                                     </Link>
 
@@ -1593,7 +1612,7 @@ function CategoryViewerContent({ initialCategory }) {
                                             {!isListView && (
                                                 <>
                                                 <h3 className="text-lg font-bold text-gray-900 truncate">
-                                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} onClick={saveScrollPosition} style={{ textDecoration: 'none', color: 'inherit' }}>
                                                         {isTileFamily ? `${displayTitle.split(' ')[0]} Series` : displayTitle}
                                                     </Link>
                                                 </h3>
@@ -1605,7 +1624,7 @@ function CategoryViewerContent({ initialCategory }) {
                                         {isListView && (
                                             <>
                                                 <h3 className="text-lg font-bold text-gray-900 truncate">
-                                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} onClick={saveScrollPosition} style={{ textDecoration: 'none', color: 'inherit' }}>
                                                         {isTileFamily ? `${displayTitle.split(' ')[0]} Series` : displayTitle}
                                                     </Link>
                                                 </h3>
@@ -1679,7 +1698,7 @@ function CategoryViewerContent({ initialCategory }) {
                                             )}
 
                                             <div className={`flex gap-2 w-full ${isListView ? 'mt-2' : ''}`}>
-                                                <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} className={isListView ? "flex-1 w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-2 rounded-lg transition text-[10px] tracking-widest" : "flex-1 w-full block text-center border border-black hover:bg-black text-black hover:text-white font-black uppercase py-2.5 rounded-xl transition text-[10px] tracking-widest"} style={{ textDecoration: 'none' }}>
+                                                <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} onClick={saveScrollPosition} className={isListView ? "flex-1 w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-2 rounded-lg transition text-[10px] tracking-widest" : "flex-1 w-full block text-center border border-black hover:bg-black text-black hover:text-white font-black uppercase py-2.5 rounded-xl transition text-[10px] tracking-widest"} style={{ textDecoration: 'none' }}>
                                                     {isTileFamily ? "View Series Options" : "View Details"}
                                                 </Link>
                                                 <button onClick={(e) => handleShare(e, p)} className={`shrink-0 flex items-center justify-center border border-gray-200 text-gray-500 hover:text-gold hover:border-gold transition-colors cursor-pointer outline-none ${isListView ? 'w-9 rounded-lg' : 'w-10 rounded-xl'}`} title="Share Product">
