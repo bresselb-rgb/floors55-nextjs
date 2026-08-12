@@ -366,32 +366,51 @@ function CategoryViewerContent({ initialCategory }) {
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
+  // --- NEW: Restore Saved Filters from Session Storage ---
+  const getSavedFilters = (cat) => {
+      if (typeof window !== 'undefined') {
+          try { return JSON.parse(sessionStorage.getItem(`cv_filters_${cat}`)) || {}; } catch (e) {}
+      }
+      return {};
+  };
+  const savedFilters = getSavedFilters(initialCategory);
+
   const [userFavorites, setUserFavorites] = useState([]); // Array of product IDs
   const [proFavorites, setProFavorites] = useState([]); 
-  const [showProPicks, setShowProPicks] = useState(false);
+  const [showProPicks, setShowProPicks] = useState(savedFilters.showProPicks || false);
 
   // Raw input states (for the UI)
   const [searchQueryInput, setSearchQueryInput] = useState(() => {
       if (typeof window !== 'undefined') {
           const params = new URLSearchParams(window.location.search);
-          return params.get('search') || '';
+          return params.get('search') || savedFilters.searchQueryInput || '';
       }
       return '';
   });
-  const [maxPriceInput, setMaxPriceInput] = useState(10000); 
+  const [maxPriceInput, setMaxPriceInput] = useState(savedFilters.maxPriceInput || 10000); 
 
   // Debounced states (for the heavy filter logic)
   const searchQuery = useDebounce(searchQueryInput, 300);
   const maxPrice = useDebounce(maxPriceInput, 300);
 
-  const [selectedPrograms, setSelectedPrograms] = useState([]);
-  const [selectedBrands, setSelectedBrands] = useState([]);
-  const [selectedSpecs, setSelectedSpecs] = useState({});
-  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+  const [selectedPrograms, setSelectedPrograms] = useState(savedFilters.selectedPrograms || []);
+  const [selectedBrands, setSelectedBrands] = useState(savedFilters.selectedBrands || []);
+  const [selectedSpecs, setSelectedSpecs] = useState(savedFilters.selectedSpecs || {});
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(savedFilters.showOnlyFavorites || false);
   
-  const [sortMode, setSortMode] = useState('price-asc');
-  const [isListView, setIsListView] = useState(false);
+  const [sortMode, setSortMode] = useState(savedFilters.sortMode || 'price-asc');
+  const [isListView, setIsListView] = useState(savedFilters.isListView || false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  // --- NEW: Automatically save active filters as they change ---
+  useEffect(() => {
+      if (typeof window !== 'undefined') {
+          sessionStorage.setItem(`cv_filters_${activeCategory}`, JSON.stringify({
+              searchQueryInput, maxPriceInput, selectedPrograms, selectedBrands, 
+              selectedSpecs, showOnlyFavorites, showProPicks, sortMode, isListView
+          }));
+      }
+  }, [activeCategory, searchQueryInput, maxPriceInput, selectedPrograms, selectedBrands, selectedSpecs, showOnlyFavorites, showProPicks, sortMode, isListView]);
   const [activePreviews, setActivePreviews] = useState({});
   const [toastMessage, setToastMessage] = useState('');
 
@@ -937,7 +956,20 @@ function CategoryViewerContent({ initialCategory }) {
   // Synchronize the input and debounced states when category changes
   useEffect(() => {
      if (liveProductsRaw.length > 0) {
-         setMaxPriceInput(priceBounds.max);
+         let savedMax = null;
+         if (typeof window !== 'undefined') {
+             try { 
+                 const saved = JSON.parse(sessionStorage.getItem(`cv_filters_${activeCategory}`)) || {}; 
+                 savedMax = saved.maxPriceInput;
+             } catch(e) {}
+         }
+         
+         // Only snap to the absolute top if they didn't have a customized limit saved
+         if (savedMax && savedMax < priceBounds.max) {
+             setMaxPriceInput(savedMax);
+         } else {
+             setMaxPriceInput(priceBounds.max);
+         }
      }
   }, [priceBounds.max, activeCategory]);
 
