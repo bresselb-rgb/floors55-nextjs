@@ -2,9 +2,6 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { signInAnonymously } from "firebase/auth";
 import { db, auth, appId } from "../../../lib/firebase";
 
-// 0. Force Vercel to always fetch fresh data for short links!
-export const dynamic = 'force-dynamic';
-
 // Helper to ensure the server is authenticated before asking Firebase for data
 const authenticateServer = async () => {
     if (!auth.currentUser) {
@@ -36,7 +33,7 @@ export async function generateMetadata({ params }) {
                  const pData = prodSnap.data();
                  const title = (pData.usePrivateName && pData.privateName) ? pData.privateName : (pData.name || 'Premium Flooring');
                  
-                 // Respect the database imageFolder field
+                 // FIX: Respect the database imageFolder field!
                  const safeName = (pData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                  const safeSku = (pData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                  let folderName = pData.imageFolder ? pData.imageFolder : 'images'; 
@@ -46,15 +43,7 @@ export async function generateMetadata({ params }) {
                      folderName = folderName.replace(/-+$/, '');
                  }
 
-                 // Extract the actual color you shared from the target URL
-                 let displaySku = pData.colors?.[0]?.sku || '01';
-                 if (target.includes('?')) {
-                     const urlParams = new URLSearchParams(target.split('?')[1]);
-                     if (urlParams.has('color')) {
-                         displaySku = urlParams.get('color');
-                     }
-                 }
-
+                 const displaySku = pData.colors?.[0]?.sku || '01';
                  const rawPath = `images/${folderName}/${pData.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
                  const imageUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
 
@@ -93,7 +82,7 @@ export async function generateMetadata({ params }) {
                      const prodSnap = await getDoc(prodRef);
                      if (prodSnap.exists()) {
                          const prodData = prodSnap.data();
-                         // Respect the database imageFolder field
+                         // FIX: Respect the database imageFolder field!
                          const safeName = (prodData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                          const safeSku = (prodData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                          let folderName = prodData.imageFolder ? prodData.imageFolder : 'images'; 
@@ -138,7 +127,7 @@ export async function generateMetadata({ params }) {
                       const prodSnap = await getDoc(prodRef);
                       if (prodSnap.exists()) {
                           const prodData = prodSnap.data();
-                          // Respect the database imageFolder field
+                          // FIX: Respect the database imageFolder field!
                           const safeName = (prodData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                           const safeSku = (prodData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                           let folderName = prodData.imageFolder ? prodData.imageFolder : 'images'; 
