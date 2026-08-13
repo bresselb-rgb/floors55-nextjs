@@ -33,13 +33,15 @@ export async function generateMetadata({ params }) {
                  const pData = prodSnap.data();
                  const title = (pData.usePrivateName && pData.privateName) ? pData.privateName : (pData.name || 'Premium Flooring');
                  
-                 // Dynamically reconstruct the image path so it shows up in the text message
+                 // FIX: Respect the database imageFolder field!
                  const safeName = (pData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                  const safeSku = (pData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                 let folderName = 'images'; 
-                 if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-                 else if (safeName) folderName = safeName;
-                 folderName = folderName.replace(/-+$/, '');
+                 let folderName = pData.imageFolder ? pData.imageFolder : 'images'; 
+                 if (!pData.imageFolder) {
+                     if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                     else if (safeName) folderName = safeName;
+                     folderName = folderName.replace(/-+$/, '');
+                 }
 
                  const displaySku = pData.colors?.[0]?.sku || '01';
                  const rawPath = `images/${folderName}/${pData.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
@@ -80,12 +82,15 @@ export async function generateMetadata({ params }) {
                      const prodSnap = await getDoc(prodRef);
                      if (prodSnap.exists()) {
                          const prodData = prodSnap.data();
+                         // FIX: Respect the database imageFolder field!
                          const safeName = (prodData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                          const safeSku = (prodData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                         let folderName = 'images'; 
-                         if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-                         else if (safeName) folderName = safeName;
-                         folderName = folderName.replace(/-+$/, '');
+                         let folderName = prodData.imageFolder ? prodData.imageFolder : 'images'; 
+                         if (!prodData.imageFolder) {
+                             if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                             else if (safeName) folderName = safeName;
+                             folderName = folderName.replace(/-+$/, '');
+                         }
                          const displaySku = pData.colorSku || prodData.colors?.[0]?.sku || '01';
                          const rawPath = `images/${folderName}/${prodData.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
                          imageUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
@@ -122,12 +127,15 @@ export async function generateMetadata({ params }) {
                       const prodSnap = await getDoc(prodRef);
                       if (prodSnap.exists()) {
                           const prodData = prodSnap.data();
+                          // FIX: Respect the database imageFolder field!
                           const safeName = (prodData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                           const safeSku = (prodData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                          let folderName = 'images'; 
-                          if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-                          else if (safeName) folderName = safeName;
-                          folderName = folderName.replace(/-+$/, '');
+                          let folderName = prodData.imageFolder ? prodData.imageFolder : 'images'; 
+                          if (!prodData.imageFolder) {
+                              if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+                              else if (safeName) folderName = safeName;
+                              folderName = folderName.replace(/-+$/, '');
+                          }
                           const displaySku = firstProd.colorSku || prodData.colors?.[0]?.sku || '01';
                           const rawPath = `images/${folderName}/${prodData.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
                           imageUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
