@@ -353,16 +353,21 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         }
 
         const prefix = productData.imgPrefix || '';
+        const vLower = view.toLowerCase();
+        
+        // Auto-detect if it should be an MP4 or a JPG
+        const ext = (vLower.includes('video') || vLower.includes('vid') || vLower.includes('mp4')) ? 'mp4' : 'jpg';
+
         let path = '';
         
+        // Legacy support for specific primary room scene overrides
         if (view === 'ROOM' && productData.roomPrefix) {
             const suffix = productData.roomSuffix || '_room.jpg';
             path = `images/${folderName}/${productData.roomPrefix}${activeColor.sku}${suffix}`;
-        } else if (view === 'VIDEO') {
-            path = `images/${folderName}/${prefix}${activeColor.sku}_video.mp4`;
         } else {
-            path = `images/${folderName}/${prefix}${activeColor.sku}_${view}.jpg`;
+            path = `images/${folderName}/${prefix}${activeColor.sku}_${vLower}.${ext}`;
         }
+        
         return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path.toLowerCase())}?alt=media`;
     };
 
@@ -389,7 +394,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     };
 
     const toggleLightbox = () => {
-        if (activeView !== 'VIDEO') {
+        if (!activeView.includes('VIDEO')) {
             try {
                 setIsLightboxOpen(true);
             } catch(err) {
@@ -809,35 +814,42 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 {activeView === 'VIDEO' ? (
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
-                    <img src={getMediaPath(activeView) || FALLBACK_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
+                    <img src={getMediaPath(activeView) || FALLBACK_IMG} alt="Product" className="w-full h-full object-contain bg-white transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} />
+                    // replaced above with this <img src={getMediaPath(activeView) || FALLBACK_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
                 )}
             </div>
 
             {productData?.views && (
-                <div className="mt-4 flex gap-3">
-                    {productData.views.filter(v => !failedViews[`${activeColor?.sku}-${v}`]).map(v => (
-                         <div key={v} className="relative shrink-0">
-                             {v === 'VIDEO' && (
-                                 <video 
-                                    key={activeColor?.sku}
-                                    src={getMediaPath('VIDEO') || ''} 
-                                    className="hidden" 
-                                    preload="metadata"
-                                    onError={() => handleViewError('VIDEO')} 
+                <div className="mt-4 flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {productData.views.filter(v => !failedViews[`${activeColor?.sku}-${v}`]).map(v => {
+                         const isVideo = v.includes('VIDEO');
+                         return (
+                             <div key={v} className="relative shrink-0">
+                                 {isVideo && (
+                                     <video 
+                                        key={activeColor?.sku}
+                                        src={getMediaPath(v) || ''} 
+                                        className="hidden" 
+                                        preload="metadata"
+                                        onError={() => handleViewError(v)} 
+                                     />
+                                 )}
+                                 <img 
+                                    src={isVideo ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || FALLBACK_IMG)} 
+                                    className={`w-[75px] h-[75px] min-w-[75px] shrink-0 object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} 
+                                    onClick={() => setActiveView(v)} 
+                                    onError={(e) => { 
+                                        handleViewError(v); 
+                                        e.currentTarget.src = FALLBACK_IMG; 
+                                    }} 
+                                    alt={`View ${v}`} 
                                  />
-                             )}
-                             <img 
-                                src={v === 'VIDEO' ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || FALLBACK_IMG)} 
-                                className={`w-[75px] h-[75px] min-w-[75px] shrink-0 object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} 
-                                onClick={() => setActiveView(v)} 
-                                onError={(e) => { 
-                                    handleViewError(v); 
-                                    e.currentTarget.src = FALLBACK_IMG; 
-                                }} 
-                                alt={`View ${v}`} 
-                             />
-                         </div>
-                    ))}
+                                 {isVideo && (
+                                     <div className="absolute top-1 right-1 bg-black/70 rounded-sm px-1.5 py-0.5 text-[8px] text-white font-bold tracking-widest pointer-events-none">MP4</div>
+                                 )}
+                             </div>
+                         );
+                    })}
                 </div>
             )}
 
@@ -1147,7 +1159,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
               <div className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center backdrop-blur-sm transition-opacity" onClick={(e) => { if (e.target === e.currentTarget) setIsLightboxOpen(false); }}>
                   <button className="absolute top-5 right-5 bg-black/60 text-white border-2 border-white rounded-full w-11 h-11 text-2xl flex items-center justify-center cursor-pointer hover:bg-gold hover:border-gold hover:text-black transition-colors z-[10000] outline-none" onClick={() => setIsLightboxOpen(false)}>✕</button>
                   <div 
-                      className="w-[90vw] max-w-[1200px] h-[85vh] relative rounded-lg overflow-hidden cursor-crosshair touch-none" 
+                      className="w-[90vw] max-w-[1200px] h-[85vh] relative rounded-lg lg:overflow-hidden cursor-crosshair lg:touch-none" 
                       onMouseMove={handleZoomPan} 
                       onTouchMove={handleZoomPan} 
                       onMouseLeave={() => setZoomPos({x:50, y:50})} 
@@ -1156,7 +1168,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                       <img 
                           src={getMediaPath(activeView) || FALLBACK_IMG} 
                           alt="Zoomed Product" 
-                          className="w-full h-full object-contain transition-transform duration-150 ease-out hover:scale-[2.2]"
+                          className="w-full h-full object-contain transition-transform duration-150 ease-out lg:hover:scale-[2.2]"
                           style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }}
                           onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }}
                       />

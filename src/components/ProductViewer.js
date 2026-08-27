@@ -263,9 +263,9 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
          }
     }, [urlColorSku, productData, activeColor]);
 
-    useEffect(() => {
-        setFailedViews({});
-    }, [activeColor]);
+    //useEffect(() => {
+    //    setFailedViews({});
+    //}, [activeColor]);
 
     const handleViewError = (view) => {
         if (activeColor) {
@@ -839,8 +839,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                                     className={`w-[75px] h-[75px] min-w-[75px] shrink-0 object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} 
                                     onClick={() => setActiveView(v)} 
                                     onError={(e) => { 
+                                        e.currentTarget.parentNode.style.display = 'none';
                                         handleViewError(v); 
-                                        e.currentTarget.src = FALLBACK_IMG; 
                                     }} 
                                     alt={`View ${v}`} 
                                  />
