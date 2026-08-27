@@ -39,6 +39,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     });
 
     const [failedViews, setFailedViews] = useState({});
+    const [loadedViews, setLoadedViews] = useState({}); // <-- ADD THIS LINE
 
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     const [isBuilderOpen, setIsBuilderOpen] = useState(false);
@@ -263,9 +264,9 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
          }
     }, [urlColorSku, productData, activeColor]);
 
-    useEffect(() => {
-        setFailedViews({});
-    }, [activeColor]);
+    //useEffect(() => {
+    //    setFailedViews({});
+    //}, [activeColor]);
 
     const handleViewError = (view) => {
         if (activeColor) {
@@ -823,8 +824,11 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 <div className="mt-4 flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {productData.views.filter(v => !failedViews[`${activeColor?.sku}-${v}`]).map(v => {
                          const isVideo = v.includes('VIDEO');
+                         const viewKey = `${activeColor?.sku}-${v}`;
+                         const isLoaded = loadedViews[viewKey];
+
                          return (
-                             <div key={v} className="relative shrink-0">
+                             <div key={v} className={`relative shrink-0 ${isLoaded ? 'block' : 'hidden'}`}>
                                  {isVideo && (
                                      <video 
                                         key={activeColor?.sku}
@@ -838,10 +842,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                                     src={isVideo ? 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23c5a059" width="48px" height="48px"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>' : (getMediaPath(v) || FALLBACK_IMG)} 
                                     className={`w-[75px] h-[75px] min-w-[75px] shrink-0 object-cover border-2 rounded cursor-pointer transition ${activeView === v ? 'border-gold shadow-md' : 'border-gray-200 bg-gray-100'}`} 
                                     onClick={() => setActiveView(v)} 
-                                    onError={(e) => { 
-                                        handleViewError(v); 
-                                        e.currentTarget.src = FALLBACK_IMG; 
-                                    }} 
+                                    onLoad={() => setLoadedViews(prev => ({ ...prev, [viewKey]: true }))}
+                                    onError={() => handleViewError(v)} 
                                     alt={`View ${v}`} 
                                  />
                                  {isVideo && (

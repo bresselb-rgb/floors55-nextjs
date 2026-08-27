@@ -752,7 +752,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
                         return (
                             <div key={c.sku} className={`cursor-pointer text-center group ${!isDesktop ? 'snap-start shrink-0 w-[85px]' : ''}`} onClick={() => {
-                                router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
+                                // Bypasses the Next.js router to completely eliminate the server-side flash
+                                window.history.replaceState(null, '', `/product/${productData.id}?color=${c.sku}`);
                                 setActiveColor(c);
                             }}>
                                 <div className={`relative w-full aspect-square border-2 rounded-md transition duration-200 bg-gray-100 overflow-hidden ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`}>
@@ -821,7 +822,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             </div>
 
             {productData?.views && (
-                <div className="mt-4 flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="mt-4 flex gap-3 overflow-x-auto pb-2 min-h-[85px] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {productData.views.filter(v => !failedViews[`${activeColor?.sku}-${v}`]).map(v => {
                          const isVideo = v.includes('VIDEO');
                          const viewKey = `${activeColor?.sku}-${v}`;
