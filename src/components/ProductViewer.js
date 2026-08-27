@@ -815,6 +815,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
                     <img src={getMediaPath(activeView) || FALLBACK_IMG} alt="Product" className="w-full h-full object-contain bg-white transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} />
+                    // replaced above with this <img src={getMediaPath(activeView) || FALLBACK_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
                 )}
             </div>
 
@@ -1158,7 +1159,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
               <div className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center backdrop-blur-sm transition-opacity" onClick={(e) => { if (e.target === e.currentTarget) setIsLightboxOpen(false); }}>
                   <button className="absolute top-5 right-5 bg-black/60 text-white border-2 border-white rounded-full w-11 h-11 text-2xl flex items-center justify-center cursor-pointer hover:bg-gold hover:border-gold hover:text-black transition-colors z-[10000] outline-none" onClick={() => setIsLightboxOpen(false)}>✕</button>
                   <div 
-                      className="w-[90vw] max-w-[1200px] h-[85vh] relative rounded-lg overflow-hidden cursor-crosshair touch-none" 
+                      className="w-[90vw] max-w-[1200px] h-[85vh] relative rounded-lg lg:overflow-hidden cursor-crosshair lg:touch-none" 
                       onMouseMove={handleZoomPan} 
                       onTouchMove={handleZoomPan} 
                       onMouseLeave={() => setZoomPos({x:50, y:50})} 
@@ -1167,7 +1168,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                       <img 
                           src={getMediaPath(activeView) || FALLBACK_IMG} 
                           alt="Zoomed Product" 
-                          className="w-full h-full object-contain transition-transform duration-150 ease-out hover:scale-[2.2]"
+                          className="w-full h-full object-contain transition-transform duration-150 ease-out lg:hover:scale-[2.2]"
                           style={{ transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }}
                           onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }}
                       />
