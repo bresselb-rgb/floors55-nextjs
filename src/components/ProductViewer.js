@@ -829,7 +829,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                          const isLoaded = loadedViews[viewKey];
 
                          return (
-                             <div key={v} className={`relative shrink-0 ${isLoaded ? 'block' : 'hidden'}`}>
+                             <div key={v} className={`relative shrink-0 transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
                                  {isVideo && (
                                      <video 
                                         key={activeColor?.sku}
