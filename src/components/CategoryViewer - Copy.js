@@ -49,6 +49,16 @@ const normalizeSpecKey = (rawKey, category = '') => {
     if (k.includes('pad') || k.includes('cushion') || k.includes('underlayment')) return 'Attached Pad';
     if (k.includes('style') || k.includes('pattern') || k.includes('visual')) return 'Style Type';
     
+    // NEW TILE MAPPINGS
+    if (category === 'Tile') {
+        if (k.includes('dimension') || k === 'size' || k.includes('tile size')) return 'Tile Size';
+        if (k.includes('composition') || k.includes('material') || k === 'type') return 'Material';
+        if (k.includes('format')) return 'Tile Format';
+        if (k.includes('finish')) return 'Finish'; // 'glaze' removed to prevent 5 and 7 from showing up
+        if (k.includes('edge')) return 'Edge';
+        if (k.includes('shade') || k.includes('variation')) return 'Shade Variation';
+    }
+    
     // Force Laminate wear layers to group under AC Rating
     if (category === 'Laminate' && (k.includes('wear') || k.includes('ac rating') || k.includes('ac class'))) return 'AC Rating';
     
@@ -248,6 +258,55 @@ const normalizeSpecValue = (key, rawValue, category = '') => {
         return val;
     }
 
+    if (key.toLowerCase() === "tile size") {
+        // Upgraded regex to catch quotation marks like 12"x24"
+        const match = lowerVal.match(/([\d.]+)\s*(?:"|in|inch|''|”)?\s*[xX*]\s*([\d.]+)/);
+        if (match) return `${match[1]}" x ${match[2]}"`;
+        return val;
+    }
+
+    if (key.toLowerCase() === "material") {
+        // Strictly limits outputs to your requested list
+        if (lowerVal.includes('porcelain')) return "Porcelain";
+        if (lowerVal.includes('ceramic')) return "Ceramic";
+        if (lowerVal.includes('glass')) return "Glass";
+        if (lowerVal.includes('deco')) return "Deco";
+        return "None"; // Vaporizes any other materials from showing up
+    }
+
+    if (key.toLowerCase() === "tile format") {
+        if (lowerVal.includes('mosaic') || lowerVal.includes('mesh')) return "Mosaic";
+        if (lowerVal.includes('bullnose') || lowerVal.includes('trim') || lowerVal.includes('base') || lowerVal.includes('cove')) return "Trim & Bullnose";
+        if (lowerVal.includes('deco')) return "Deco";
+        return "Field Tile";
+    }
+
+    if (key.toLowerCase() === "finish") {
+        if (lowerVal.includes('gloss') || lowerVal.includes('polished') || lowerVal.includes('brilho')) return "Glossy";
+        if (lowerVal.includes('matte') || lowerVal.includes('honed')) return "Matte";
+        if (lowerVal.includes('texture') || lowerVal.includes('slip')) return "Textured";
+        return "None"; // Eliminates 5, 7, and random text
+    }
+
+    if (key.toLowerCase() === "edge") {
+        if (lowerVal.includes('rectified')) return "Rectified";
+        if (lowerVal.includes('pressed')) return "Pressed";
+        return val;
+    }
+
+    if (key.toLowerCase() === "shade variation") {
+        // Find any number 1-4, with or without a V, and force it to be strictly V1, V2, etc.
+        const match = lowerVal.match(/v?([1-4])/i);
+        if (match) return `V${match[1]}`;
+        
+        // Fallback catchers if the DB only contains words
+        if (lowerVal.includes('uniform')) return "V1";
+        if (lowerVal.includes('slight')) return "V2";
+        if (lowerVal.includes('moderate')) return "V3";
+        if (lowerVal.includes('substantial') || lowerVal.includes('random')) return "V4";
+        return val;
+    }
+
     return val;
 };
 
@@ -307,32 +366,51 @@ function CategoryViewerContent({ initialCategory }) {
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
+  // --- NEW: Restore Saved Filters from Session Storage ---
+  const getSavedFilters = (cat) => {
+      if (typeof window !== 'undefined') {
+          try { return JSON.parse(sessionStorage.getItem(`cv_filters_${cat}`)) || {}; } catch (e) {}
+      }
+      return {};
+  };
+  const savedFilters = getSavedFilters(initialCategory);
+
   const [userFavorites, setUserFavorites] = useState([]); // Array of product IDs
   const [proFavorites, setProFavorites] = useState([]); 
-  const [showProPicks, setShowProPicks] = useState(false);
+  const [showProPicks, setShowProPicks] = useState(savedFilters.showProPicks || false);
 
   // Raw input states (for the UI)
   const [searchQueryInput, setSearchQueryInput] = useState(() => {
       if (typeof window !== 'undefined') {
           const params = new URLSearchParams(window.location.search);
-          return params.get('search') || '';
+          return params.get('search') || savedFilters.searchQueryInput || '';
       }
       return '';
   });
-  const [maxPriceInput, setMaxPriceInput] = useState(10000); 
+  const [maxPriceInput, setMaxPriceInput] = useState(savedFilters.maxPriceInput || 10000); 
 
   // Debounced states (for the heavy filter logic)
   const searchQuery = useDebounce(searchQueryInput, 300);
   const maxPrice = useDebounce(maxPriceInput, 300);
 
-  const [selectedPrograms, setSelectedPrograms] = useState([]);
-  const [selectedBrands, setSelectedBrands] = useState([]);
-  const [selectedSpecs, setSelectedSpecs] = useState({});
-  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+  const [selectedPrograms, setSelectedPrograms] = useState(savedFilters.selectedPrograms || []);
+  const [selectedBrands, setSelectedBrands] = useState(savedFilters.selectedBrands || []);
+  const [selectedSpecs, setSelectedSpecs] = useState(savedFilters.selectedSpecs || {});
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(savedFilters.showOnlyFavorites || false);
   
-  const [sortMode, setSortMode] = useState('price-asc');
-  const [isListView, setIsListView] = useState(false);
+  const [sortMode, setSortMode] = useState(savedFilters.sortMode || 'price-asc');
+  const [isListView, setIsListView] = useState(savedFilters.isListView || false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+
+  // --- NEW: Automatically save active filters as they change ---
+  useEffect(() => {
+      if (typeof window !== 'undefined') {
+          sessionStorage.setItem(`cv_filters_${activeCategory}`, JSON.stringify({
+              searchQueryInput, maxPriceInput, selectedPrograms, selectedBrands, 
+              selectedSpecs, showOnlyFavorites, showProPicks, sortMode, isListView
+          }));
+      }
+  }, [activeCategory, searchQueryInput, maxPriceInput, selectedPrograms, selectedBrands, selectedSpecs, showOnlyFavorites, showProPicks, sortMode, isListView]);
   const [activePreviews, setActivePreviews] = useState({});
   const [toastMessage, setToastMessage] = useState('');
 
@@ -340,6 +418,25 @@ function CategoryViewerContent({ initialCategory }) {
       setToastMessage(msg);
       setTimeout(() => setToastMessage(''), 3000);
   };
+
+  // 1. Helper function to save the exact scroll pixel before leaving the page
+  const saveScrollPosition = () => {
+      sessionStorage.setItem('categoryScrollPosition', window.scrollY);
+  };
+
+  // 2. Automatically restore the scroll position once Firebase finishes loading the grid
+  useEffect(() => {
+      if (isDataLoaded) {
+          const savedScroll = sessionStorage.getItem('categoryScrollPosition');
+          if (savedScroll) {
+              // A tiny 100ms delay ensures the DOM has fully painted the images before scrolling
+              setTimeout(() => {
+                  window.scrollTo(0, parseInt(savedScroll, 10));
+                  sessionStorage.removeItem('categoryScrollPosition');
+              }, 100);
+          }
+      }
+  }, [isDataLoaded]);
 
   const handleShare = async (e, p) => {
       e.preventDefault();
@@ -765,6 +862,38 @@ function CategoryViewerContent({ initialCategory }) {
                       existingSpecs.push('Water Resistant: Water Resistant');
                   }
               }
+          } else if (data.category === 'Tile') {
+              const searchNet = `${data.displayTitle} ${fullDesc} ${(data.colors || []).map(c => c.name || '').join(' ')} ${existingSpecs.join(' ')}`.toLowerCase();
+
+              // 1. Material (Strict list)
+              if (!hasSpec('Material')) {
+                  if (searchNet.includes('porcelain')) existingSpecs.push('Material: Porcelain');
+                  else if (searchNet.includes('ceramic')) existingSpecs.push('Material: Ceramic');
+                  else if (searchNet.includes('glass')) existingSpecs.push('Material: Glass');
+                  else if (searchNet.includes('deco')) existingSpecs.push('Material: Deco');
+              }
+
+              // 2. Tile Format
+              if (!hasSpec('Tile Format')) {
+                  if (searchNet.includes('mosaic') || searchNet.includes('mesh') || data.displayTitle.toLowerCase().includes('m12')) existingSpecs.push('Tile Format: Mosaic');
+                  else if (searchNet.includes('bullnose') || searchNet.includes('trim') || data.isAccessory) existingSpecs.push('Tile Format: Trim & Bullnose');
+                  else if (searchNet.includes('deco') || searchNet.includes('decorative')) existingSpecs.push('Tile Format: Deco');
+                  else existingSpecs.push('Tile Format: Field Tile');
+              }
+
+              // 3. Finish
+              if (!hasSpec('Finish')) {
+                  if (searchNet.includes('gloss') || searchNet.includes('polished')) existingSpecs.push('Finish: Glossy');
+                  else if (searchNet.includes('matte') || searchNet.includes('honed')) existingSpecs.push('Finish: Matte');
+              }
+
+              // 4. Tile Size (Dimensions) with quote support
+              if (!hasSpec('Tile Size')) {
+                  const dimMatch = data.displayTitle.match(/([\d.]+)\s*(?:"|in|inch|''|”)?\s*[xX*]\s*([\d.]+)/);
+                  if (dimMatch) {
+                      existingSpecs.push(`Tile Size: ${dimMatch[1]}" x ${dimMatch[2]}"`);
+                  }
+              }
           } else {
               if (fullDesc.includes('cork') && !hasSpec('Attached Pad')) {
                   existingSpecs.push('Attached Pad: Attached Cork');
@@ -827,7 +956,20 @@ function CategoryViewerContent({ initialCategory }) {
   // Synchronize the input and debounced states when category changes
   useEffect(() => {
      if (liveProductsRaw.length > 0) {
-         setMaxPriceInput(priceBounds.max);
+         let savedMax = null;
+         if (typeof window !== 'undefined') {
+             try { 
+                 const saved = JSON.parse(sessionStorage.getItem(`cv_filters_${activeCategory}`)) || {}; 
+                 savedMax = saved.maxPriceInput;
+             } catch(e) {}
+         }
+         
+         // Only snap to the absolute top if they didn't have a customized limit saved
+         if (savedMax && savedMax < priceBounds.max) {
+             setMaxPriceInput(savedMax);
+         } else {
+             setMaxPriceInput(priceBounds.max);
+         }
      }
   }, [priceBounds.max, activeCategory]);
 
@@ -859,10 +1001,15 @@ function CategoryViewerContent({ initialCategory }) {
           "Wear Layer",
           "AC Rating",
           "Attached Pad",
-          //"Species",
           "Style Type",
           "Fiber Type",
-          "Face Weight"
+          "Face Weight",
+          "Tile Size",
+          "Tile Format",
+          "Material",
+          "Finish",
+          "Edge",
+          "Shade Variation"
       ];
 
       if (activeCategory === 'Carpet' || activeCategory === 'Carpet Cushion') {
@@ -871,7 +1018,13 @@ function CategoryViewerContent({ initialCategory }) {
               s !== "Thickness" && 
               s !== "Waterproof" && 
               s !== "Wear Layer" &&
-              s !== "AC Rating"
+              s !== "AC Rating" &&
+              s !== "Tile Size" &&
+              s !== "Tile Format" &&
+              s !== "Material" &&
+              s !== "Finish" &&
+              s !== "Edge" &&
+              s !== "Shade Variation"
           );
       } else if (['Luxury Vinyl (LVP)', 'Hardwood', 'Laminate', 'Tile'].includes(activeCategory)) {
               // Strictly eliminate carpet specs from hard surface categories
@@ -879,12 +1032,42 @@ function CategoryViewerContent({ initialCategory }) {
                   s !== "Face Weight" && 
                   s !== "Fiber Type"
               );
-              if (activeCategory !== 'Laminate') {
-                  TARGET_SPECS = TARGET_SPECS.filter(s => s !== "AC Rating");
-              } else {
-                  // Laminate category: remove Wear Layer, Construction, and Style Type, swap Waterproof to Water Resistant
-                  TARGET_SPECS = TARGET_SPECS.filter(s => s !== "Wear Layer" && s !== "Construction / Core" && s !== "Style Type");
+              
+              if (activeCategory === 'Tile') {
+                  // Keep Tile-specific specs and generic ones like Thickness
+                  TARGET_SPECS = TARGET_SPECS.filter(s => 
+                      s !== "Wear Layer" && 
+                      s !== "Construction / Core" && 
+                      s !== "Attached Pad" && 
+                      s !== "Waterproof" && 
+                      s !== "AC Rating" && 
+                      s !== "Style Type"
+                  );
+              } else if (activeCategory === 'Laminate') {
+                  // Laminate category rules
+                  TARGET_SPECS = TARGET_SPECS.filter(s => 
+                      s !== "Wear Layer" && 
+                      s !== "Construction / Core" && 
+                      s !== "Style Type" &&
+                      s !== "Tile Size" &&
+                      s !== "Tile Format" &&
+                      s !== "Material" &&
+                      s !== "Finish" &&
+                      s !== "Edge" &&
+                      s !== "Shade Variation"
+                  );
                   TARGET_SPECS = TARGET_SPECS.map(s => s === "Waterproof" ? "Water Resistant" : s);
+              } else {
+                  // LVP and Hardwood rules
+                  TARGET_SPECS = TARGET_SPECS.filter(s => 
+                      s !== "AC Rating" &&
+                      s !== "Tile Size" &&
+                      s !== "Tile Format" &&
+                      s !== "Material" &&
+                      s !== "Finish" &&
+                      s !== "Edge" &&
+                      s !== "Shade Variation"
+                  );
               }
           }
       
@@ -898,6 +1081,7 @@ function CategoryViewerContent({ initialCategory }) {
 
       relevantProducts.forEach(p => {
           (p.specs || []).forEach(s => {
+              if (typeof s !== 'string') return;
               const parts = s.split(':');
               if (parts.length >= 2) {
                   const rawKey = parts[0].trim();
@@ -927,6 +1111,13 @@ function CategoryViewerContent({ initialCategory }) {
                   }
                   if (specName === "Face Weight") {
                       return (FACE_WEIGHT_ORDER[a] || 99) - (FACE_WEIGHT_ORDER[b] || 99);
+                  }
+                  if (specName === "Tile Size") {
+                      const matchA = a.match(/([\d.]+)/);
+                      const matchB = b.match(/([\d.]+)/);
+                      const numA = matchA ? parseFloat(matchA[1]) : 999;
+                      const numB = matchB ? parseFloat(matchB[1]) : 999;
+                      if (numA !== numB) return numA - numB;
                   }
                   const numA = parseFloat(a);
                   const numB = parseFloat(b);
@@ -1363,12 +1554,8 @@ function CategoryViewerContent({ initialCategory }) {
                         {filteredProducts.filter((p, index, self) => {
                             // FAST FILTER: Smart group Tile Families by prioritizing Field Tiles over Accessories
                             if (p.category === 'Tile' && p.styleFamily) {
-                                // Find the first product in this family that is NOT an accessory
                                 const mainRepIndex = self.findIndex(s => s.styleFamily === p.styleFamily && s.isAccessory !== true);
-                                
-                                // Fallback to the very first item if no main field tile exists for some reason
                                 const targetIndex = mainRepIndex !== -1 ? mainRepIndex : self.findIndex(s => s.styleFamily === p.styleFamily);
-                                
                                 return index === targetIndex;
                             }
                             return true;
@@ -1428,7 +1615,7 @@ function CategoryViewerContent({ initialCategory }) {
                                         </button>
                                     )}
 
-                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
+                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} onClick={saveScrollPosition} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
                                         <img src={fbPath} className="w-full h-full object-cover transition duration-300 hover:scale-105" onError={e => e.target.src=TBD_IMG} />
                                     </Link>
 
@@ -1457,7 +1644,7 @@ function CategoryViewerContent({ initialCategory }) {
                                             {!isListView && (
                                                 <>
                                                 <h3 className="text-lg font-bold text-gray-900 truncate">
-                                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} onClick={saveScrollPosition} style={{ textDecoration: 'none', color: 'inherit' }}>
                                                         {isTileFamily ? `${displayTitle.split(' ')[0]} Series` : displayTitle}
                                                     </Link>
                                                 </h3>
@@ -1469,7 +1656,7 @@ function CategoryViewerContent({ initialCategory }) {
                                         {isListView && (
                                             <>
                                                 <h3 className="text-lg font-bold text-gray-900 truncate">
-                                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                                    <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} onClick={saveScrollPosition} style={{ textDecoration: 'none', color: 'inherit' }}>
                                                         {isTileFamily ? `${displayTitle.split(' ')[0]} Series` : displayTitle}
                                                     </Link>
                                                 </h3>
@@ -1543,7 +1730,7 @@ function CategoryViewerContent({ initialCategory }) {
                                             )}
 
                                             <div className={`flex gap-2 w-full ${isListView ? 'mt-2' : ''}`}>
-                                                <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} className={isListView ? "flex-1 w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-2 rounded-lg transition text-[10px] tracking-widest" : "flex-1 w-full block text-center border border-black hover:bg-black text-black hover:text-white font-black uppercase py-2.5 rounded-xl transition text-[10px] tracking-widest"} style={{ textDecoration: 'none' }}>
+                                                <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} onClick={saveScrollPosition} className={isListView ? "flex-1 w-full block text-center bg-black hover:bg-gold text-white hover:text-black font-black uppercase py-2 rounded-lg transition text-[10px] tracking-widest" : "flex-1 w-full block text-center border border-black hover:bg-black text-black hover:text-white font-black uppercase py-2.5 rounded-xl transition text-[10px] tracking-widest"} style={{ textDecoration: 'none' }}>
                                                     {isTileFamily ? "View Series Options" : "View Details"}
                                                 </Link>
                                                 <button onClick={(e) => handleShare(e, p)} className={`shrink-0 flex items-center justify-center border border-gray-200 text-gray-500 hover:text-gold hover:border-gold transition-colors cursor-pointer outline-none ${isListView ? 'w-9 rounded-lg' : 'w-10 rounded-xl'}`} title="Share Product">

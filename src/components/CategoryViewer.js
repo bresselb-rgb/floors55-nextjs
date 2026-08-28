@@ -865,19 +865,17 @@ function CategoryViewerContent({ initialCategory }) {
           } else if (data.category === 'Tile') {
               const searchNet = `${data.displayTitle} ${fullDesc} ${(data.colors || []).map(c => c.name || '').join(' ')} ${existingSpecs.join(' ')}`.toLowerCase();
 
-              // 1. Material (Strict list)
-              if (!hasSpec('Material')) {
-                  if (searchNet.includes('porcelain')) existingSpecs.push('Material: Porcelain');
-                  else if (searchNet.includes('ceramic')) existingSpecs.push('Material: Ceramic');
-                  else if (searchNet.includes('glass')) existingSpecs.push('Material: Glass');
-                  else if (searchNet.includes('deco')) existingSpecs.push('Material: Deco');
-              }
+              // 1. Material (Removed the hasSpec blocker so it always catches ceramic/porcelain hidden in descriptions)
+              if (searchNet.includes('porcelain')) existingSpecs.push('Material: Porcelain');
+              else if (searchNet.includes('ceramic')) existingSpecs.push('Material: Ceramic');
+              else if (searchNet.includes('glass')) existingSpecs.push('Material: Glass');
+              else if (searchNet.includes('deco')) existingSpecs.push('Material: Deco');
 
               // 2. Tile Format
               if (!hasSpec('Tile Format')) {
-                  if (searchNet.includes('mosaic') || searchNet.includes('mesh') || data.displayTitle.toLowerCase().includes('m12')) existingSpecs.push('Tile Format: Mosaic');
-                  else if (searchNet.includes('bullnose') || searchNet.includes('trim') || data.isAccessory) existingSpecs.push('Tile Format: Trim & Bullnose');
-                  else if (searchNet.includes('deco') || searchNet.includes('decorative')) existingSpecs.push('Tile Format: Deco');
+                  if (searchNet.includes('bullnose') || searchNet.includes('trim') || data.isAccessory) existingSpecs.push('Tile Format: Trim & Bullnose');
+                  else if (searchNet.includes('deco') || searchNet.includes('decorative')) existingSpecs.push('Tile Format: Deco'); // MOVED UP: Deco now takes priority over Mosaic
+                  else if (searchNet.includes('mosaic') || searchNet.includes('mesh') || data.displayTitle.toLowerCase().includes('m12')) existingSpecs.push('Tile Format: Mosaic');
                   else existingSpecs.push('Tile Format: Field Tile');
               }
 
