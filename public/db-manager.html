@@ -130,8 +130,8 @@
                             
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label class="block text-[9px] font-black uppercase tracking-wider text-gray-500 mb-1">Image Folder (Optional)</label>
-                                    <input type="text" id="ai-img-prefix" placeholder="e.g. ftaura" class="w-full bg-gray-950 border border-gray-800 rounded px-2.5 py-1.5 text-xs text-white outline-none focus:border-gold">
+                                    <label class="block text-[9px] font-black uppercase tracking-wider text-gray-500 mb-1">Image Prefix (e.g. sw789_)</label>
+                                    <input type="text" id="ai-img-prefix" placeholder="e.g. sw789_" class="w-full bg-gray-950 border border-gray-800 rounded px-2.5 py-1.5 text-xs text-white outline-none focus:border-gold">
                                 </div>
                                 <div>
                                     <label class="block text-[9px] font-black uppercase tracking-wider text-gray-500 mb-1">Color Count</label>
@@ -798,8 +798,7 @@
             CRITICAL EXTRACTION GUIDELINES:
             1. Find and extract EVERY SINGLE colorway listed in the text or web page. There should be EXACTLY ${colorCount} colors. Do not stop early. Do not truncate the list. You MUST output all ${colorCount} colors in the "colors" array.
             2. Match every color name to its correct corresponding numeric SKU value (such as '00732' for 'Slate').
-            3. If a folder prefix is provided, set "imageFolder" to exactly "${prefix}". If it is empty, set it to null.
-            4. Make sure "category" is exactly "${category}".
+            3. If a folder prefix is provided, set "imgPrefix" to exactly "${prefix}". Create an "imageFolder" name by combining the product name and base SKU in lowercase with hyphens (e.g., "coretec-originals-vv458").
             5. Set "calcType" to "carton" (if Hardwood, Laminate, or Luxury Vinyl LVP) or "carpet" (if Carpet or Carpet Cushion).
             6. If the category is "Carpet Cushion", set "cartonSize" to the roll square footage (e.g. 360). If "Carpet", set "cartonSize" to null and do NOT include any carton info in the specs. Otherwise, set it to ${cartonSize !== 'N/A' && cartonSize !== 'Unknown' ? parseFloat(cartonSize) : 1} or the numeric box coverage.
             7. Ensure "views" includes "VIDEO" as a supported view (e.g., ["MAIN", "ROOM", "SWATCH", "VIDEO"]).
@@ -812,7 +811,8 @@
               "manufacturer": "Manufacturer Company Name",
               "sku": "Base SKU / Style Number (e.g. 5E895)",
               "category": "${category}",
-              "imageFolder": "${prefix || 'null'}",
+              "imageFolder": "product-name-sku",
+              "imgPrefix": "${prefix || ''}",
               "views": ["MAIN", "ROOM", "SWATCH", "VIDEO"],
               "desc": "Brand agnostic 1-2 sentence description here...",
               "price": 0.00,
