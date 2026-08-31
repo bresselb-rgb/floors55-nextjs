@@ -816,7 +816,12 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 {activeView === 'VIDEO' ? (
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
-                    <img src={getMediaPath(activeView) || FALLBACK_IMG} alt="Product" className="w-full h-full object-contain bg-white transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} />
+                    <img 
+                        src={getMediaPath(activeView) || FALLBACK_IMG} 
+                        alt="Product" 
+                        className={`w-full h-full bg-white transition-opacity duration-200 group-hover:opacity-85 ${activeView === 'MAIN' ? 'object-cover' : 'object-contain'}`} 
+                        onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} 
+                    />
                     // replaced above with this <img src={getMediaPath(activeView) || FALLBACK_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
                 )}
             </div>
