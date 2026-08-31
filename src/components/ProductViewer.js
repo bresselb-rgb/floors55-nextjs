@@ -825,11 +825,14 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 <div className="mt-4 flex gap-3 overflow-x-auto pb-2 min-h-[85px] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {productData.views.filter(v => !failedViews[`${activeColor?.sku}-${v}`]).map(v => {
                          const isVideo = v.includes('VIDEO');
-                         const viewKey = `${activeColor?.sku}-${v}`;
-                         const isLoaded = loadedViews[viewKey];
+                     const viewKey = `${activeColor?.sku}-${v}`;
+                     
+                     // Bypass the wait time for the static video SVG so it never gets stuck invisible
+                     const isLoaded = isVideo || loadedViews[viewKey];
 
-                         return (
-                             <div key={v} className={`relative shrink-0 transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+                     // Adding the SKU to the key forces React to fully refresh the element when colors change
+                     return (
+                         <div key={`${activeColor?.sku}-${v}`} className={`relative shrink-0 transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
                                  {isVideo && (
                                      <video 
                                         key={activeColor?.sku}
