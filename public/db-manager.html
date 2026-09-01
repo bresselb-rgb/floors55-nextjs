@@ -193,6 +193,20 @@
                                 </div>
                             </div>
 
+                            <div class="pt-3 mt-3 border-t border-gray-850">
+                                <label class="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Set Retail Margin (%)</label>
+                                <div class="flex gap-2 mb-2">
+                                    <input type="number" id="batch-retail-margin" placeholder="e.g. 50" class="flex-1 bg-gray-950 border border-gray-800 rounded px-2.5 py-1.5 text-xs text-white outline-none focus:border-gold">
+                                    <select id="batch-target-type" class="flex-1 bg-gray-950 border border-gray-800 rounded px-2 py-1 text-[10px] text-white font-bold outline-none focus:border-gold cursor-pointer">
+                                        <option value="all">All Products</option>
+                                        <option value="accessories">Trims & Accessories Only</option>
+                                    </select>
+                                </div>
+                                <button onclick="window.applyBatchRetailMargin()" class="w-full bg-gray-800 hover:bg-gold hover:text-black transition-all px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider">
+                                    Apply Retail Margin
+                                </button>
+                            </div>
+
                             <div class="pt-2 border-t border-gray-850">
                                 <label class="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Visibility Override</label>
                                 <div class="flex gap-2">
@@ -956,6 +970,65 @@
 
             showToast(`Adjusted ${processed} products!`);
             logEvent(`Completed batch pricing update on ${processed} documents.`, "success");
+        };
+
+window.applyBatchRetailMargin = async () => {
+            if (currentCollection !== 'pricing') {
+                window.customAlert("Invalid Collection", "Margin adjustments can only be applied to the 'pricing' (Catalog) collection.");
+                return;
+            }
+
+            const marginInput = parseFloat(document.getElementById('batch-retail-margin').value);
+            if (isNaN(marginInput) || marginInput <= 0 || marginInput >= 100) {
+                window.customAlert("Invalid Margin", "Please enter a valid margin percentage (e.g. 50).");
+                return;
+            }
+
+            const targetType = document.getElementById('batch-target-type').value;
+            const targetText = targetType === 'accessories' ? "all Trims & Accessories" : "ALL products";
+
+            const consent = await window.customConfirm("Set Retail Margin", `Are you sure you want to hard-reset the retail margin to ${marginInput}% for ${targetText}?`);
+            if (!consent) return;
+
+            logEvent(`Initiating batch retail margin reset to ${marginInput}% for ${targetType}...`, "warn");
+            let processed = 0;
+
+            for (const prod of documentsCache) {
+                let isMatch = false;
+                
+                if (targetType === 'all') {
+                    isMatch = true;
+                } else if (targetType === 'accessories') {
+                    // Check if it's flagged as an accessory or categorized as Trim & Molding
+                    if (prod.isAccessory === true || prod.category === 'Trim & Molding') {
+                        isMatch = true;
+                    }
+                }
+
+                if (isMatch) {
+                    // Cost basis: prioritize landedCost, fallback to wholesale price if landedCost is missing
+                    let baseCost = parseFloat(prod.landedCost);
+                    if (isNaN(baseCost)) baseCost = parseFloat(prod.price);
+                    
+                    if (!isNaN(baseCost) && baseCost > 0) {
+                        const newRetail = Math.round((baseCost / (1 - (marginInput / 100))) * 100) / 100;
+                        
+                        const cleanProd = { ...prod };
+                        delete cleanProd.id;
+                        cleanProd.retailPrice = newRetail;
+
+                        try {
+                            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', prod.id), cleanProd);
+                            processed++;
+                        } catch (e) {
+                            logEvent(`Failed to update ${prod.id}: ${e.message}`, "error");
+                        }
+                    }
+                }
+            }
+
+            showToast(`Adjusted ${processed} items!`);
+            logEvent(`Completed retail margin update on ${processed} documents.`, "success");
         };
 
         window.setBatchVisibility = async (status) => {
