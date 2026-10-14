@@ -442,6 +442,10 @@
                             <input type="checkbox" id="new-prod-contractor" class="accent-purple-600 h-4 w-4">
                             🛠️ Feature in Contractor Pro
                         </label>
+                        <label class="flex items-center gap-2 text-[11px] font-bold text-orange-700 cursor-pointer">
+                            <input type="checkbox" id="new-prod-gluedown" class="accent-orange-600 h-4 w-4">
+                            🧴 Glue Down Installation
+                        </label>
                         <label class="flex items-center gap-2 text-[11px] font-bold text-indigo-700 cursor-pointer md:col-span-2 bg-indigo-50 p-2 rounded">
                             <input type="checkbox" id="new-prod-is-accessory" class="accent-indigo-600 h-4 w-4">
                             🔗 Mark as Accessory (Hides from main catalog grids, keeps SKU searchable)
@@ -1652,6 +1656,9 @@
                                 <label class="flex items-center gap-1 text-[9px] font-bold text-purple-600 cursor-pointer">
                                     <input type="checkbox" id="edit-contractor-${p.id}" ${isContractor ? 'checked' : ''} class="accent-purple-600 h-3.3 w-3.5"> 🛠️ Contractor
                                 </label>
+                                <label class="flex items-center gap-1 text-[9px] font-bold text-orange-600 cursor-pointer">
+                                    <input type="checkbox" id="edit-gluedown-${p.id}" ${p.isGlueDown ? 'checked' : ''} class="accent-orange-600 h-3.3 w-3.5"> 🧴 Glue Down
+                                </label>
                             </div>
                         </td>
                         <td class="px-4 py-1.5 align-middle">
@@ -1814,6 +1821,7 @@
             const isSale = document.getElementById(`edit-sale-${id}`).checked;
             const isPropMgt = document.getElementById(`edit-prop-${id}`).checked;
             const isContractor = document.getElementById(`edit-contractor-${id}`).checked;
+            const isGlueDown = document.getElementById(`edit-gluedown-${id}`)?.checked || false;
             const imgPrefix = document.getElementById(`edit-img-prefix-${id}`).value;
 
             const btn = e.target;
@@ -1837,6 +1845,7 @@
                     isSale: isSale,
                     isPropMgt: isPropMgt,
                     isContractor: isContractor,
+                    isGlueDown: isGlueDown,
                     isAccessory: isAccessory,
                     length: length,
                     width: width,
@@ -1976,6 +1985,7 @@
                         isSale: document.getElementById('new-prod-is-sale').checked,
                         isPropMgt: document.getElementById('new-prod-prop-mgt').checked,
                         isContractor: document.getElementById('new-prod-contractor').checked,
+                        isGlueDown: document.getElementById('new-prod-gluedown')?.checked || false,
                         isAccessory: document.getElementById('new-prod-is-accessory').checked,
                         length: document.getElementById('new-prod-length').value,
                         width: document.getElementById('new-prod-width').value,

@@ -400,17 +400,17 @@ function CategoryViewerContent({ initialCategory }) {
   
   const [sortMode, setSortMode] = useState(savedFilters.sortMode || 'price-asc');
   const [isListView, setIsListView] = useState(savedFilters.isListView || false);
+  const [glueDownOnly, setGlueDownOnly] = useState(savedFilters.glueDownOnly || false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-
   // --- NEW: Automatically save active filters as they change ---
   useEffect(() => {
       if (typeof window !== 'undefined') {
           sessionStorage.setItem(`cv_filters_${activeCategory}`, JSON.stringify({
               searchQueryInput, maxPriceInput, selectedPrograms, selectedBrands, 
-              selectedSpecs, showOnlyFavorites, showProPicks, sortMode, isListView
+              selectedSpecs, showOnlyFavorites, showProPicks, sortMode, isListView, glueDownOnly
           }));
       }
-  }, [activeCategory, searchQueryInput, maxPriceInput, selectedPrograms, selectedBrands, selectedSpecs, showOnlyFavorites, showProPicks, sortMode, isListView]);
+  }, [activeCategory, searchQueryInput, maxPriceInput, selectedPrograms, selectedBrands, selectedSpecs, showOnlyFavorites, showProPicks, sortMode, isListView, glueDownOnly]);
   const [activePreviews, setActivePreviews] = useState({});
   const [toastMessage, setToastMessage] = useState('');
 
@@ -1159,9 +1159,10 @@ function CategoryViewerContent({ initialCategory }) {
     const searchVal = searchQuery.toLowerCase().trim();
     
     return liveProductsRaw.filter(p => {
-        // FAST FAIL: Favorite Filter
+        // FAST FAIL: Favorite & Glue Down Filters
         if (showOnlyFavorites && !userFavorites.includes(p.id)) return false;
         if (showProPicks && !proFavorites.includes(p.id)) return false;
+        if (glueDownOnly && !p.isGlueDown) return false;
 
         const priceValue = isClientMode ? p.price * (1 + clientMargin / 100) : (isWholesale ? p.price : (p.retailPrice ? parseFloat(p.retailPrice) : (p.price * 2.2)));
 
@@ -1259,7 +1260,7 @@ function CategoryViewerContent({ initialCategory }) {
         if (catCompare !== 0) return catCompare;
         return (aTitle || '').localeCompare(bTitle || '');
     });
-  }, [liveProductsRaw, activeCategory, searchQuery, maxPrice, selectedPrograms, selectedBrands, selectedSpecs, sortMode, isWholesale, isClientMode, clientMargin, isPrivateLabel, showOnlyFavorites, userFavorites, showProPicks, proFavorites]);
+  }, [liveProductsRaw, activeCategory, searchQuery, maxPrice, selectedPrograms, selectedBrands, selectedSpecs, sortMode, isWholesale, isClientMode, clientMargin, isPrivateLabel, showOnlyFavorites, userFavorites, showProPicks, proFavorites, glueDownOnly]);
 
   const resetAllFilters = () => {
       setSearchQueryInput('');
@@ -1270,6 +1271,7 @@ function CategoryViewerContent({ initialCategory }) {
       setSortMode('price-asc');
       setShowOnlyFavorites(false);
       setShowProPicks(false);
+      setGlueDownOnly(false);
       if (isMobileDrawerOpen) setIsMobileDrawerOpen(false);
   };
 
@@ -1494,9 +1496,21 @@ function CategoryViewerContent({ initialCategory }) {
                     </div>
                 </div>
 
+                {activeCategory === 'Luxury Vinyl (LVP)' && (
+                    <div className="pt-4 mt-4 border-t border-gray-100">
+                        <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-gold transition-colors">
+                            <input 
+                                type="checkbox" 
+                                checked={glueDownOnly} 
+                                onChange={(e) => setGlueDownOnly(e.target.checked)}
+                                className="w-4 h-4 accent-gold"
+                            />
+                            🧴 Show Glue Down Only
+                        </label>
+                    </div>
+                )}
                
                 {renderSpecFilters()}
-
                 <div className="pt-4 border-t border-gray-100">
                     <button onClick={resetAllFilters} className="w-full bg-gray-50 hover:bg-gray-100 text-gray-500 hover:text-black border border-gray-200 font-bold text-[10px] uppercase py-2 rounded-xl transition outline-none cursor-pointer">
                         Clear Active Filters
@@ -1818,6 +1832,19 @@ function CategoryViewerContent({ initialCategory }) {
                     </div>
                 </div>
 
+                {activeCategory === 'Luxury Vinyl (LVP)' && (
+                    <div className="pt-4 mt-4 border-t border-gray-100">
+                        <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer hover:text-gold transition-colors">
+                            <input 
+                                type="checkbox" 
+                                checked={glueDownOnly} 
+                                onChange={(e) => setGlueDownOnly(e.target.checked)}
+                                className="w-4 h-4 accent-gold"
+                            />
+                            🧴 Show Glue Down Only
+                        </label>
+                    </div>
+                )}
                                 
                 {renderSpecFilters()}
 
