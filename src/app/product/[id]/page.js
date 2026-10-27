@@ -41,7 +41,7 @@ export async function generateMetadata({ params, searchParams }) {
   const docSnap = await getDoc(docRef);
 
   if (!docSnap.exists()) {
-    return { title: 'Product Not Found | Floors 55' };
+    return { title: 'Product Not Found | Floors 55 Pro' };
   }
 
   const data = docSnap.data();
@@ -49,25 +49,30 @@ export async function generateMetadata({ params, searchParams }) {
     ? (data.privateName || 'Custom Collection') 
     : (data.name || 'Unnamed Product');
 
+  // Strip HTML tags for clean meta tags and limit to Google's preferred 155 characters
+  const rawTextDesc = data.desc ? data.desc.replace(/<[^>]*>?/gm, '').substring(0, 155) : '';
+  const seoDesc = rawTextDesc || `Source ${title} wholesale ${data.category || 'flooring'} at Floors 55 Pro. Exclusive B2B pricing for Portland contractors, custom builders, and property managers.`;
+
   const imageUrl = getGridImgUrl(data);
+  const categoryLabel = data.category ? `Wholesale ${data.category}` : 'Premium Flooring';
 
   return {
-    title: `${title} | Floors 55`,
-    description: data.desc || `View the ${title} premium flooring collection at Floors 55.`,
+    title: `${title} | ${categoryLabel} | Floors 55 Pro Portland`,
+    description: seoDesc,
     openGraph: {
-        title: `${title} | Floors 55`,
-        description: data.desc || `View the ${title} premium flooring collection at Floors 55.`,
+        title: `${title} | Floors 55 Pro`,
+        description: seoDesc,
         images: [{ url: imageUrl, width: 1200, height: 630 }],
         type: 'website'
     },
     twitter: {
         card: 'summary_large_image',
-        title: `${title} | Floors 55`,
-        description: data.desc || `View the ${title} premium flooring collection at Floors 55.`,
+        title: `${title} | Floors 55 Pro`,
+        description: seoDesc,
         images: [imageUrl]
     },
     alternates: {
-      canonical: `https://www.floors55pro.com/product/${id}`,
+      canonical: `https://floors55pro.com/product/${id}`,
     }
   };
 }
