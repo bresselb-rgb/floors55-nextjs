@@ -33,11 +33,11 @@ export default function WarrantiesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
             <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
                 <h3 className="text-xl font-bold mb-4 border-b border-gray-100 pb-2">The "Wear" Warranty</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">This guarantees that the clear protective wear layer on top of your LVP or Laminate will not wear completely through to the printed decorative film underneath under normal household conditions. <strong>Note:</strong> This does not mean the floor is scratch-proof. Scratches, dents, and scuffs are considered normal wear and tear and are not covered.</p>
+                <p className="text-gray-600 text-sm leading-relaxed">This guarantees that the clear protective wear layer on top of your <Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">LVP</Link> or <Link href="/category/laminate" className="text-gold font-bold hover:underline transition-colors">Laminate</Link> will not wear completely through to the printed decorative film underneath under normal household conditions. <strong>Note:</strong> This does not mean the floor is scratch-proof. Scratches, dents, and scuffs are considered normal wear and tear and are not covered.</p>
             </div>
             <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
                 <h3 className="text-xl font-bold mb-4 border-b border-gray-100 pb-2">The "Structural" Warranty</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">This guarantees that the flooring will not delaminate, cup, warp, or fail structurally due to manufacturing defects. If a locking mechanism snaps because of a factory error, the structural warranty covers the replacement materials.</p>
+                <p className="text-gray-600 text-sm leading-relaxed">This guarantees that the flooring will not delaminate, cup, warp, or fail structurally due to manufacturing defects. Whether you install engineered <Link href="/category/hardwood" className="text-gold font-bold hover:underline transition-colors">hardwood</Link> or rigid-core vinyl, if a locking mechanism snaps because of a factory error, the structural warranty covers the replacement materials.</p>
             </div>
         </div>
 
@@ -65,11 +65,10 @@ export default function WarrantiesPage() {
             </ul>
         </section>
 
-        <div className="text-center">
-            <p className="text-gray-600 italic text-sm">This is a general overview. Always refer to your specific product's manufacturer warranty documentation for exact details and coverage.</p>
+        <div className="mb-16 text-center border-b border-gray-200 pb-12">
+            <p className="text-gray-600 italic text-sm mb-6">This is a general overview. Always refer to your specific product's manufacturer warranty documentation for exact details and coverage.</p>
+            <p className="text-gray-900 font-bold mb-6">Want to ensure your warranty remains valid? Trust our professional installers in Portland and Lake Oswego.</p>
+            <Link href="/locations" className="inline-block bg-black text-white px-8 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:bg-gold hover:text-black transition-all shadow-md" style={{ textDecoration: 'none' }}>
+                Contact Our Local Installation Team
+            </Link>
         </div>
-
-      </div>
-    </main>
-  );
-}

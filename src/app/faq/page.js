@@ -33,12 +33,12 @@ export default function FAQPage() {
             
             <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
                 <h3 className="text-xl font-bold mb-3">Can I install Luxury Vinyl (LVP) over my existing tile?</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">In many cases, yes. LVP can be floated over existing hard surfaces like tile or well-adhered sheet vinyl. However, the existing floor must be flat. If your tile has deep grout lines, they must be filled with a leveling compound first, otherwise, the LVP will eventually settle and "telegraph" the grout lines through the surface.</p>
+                <p className="text-gray-600 text-sm leading-relaxed">In many cases, yes. <Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">Luxury Vinyl (LVP)</Link> can be floated over existing hard surfaces like <Link href="/category/tile" className="text-gold font-bold hover:underline transition-colors">tile</Link> or well-adhered sheet vinyl. However, the existing floor must be flat. If your tile has deep grout lines, they must be filled with a leveling compound first, otherwise, the LVP will eventually settle and "telegraph" the grout lines through the surface.</p>
             </div>
 
             <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
                 <h3 className="text-xl font-bold mb-3">Do I need to buy a separate underlayment pad?</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">It depends on the product. Almost all of our premium Luxury Vinyl (LVP) and many Laminates come with a high-density acoustic pad already attached to the back. If a pad is pre-attached, adding a second soft pad under it will actually cause the locking system to break! For solid hardwood or traditional laminate without a pad, a separate underlayment is required.</p>
+                <p className="text-gray-600 text-sm leading-relaxed">It depends on the product. Almost all of our premium <Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">Luxury Vinyl (LVP)</Link> and many <Link href="/category/laminate" className="text-gold font-bold hover:underline transition-colors">Laminates</Link> come with a high-density acoustic pad already attached to the back. If a pad is pre-attached, adding a second soft pad under it will actually cause the locking system to break! For <Link href="/category/hardwood" className="text-gold font-bold hover:underline transition-colors">solid hardwood</Link> or traditional laminate without a pad, a separate underlayment is required.</p>
             </div>
 
             <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
@@ -48,20 +48,20 @@ export default function FAQPage() {
 
             <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
                 <h3 className="text-xl font-bold mb-3">Which is better for big dogs: Laminate or LVP?</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">If scratch resistance is your #1 concern, modern Premium Laminate is the winner. It is coated with aluminum oxide, making it vastly more scratch-resistant to heavy dog claws than vinyl. However, LVP is 100% waterproof. If you are worried about pet accidents sitting on the floor all day while you are at work, LVP might be the safer structural choice.</p>
+                <p className="text-gray-600 text-sm leading-relaxed">If scratch resistance is your #1 concern, modern <Link href="/category/laminate" className="text-gold font-bold hover:underline transition-colors">Premium Laminate</Link> is the winner. It is coated with aluminum oxide, making it vastly more scratch-resistant to heavy dog claws than vinyl. However, <Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">LVP</Link> is 100% waterproof. If you are worried about pet accidents sitting on the floor all day while you are at work, LVP might be the safer structural choice.</p>
             </div>
 
             <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
                 <h3 className="text-xl font-bold mb-3">What happens if I use a steam mop on my floor?</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">Steam mops will permanently ruin hardwood, laminate, and LVP floors, instantly voiding the manufacturer warranty. The intense heat and injected moisture will cause wood to warp and vinyl adhesives to delaminate. Stick to lightly damp microfiber mops with pH-neutral cleaners.</p>
+                <p className="text-gray-600 text-sm leading-relaxed">Steam mops will permanently ruin <Link href="/category/hardwood" className="text-gold font-bold hover:underline transition-colors">hardwood</Link>, <Link href="/category/laminate" className="text-gold font-bold hover:underline transition-colors">laminate</Link>, and <Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">LVP</Link> floors, instantly voiding the manufacturer warranty. The intense heat and injected moisture will cause wood to warp and vinyl adhesives to delaminate. Stick to lightly damp microfiber mops with pH-neutral cleaners.</p>
             </div>
 
         </div>
 
         <div className="mt-12 text-center">
-            <p className="text-gray-500 mb-6">Didn't find what you were looking for?</p>
-            <Link href="/general-contact" className="inline-block bg-black text-white px-8 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:bg-gold hover:text-black transition-all shadow-md" style={{ textDecoration: 'none' }}>
-                Contact Our Support Team
+            <p className="text-gray-500 mb-6">Need expert advice for your Portland or Lake Oswego home?</p>
+            <Link href="/locations" className="inline-block bg-black text-white px-8 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:bg-gold hover:text-black transition-all shadow-md" style={{ textDecoration: 'none' }}>
+                Contact Our Portland or Lake Oswego Team
             </Link>
         </div>
 

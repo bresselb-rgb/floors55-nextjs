@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 export const metadata = {
   title: "Flooring Glossary & Terms | Floors 55",
@@ -9,18 +10,54 @@ export default function GlossaryPage() {
   const getFbUrl = (path) => `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path)}?alt=media`;
 
   const terms = [
-    { term: "Acclimation", def: "The process of allowing flooring materials (like hardwood and laminate) to rest in the environment where they will be installed so they can adjust to the room's temperature and humidity before being locked down." },
-    { term: "AC Rating", def: "A durability rating system for Laminate flooring ranging from AC1 to AC5. AC4 and AC5 are considered commercial grade and are highly scratch-resistant." },
-    { term: "Bevel / Micro-Bevel", def: "The angled edge of a floor plank. When two planks click together, the bevels create a small V-groove that mimics the look of authentic, individual wood boards." },
-    { term: "Engineered Hardwood", def: "Real wood flooring constructed with a top layer (veneer) of genuine hardwood bonded to a multi-ply or high-density core. It provides the exact look of solid wood but is much more dimensionally stable against moisture and temperature changes." },
-    { term: "EIR (Embossed In Register)", def: "A premium manufacturing technique where the physical texture on the surface of the plank perfectly matches the wood grain image printed below it, creating hyper-realistic flooring." },
-    { term: "Floating Floor", def: "A floor that is not glued or nailed to the subfloor. The planks click and lock together, resting over an underlayment pad. Most LVP and Laminate floors are floated." },
-    { term: "LVP / LVT", def: "Luxury Vinyl Plank (or Tile). A highly durable, 100% waterproof synthetic flooring option that mimics the look of wood or stone." },
-    { term: "Mil", def: "A unit of measurement used for the 'Wear Layer' on vinyl flooring. One mil is one-thousandth of an inch (not a millimeter). 12-mil is standard residential, while 20-mil or higher is commercial grade." },
-    { term: "SPC (Stone Polymer Composite)", def: "A type of rigid-core LVP where the core is made from a mixture of limestone powder and plastic. It makes the floor incredibly dense, highly dent-resistant, and 100% waterproof." },
-    { term: "Subfloor", def: "The structural layer (usually plywood or concrete) beneath your finished flooring. A flat, clean, and structurally sound subfloor is the most critical component of a successful installation." },
-    { term: "Wear Layer", def: "The clear, protective urethane coating applied to the very top of LVP and Laminate flooring. It is the invisible shield that protects the printed wood image from scratches, stains, and scuffs." },
-    { term: "WPC (Wood Polymer Composite)", def: "A type of rigid-core LVP where the core includes foaming agents. It is 100% waterproof like SPC, but feels slightly softer and warmer underfoot, and has superior sound-dampening qualities." }
+    { 
+      term: "Acclimation", 
+      def: <>The process of allowing flooring materials (like <Link href="/category/hardwood" className="text-gold font-bold hover:underline transition-colors">hardwood</Link> and <Link href="/category/laminate" className="text-gold font-bold hover:underline transition-colors">laminate</Link>) to rest in the environment where they will be installed so they can adjust to the room's temperature and humidity before being locked down.</> 
+    },
+    { 
+      term: "AC Rating", 
+      def: <>A durability rating system for <Link href="/category/laminate" className="text-gold font-bold hover:underline transition-colors">laminate flooring</Link> ranging from AC1 to AC5. AC4 and AC5 are considered commercial grade and are highly scratch-resistant.</> 
+    },
+    { 
+      term: "Bevel / Micro-Bevel", 
+      def: <>The angled edge of a floor plank. When two planks click together, the bevels create a small V-groove that mimics the look of authentic, individual wood boards.</> 
+    },
+    { 
+      term: "Engineered Hardwood", 
+      def: <>Real wood flooring constructed with a top layer (veneer) of genuine hardwood bonded to a multi-ply or high-density core. It provides the exact look of <Link href="/category/hardwood" className="text-gold font-bold hover:underline transition-colors">solid wood</Link> but is much more dimensionally stable against moisture and temperature changes.</> 
+    },
+    { 
+      term: "EIR (Embossed In Register)", 
+      def: <>A premium manufacturing technique where the physical texture on the surface of the plank perfectly matches the wood grain image printed below it, creating hyper-realistic flooring.</> 
+    },
+    { 
+      term: "Floating Floor", 
+      def: <>A floor that is not glued or nailed to the subfloor. The planks click and lock together, resting over an underlayment pad. Most <Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">LVP</Link> and <Link href="/category/laminate" className="text-gold font-bold hover:underline transition-colors">Laminate</Link> floors are floated.</> 
+    },
+    { 
+      term: "LVP / LVT", 
+      def: <><Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">Luxury Vinyl Plank</Link> (or Tile). A highly durable, 100% waterproof synthetic flooring option that mimics the look of wood or stone.</> 
+    },
+    { 
+      term: "Mil", 
+      def: <>A unit of measurement used for the 'Wear Layer' on vinyl flooring. One mil is one-thousandth of an inch (not a millimeter). 12-mil is standard residential, while 20-mil or higher is commercial grade.</> 
+    },
+    { 
+      term: "SPC (Stone Polymer Composite)", 
+      def: <>A type of rigid-core <Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">LVP</Link> where the core is made from a mixture of limestone powder and plastic. It makes the floor incredibly dense, highly dent-resistant, and 100% waterproof.</> 
+    },
+    { 
+      term: "Subfloor", 
+      def: <>The structural layer (usually plywood or concrete) beneath your finished flooring. A flat, clean, and structurally sound subfloor is the most critical component of a successful installation.</> 
+    },
+    { 
+      term: "Wear Layer", 
+      def: <>The clear, protective urethane coating applied to the very top of <Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">LVP</Link> and <Link href="/category/laminate" className="text-gold font-bold hover:underline transition-colors">Laminate</Link> flooring. It is the invisible shield that protects the printed wood image from scratches, stains, and scuffs.</> 
+    },
+    { 
+      term: "WPC (Wood Polymer Composite)", 
+      def: <>A type of rigid-core <Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">LVP</Link> where the core includes foaming agents. It is 100% waterproof like SPC, but feels slightly softer and warmer underfoot, and has superior sound-dampening qualities.</> 
+    }
   ];
 
   return (

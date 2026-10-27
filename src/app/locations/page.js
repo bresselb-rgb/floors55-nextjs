@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata = {
   title: 'Showroom Locations | Floors 55 Pro',
-  description: 'Find a Floors 55 Pro showroom near you. Premium wholesale flooring for contractors and property managers.',
+  description: 'Find a Floors 55 Pro showroom near you in Portland or Lake Oswego. Premium wholesale flooring for contractors and property managers.',
 };
 
 export default function LocationsPage() {
@@ -28,15 +28,43 @@ export default function LocationsPage() {
     }
   ];
 
+  // SEO: Local Business Schema specifically mapping both physical locations
+  const localSchema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "itemListElement": showrooms.map((room, index) => ({
+      "@type": "ListItem",
+      "position": index + 1,
+      "item": {
+        "@type": "HomeAndConstructionBusiness",
+        "name": `Floors 55 - ${room.name}`,
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": room.address,
+          "addressLocality": room.cityStateZip.split(',')[0],
+          "addressRegion": "OR",
+          "postalCode": room.cityStateZip.split(' ')[2]
+        },
+        "telephone": room.phone
+      }
+    }))
+  };
+
   return (
     <main className="bg-gray-50 text-gray-900 font-sans flex flex-col flex-1 min-h-screen">
+      
+      {/* Inject Local Schema for Googlebot */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localSchema) }}
+      />
       
       {/* Page Header */}
       <header className="bg-black py-16 text-center text-white border-b border-gray-800">
         <div className="max-w-3xl mx-auto px-4">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">Our Showrooms</h1>
             <p className="text-gray-400 text-lg font-light leading-relaxed">
-              Visit us in person to view premium hardwood, luxury vinyl, and designer carpet samples. 
+              Visit us in person to view premium <Link href="/category/hardwood" className="text-gold font-bold hover:underline transition-colors">hardwood</Link>, <Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">luxury vinyl</Link>, and <Link href="/category/carpet" className="text-gold font-bold hover:underline transition-colors">designer carpet</Link> samples. 
             </p>
         </div>
       </header>
