@@ -1,5 +1,6 @@
 import { collection, getDocs } from 'firebase/firestore';
-import { db, appId } from '../lib/firebase';
+import { signInAnonymously } from 'firebase/auth';
+import { db, auth, appId } from '../lib/firebase';
 
 // Force Next.js to dynamically generate this file so it always has your latest products
 export const dynamic = 'force-dynamic';
@@ -35,9 +36,14 @@ export default async function sitemap() {
     priority: route === '' ? 1 : 0.8, // Homepage gets highest priority
   }));
 
-  // 2. Dynamically fetch all live products from your Firestore Database
+ // 2. Dynamically fetch all live products from your Firestore Database
   let productRoutes = [];
   try {
+    // Authenticate the server-side request before fetching
+    if (!auth.currentUser) {
+        await signInAnonymously(auth).catch(() => {});
+    }
+
     const querySnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'pricing'));
     
     querySnapshot.forEach((doc) => {
