@@ -2,6 +2,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+// Import your analytics component so tracking works
+import FirebaseAnalytics from "../components/FirebaseAnalytics"; 
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,21 +15,30 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// This includes your Pro SEO, keywords, AND the new Favicon links
+// Merged metadata block (Only ONE export allowed)
 export const metadata = {
-  metadataBase: new URL('https://www.floors55pro.com'),
-  title: "Floors 55 Pro | Wholesale Flooring for Portland Contractors",
-  description: "Portland's premier wholesale flooring broker. Exclusive pricing on LVP, hardwood, and carpet for contractors, builders, and property managers in the PNW.",
-  keywords: "wholesale flooring Portland, contractor flooring supplier, LVP wholesale Oregon, property management flooring, Floors 55 pro, trade flooring account",
+  metadataBase: new URL('https://floors55pro.com'),
+  title: {
+    default: 'Floors 55 Pro | Wholesale Flooring for Portland Contractors',
+    template: '%s | Floors 55 Pro Portal',
+  },
+  description: 'Exclusive B2B trade portal for Portland and Lake Oswego contractors, custom builders, and property managers. Access wholesale LVP, hardwood, carpet, and tile.',
+  keywords: 'wholesale flooring Portland, contractor flooring supplier, LVP wholesale Oregon, property management flooring, Floors 55 pro, trade flooring account',
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
-    title: 'Floors 55 Pro | Wholesale Flooring',
-    description: 'Exclusive wholesale flooring for Portland contractors and designers.',
+    title: 'Floors 55 Pro | Portland Wholesale Flooring',
+    description: 'Exclusive B2B trade portal for Portland and Lake Oswego contractors.',
+    url: 'https://floors55pro.com',
+    siteName: 'Floors 55 Pro',
+    locale: 'en_US',
     type: 'website',
-  }
+  },
 };
 
 export default function RootLayout({ children }) {
-  // Your Local SEO Schema is perfectly preserved here
+  // Local SEO Schema
   const localBusinessSchema = {
     "@context": "https://schema.org",
     "@type": "WholesaleStore",
@@ -36,15 +47,20 @@ export default function RootLayout({ children }) {
     "description": "Wholesale flooring supplier providing exclusive pricing and account management for contractors, builders, and property managers.",
     "address": {
       "@type": "PostalAddress",
-      "addressLocality": "Portland",
+      "streetAddress": "312 Oswego Pointe Dr",
+      "addressLocality": "Lake Oswego",
       "addressRegion": "OR",
+      "postalCode": "97034",
       "addressCountry": "US"
     },
     "areaServed": ["Portland, OR", "Lake Oswego, OR", "Pacific Northwest"],
     "audience": {
       "@type": "Audience",
       "audienceType": "Contractors, Builders, Interior Designers, Property Managers"
-    }
+    },
+    "sameAs": [
+      "https://floors55.com"
+    ]
   };
 
   return (
@@ -59,6 +75,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="min-h-full flex flex-col">
+        <FirebaseAnalytics />
         <Header />
         {children}
         <Footer />
