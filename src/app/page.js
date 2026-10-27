@@ -194,6 +194,55 @@ export default function Home() {
                 </div>
             </div>
           </section>
+
+          {/* SEO FAQ Accordion Section */}
+          <section className="py-16 bg-white border-t border-gray-200">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+              <h2 className="text-3xl font-bold text-gray-900 text-center mb-10">Frequently Asked Questions</h2>
+              <div className="space-y-4">
+                
+                {/* FAQ 1 */}
+                <details className="group bg-gray-50 rounded-lg p-6 [&_summary::-webkit-details-marker]:hidden cursor-pointer shadow-sm border border-gray-100">
+                  <summary className="flex items-center justify-between gap-1.5 text-gray-900 font-semibold">
+                    <h3 className="text-lg">How do I qualify for wholesale flooring pricing in Portland?</h3>
+                    <span className="shrink-0 rounded-full bg-white p-2 text-gray-900 shadow-sm group-open:-rotate-180 transition-transform duration-300">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                    </span>
+                  </summary>
+                  <p className="mt-4 leading-relaxed text-gray-600">
+                    To access our exclusive trade portal, you must be a licensed contractor, custom builder, interior designer, or property manager operating in the Portland metro or Lake Oswego area. Once your B2B account is approved, you unlock hidden margins on premium LVP, hardwood, and carpet.
+                  </p>
+                </details>
+
+                {/* FAQ 2 */}
+                <details className="group bg-gray-50 rounded-lg p-6 [&_summary::-webkit-details-marker]:hidden cursor-pointer shadow-sm border border-gray-100">
+                  <summary className="flex items-center justify-between gap-1.5 text-gray-900 font-semibold">
+                    <h3 className="text-lg">Do you stock commercial LVP for property management turnovers?</h3>
+                    <span className="shrink-0 rounded-full bg-white p-2 text-gray-900 shadow-sm group-open:-rotate-180 transition-transform duration-300">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                    </span>
+                  </summary>
+                  <p className="mt-4 leading-relaxed text-gray-600">
+                    Yes. We understand multi-family unit turn-overs require speed and consistency. We stock durable, 100% waterproof Luxury Vinyl Plank (LVP) and builder-grade carpet lines designed specifically for rapid deployment across Pacific Northwest property portfolios.
+                  </p>
+                </details>
+
+                {/* FAQ 3 */}
+                <details className="group bg-gray-50 rounded-lg p-6 [&_summary::-webkit-details-marker]:hidden cursor-pointer shadow-sm border border-gray-100">
+                  <summary className="flex items-center justify-between gap-1.5 text-gray-900 font-semibold">
+                    <h3 className="text-lg">Can my clients visit the Floors 55 Lake Oswego showroom?</h3>
+                    <span className="shrink-0 rounded-full bg-white p-2 text-gray-900 shadow-sm group-open:-rotate-180 transition-transform duration-300">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                    </span>
+                  </summary>
+                  <p className="mt-4 leading-relaxed text-gray-600">
+                    Absolutely. While Floors 55 Pro is your digital purchasing tool, your clients are welcome to visit our physical showroom at Oswego Village to view samples of high-end tile, engineered hardwood, and designer carpet. You retain full control of the billing and margins.
+                  </p>
+                </details>
+
+              </div>
+            </div>
+          </section>
         </>
       )}
 
