@@ -752,7 +752,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
                         return (
                             <div key={c.sku} className={`cursor-pointer text-center group ${!isDesktop ? 'snap-start shrink-0 w-[85px]' : ''}`} onClick={() => {
-                                router.replace(`/product/${productData.id}?color=${c.sku}`, { scroll: false });
+                                // Bypasses the Next.js router to completely eliminate the server-side flash
+                                window.history.replaceState(null, '', `/product/${productData.id}?color=${c.sku}`);
                                 setActiveColor(c);
                             }}>
                                 <div className={`relative w-full aspect-square border-2 rounded-md transition duration-200 bg-gray-100 overflow-hidden ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`}>
@@ -815,20 +816,28 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 {activeView === 'VIDEO' ? (
                     <video src={getMediaPath('VIDEO') || ''} className="w-full h-full object-cover" controls autoPlay loop muted playsInline />
                 ) : (
-                    <img src={getMediaPath(activeView) || FALLBACK_IMG} alt="Product" className="w-full h-full object-contain bg-white transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} />
+                    <img 
+                        src={getMediaPath(activeView) || FALLBACK_IMG} 
+                        alt="Product" 
+                        className={`w-full h-full bg-white transition-opacity duration-200 group-hover:opacity-85 ${activeView === 'MAIN' ? 'object-cover' : 'object-contain'}`} 
+                        onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} 
+                    />
                     // replaced above with this <img src={getMediaPath(activeView) || FALLBACK_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
                 )}
             </div>
 
             {productData?.views && (
-                <div className="mt-4 flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="mt-4 flex gap-3 overflow-x-auto pb-2 min-h-[85px] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {productData.views.filter(v => !failedViews[`${activeColor?.sku}-${v}`]).map(v => {
                          const isVideo = v.includes('VIDEO');
-                         const viewKey = `${activeColor?.sku}-${v}`;
-                         const isLoaded = loadedViews[viewKey];
+                     const viewKey = `${activeColor?.sku}-${v}`;
+                     
+                     // Bypass the wait time for the static video SVG so it never gets stuck invisible
+                     const isLoaded = isVideo || loadedViews[viewKey];
 
-                         return (
-                             <div key={v} className={`relative shrink-0 ${isLoaded ? 'block' : 'hidden'}`}>
+                     // Adding the SKU to the key forces React to fully refresh the element when colors change
+                     return (
+                         <div key={`${activeColor?.sku}-${v}`} className={`relative shrink-0 transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
                                  {isVideo && (
                                      <video 
                                         key={activeColor?.sku}

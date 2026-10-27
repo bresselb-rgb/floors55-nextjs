@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "firebase/auth";
 import { doc, onSnapshot, updateDoc, arrayUnion, collection, query, where, getDocs, getDoc, addDoc, setDoc } from "firebase/firestore";
-import { auth, db, appId } from "../lib/firebase";
+import { logEvent } from "firebase/analytics";
+import { auth, db, appId, analytics } from "../lib/firebase";
 
 function ProductViewerContent({ initialProduct, hideBadges }) {
     const router = useRouter();
@@ -462,6 +463,15 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                     textArea.select();
                     document.execCommand('copy');
                     document.body.removeChild(textArea);
+                    
+                    if (analytics) {
+                        logEvent(analytics, 'share', {
+                            method: 'link_copy',
+                            content_type: 'product',
+                            item_id: productData.id
+                        });
+                    }
+                    
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
                 } catch(e) {}
@@ -596,6 +606,13 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             const boardRef = doc(db, 'artifacts', appId, 'public', 'data', 'client_boards', selectedBoardId);
             await updateDoc(boardRef, { products: arrayUnion(productToSave) });
             
+            if (analytics) {
+                logEvent(analytics, 'add_to_board', {
+                    item_id: productData.id,
+                    item_category: productData.category
+                });
+            }
+            
             const boardName = proBoards.find(b => b.id === selectedBoardId)?.name || 'Board';
             setBoardSaveMessage(`Saved to ${boardName}`);
             setTimeout(() => setBoardSaveMessage(''), 2000);
@@ -644,6 +661,15 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             };
 
             await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'pro_quotes'), quoteDoc);
+            
+            if (analytics) {
+                logEvent(analytics, 'generate_proposal', {
+                    item_id: productData.id,
+                    item_category: productData.category,
+                    value: totalWholesaleProjectCost,
+                    currency: 'USD'
+                });
+            }
             
             setBoardSaveMessage(`Proposal Saved!`);
             setTimeout(() => { 
