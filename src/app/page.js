@@ -117,49 +117,57 @@ export default function Home() {
       {/* ONLY SHOW B2B SECTIONS IF NOT IN CLIENT MODE */}
       {!isClientMode && (
         <>
-          <section className="py-24 relative bg-gray-900 overflow-hidden">
-            {/* Next.js Optimized Background Image */}
-            <div className="absolute inset-0 z-0">
-                <Image 
-                    src={getFbUrl('images/heros/trade-bg.jpg')} 
-                    alt="Trade Professional Flooring"
-                    fill
-                    sizes="100vw"
-                    className="object-cover object-center" 
-                />
-                <div className="absolute inset-0 bg-black/75"></div>
-            </div>
+          <section className="bg-gray-50 py-16 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center mb-12">
+                <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+                  Wholesale Flooring Solutions for Portland Professionals
+                </h2>
+                <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+                  Protect your bids and streamline your material sourcing. Floors 55 Pro provides exclusive trade pricing, dedicated account management, and rapid will-call logistics for the Pacific Northwest construction industry.
+                </p>
+              </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                <div className="text-center mb-16">
-                    <h2 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-white">Tailored for Your Trade</h2>
-                    <p className="text-gray-300 text-lg max-w-2xl mx-auto leading-relaxed">Curated flooring collections designed specifically for the rigorous demands of your industry.</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* Property Management Column */}
+                <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-100 group hover:shadow-md transition-shadow">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                    Multi-Family & Property Management
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed mb-6">
+                    Accelerate your unit turnovers with our heavily stocked commercial LVP and builder-grade carpet. Engineered for high-traffic durability and rigorous PNW weather, our waterproof vinyl plank lines ensure your maintenance teams always have matching inventory ready for immediate Lake Oswego or Portland pickup.
+                  </p>
+                  <Link href="/category?program=propmgt" className="inline-block border border-gray-300 text-gray-700 px-6 py-2 rounded-full font-bold uppercase text-[10px] tracking-widest hover:bg-gray-50 transition-colors">
+                      Explore Prop Mgt
+                  </Link>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    
-                    {/* Prop Mgt Card - Frosted Glass */}
-                    <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-10 border border-white/20 shadow-2xl hover:bg-white/20 transition-all duration-300 relative overflow-hidden group transform hover:-translate-y-1">
-                        <div className="absolute top-0 right-0 p-8 opacity-10 text-8xl group-hover:scale-110 transition-transform duration-500 pointer-events-none">🏠</div>
-                        <div className="w-12 h-12 bg-white/10 border border-white/20 text-gold rounded-full flex items-center justify-center text-xl mb-6 shadow-md">🏠</div>
-                        <h3 className="text-2xl font-bold mb-3 text-white">Property Management</h3>
-                        <p className="text-gray-200 mb-8 leading-relaxed max-w-sm font-light">Durable, high-yield LVP and carpet solutions built for rapid multi-family and commercial turn-overs. Standardized lines for consistent, repeatable ordering.</p>
-                        <Link href="/category?program=propmgt" className="inline-block bg-gold text-black px-6 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:bg-white transition-colors shadow-md" style={{ textDecoration: 'none' }}>
-                            Explore Prop Mgt
-                        </Link>
-                    </div>
 
-                    {/* Contractor Pro Card - Frosted Glass */}
-                    <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-10 border border-white/20 shadow-2xl hover:bg-white/20 transition-all duration-300 relative overflow-hidden group transform hover:-translate-y-1">
-                        <div className="absolute top-0 right-0 p-8 opacity-10 text-8xl group-hover:scale-110 transition-transform duration-500 pointer-events-none">🛠️</div>
-                        <div className="w-12 h-12 bg-white/10 border border-white/20 text-gold rounded-full flex items-center justify-center text-xl mb-6 shadow-md">🛠️</div>
-                        <h3 className="text-2xl font-bold mb-3 text-white">Contractor Pro Select</h3>
-                        <p className="text-gray-200 mb-8 leading-relaxed max-w-sm font-light">Premium hardwood, tile, and luxury vinyl carefully sourced for custom builders and high-end renovations. Uncompromising quality to impress your clients.</p>
-                        <Link href="/category?program=contractor" className="inline-block bg-gold text-black px-6 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:bg-white transition-colors shadow-md" style={{ textDecoration: 'none' }}>
-                            Explore Pro Select
-                        </Link>
-                    </div>
-
+                {/* Custom Builders Column */}
+                <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-100 group hover:shadow-md transition-shadow">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                    Contractors & Custom Builders
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed mb-6">
+                    Maintain your profit margins without sacrificing material quality. We supply top-tier engineered hardwood, laminate, and transition pieces directly to your job site. With transparent trade pricing hidden behind our gated portal, your clients see the value of your work, not your wholesale material costs.
+                  </p>
+                  <Link href="/category?program=contractor" className="inline-block border border-gray-300 text-gray-700 px-6 py-2 rounded-full font-bold uppercase text-[10px] tracking-widest hover:bg-gray-50 transition-colors">
+                      Explore Pro Select
+                  </Link>
                 </div>
+
+                {/* Interior Designers Column */}
+                <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-100 group hover:shadow-md transition-shadow">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                    Interior Designers & Architects
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed mb-6">
+                    Specify with confidence using our premium tile and high-end carpet collections. Send your clients to our physical showroom at Oswego Village to view physical samples, while you retain full control over the purchasing pipeline, trade discounts, and project tracking through your digital dashboard.
+                  </p>
+                   <Link href="/category" className="inline-block border border-gray-300 text-gray-700 px-6 py-2 rounded-full font-bold uppercase text-[10px] tracking-widest hover:bg-gray-50 transition-colors">
+                      Explore Categories
+                  </Link>
+                </div>
+              </div>
             </div>
           </section>
 
