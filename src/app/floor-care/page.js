@@ -66,7 +66,7 @@ export default function FloorCarePage() {
                 </div>
                 <div className="p-6 md:p-8 space-y-4 text-gray-600">
                     <p><strong>Routine Cleaning:</strong> Sweep, vacuum (with the beater bar turned OFF), or dust mop daily to remove dirt and grit.</p>
-                    <p><strong>Deep Cleaning:</strong> Damp mop using a pH-neutral luxury vinyl floor cleaner. Do not flood the floor with water, even though LVP is waterproof, as water can still seep under the baseboards.</p>
+                    <p><strong>Deep Cleaning:</strong> Damp mop using a pH-neutral luxury vinyl floor cleaner. Do not flood the floor with water, even though <Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">luxury vinyl plank</Link> is completely waterproof, as water can still seep under the baseboards.</p>
                     <p><strong>What to Avoid:</strong> Never use abrasive cleaners, bleach, ammonia, wax, or "mop and shine" products. These will leave a dull, sticky film on the surface.</p>
                 </div>
             </div>
@@ -78,7 +78,7 @@ export default function FloorCarePage() {
                 </div>
                 <div className="p-6 md:p-8 space-y-4 text-gray-600">
                     <p><strong>Routine Cleaning:</strong> Dust mop with a microfiber cloth regularly. Vacuum only with a soft brush attachment (no beater bars).</p>
-                    <p><strong>Deep Cleaning:</strong> Use only specialized hardwood floor cleaners (like Bona). Spray the cleaner directly onto a microfiber mop head, not directly onto the floor.</p>
+                    <p><strong>Deep Cleaning:</strong> Use only specialized <Link href="/category/hardwood" className="text-gold font-bold hover:underline transition-colors">hardwood flooring</Link> cleaners (like Bona). Spray the cleaner directly onto a microfiber mop head, not directly onto the floor.</p>
                     <p><strong>Climate Control:</strong> Wood is a natural material. Keep your home's relative humidity between 35% and 55% year-round to prevent excessive shrinking or expanding.</p>
                     <p className="text-red-600 font-bold text-sm bg-red-50 p-3 rounded">Warning: NEVER wet mop a hardwood floor. Standing water will irreparably damage the wood veneer.</p>
                 </div>
@@ -91,7 +91,7 @@ export default function FloorCarePage() {
                 </div>
                 <div className="p-6 md:p-8 space-y-4 text-gray-600">
                     <p><strong>Routine Cleaning:</strong> Dry dust mop or vacuum (with the beater bar turned off) to keep the surface free of abrasive dirt.</p>
-                    <p><strong>Moisture Management:</strong> While many modern laminates are highly water-resistant, they are not completely waterproof from the bottom up like LVP. Wipe up liquid spills immediately. Never let water puddle on the joints, as it can seep down and cause the fiberboard core to swell.</p>
+                    <p><strong>Moisture Management:</strong> While many modern <Link href="/category/laminate" className="text-gold font-bold hover:underline transition-colors">laminate floors</Link> are highly water-resistant, they are not completely waterproof from the bottom up like LVP. Wipe up liquid spills immediately. Never let water puddle on the joints, as it can seep down and cause the fiberboard core to swell.</p>
                     <p><strong>Deep Cleaning:</strong> Use a specialized laminate floor cleaner. Apply the cleaner directly to a microfiber mop pad—never spray it directly onto the floor. Use as little moisture as possible during cleaning.</p>
                     <p><strong>Scratch Prevention:</strong> Although laminate has an incredibly tough aluminum oxide wear layer, you should still use felt protectors under heavy furniture and avoid dragging appliances across the room.</p>
                 </div>
@@ -105,7 +105,7 @@ export default function FloorCarePage() {
                 <div className="p-6 md:p-8 space-y-4 text-gray-600">
                     <p><strong>Vacuuming:</strong> Vacuum 1-2 times a week. For ultra-soft or plush carpets, ensure your vacuum’s beater bar height is adjustable so it doesn't damage the yarn.</p>
                     <p><strong>Spills & Stains:</strong> Act fast! Blot (never rub) the stain with a clean, white cloth. Work from the outside of the stain inward to prevent spreading. Use water first, then a manufacturer-approved carpet spot cleaner if needed.</p>
-                    <p><strong>Professional Cleaning:</strong> Most carpet warranties require professional hot water extraction (steam cleaning) every 12 to 18 months by an IICRC-certified technician. Keep your receipts!</p>
+                    <p><strong>Professional Cleaning:</strong> Most <Link href="/category/carpet" className="text-gold font-bold hover:underline transition-colors">residential carpet</Link> warranties require professional hot water extraction (steam cleaning) every 12 to 18 months by an IICRC-certified technician. Keep your receipts!</p>
                 </div>
             </div>
 
@@ -114,8 +114,8 @@ export default function FloorCarePage() {
         {/* CTA */}
         <div className="mt-16 text-center">
             <p className="text-gray-500 mb-6">Have a specific question about an approved cleaner or a stubborn stain?</p>
-            <Link href="/general-contact" className="inline-block bg-black text-white px-8 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:bg-gold hover:text-black transition-all shadow-md" style={{ textDecoration: 'none' }}>
-                Contact Our Support Team
+            <Link href="/locations" className="inline-block bg-black text-white px-8 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:bg-gold hover:text-black transition-all shadow-md" style={{ textDecoration: 'none' }}>
+                Contact Our Portland or Lake Oswego Team
             </Link>
         </div>
 

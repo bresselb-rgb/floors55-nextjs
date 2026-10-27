@@ -24,7 +24,7 @@ export default function InstallationPrepPage() {
             <p className="text-gold uppercase tracking-[0.2em] font-bold mb-4 text-xs">Homeowner Guide</p>
             <h1 className="text-4xl md:text-5xl font-black mb-6 tracking-tight">Installation Prep Guide</h1>
             <p className="text-lg md:text-xl text-gray-300 font-light leading-relaxed max-w-2xl mx-auto">
-                Getting new floors is exciting! To ensure a flawless installation and a smooth process for your installation team, here is exactly what you need to know and do before they arrive.
+                Getting new floors for your Portland or Lake Oswego home is exciting! To ensure a flawless installation and a smooth process for your installation team, here is exactly what you need to know and do before they arrive.
             </p>
         </div>
       </header>
@@ -38,7 +38,7 @@ export default function InstallationPrepPage() {
                 <div className="absolute top-0 left-0 w-2 h-full bg-gold"></div>
                 <h2 className="text-2xl font-black mb-6 flex items-center gap-3"><span className="text-3xl">🗓️</span> The Week Before</h2>
                 <div className="space-y-4 text-gray-600 leading-relaxed">
-                    <p><strong>Climate Control:</strong> Your home's HVAC system must be operational. Wood, laminate, and luxury vinyl need to acclimate to your home's normal living conditions (typically 65-75°F with 35-55% humidity) for at least 48 to 72 hours prior to installation.</p>
+                    <p><strong>Climate Control:</strong> Your home's HVAC system must be operational. <Link href="/category/hardwood" className="text-gold font-bold hover:underline transition-colors">Hardwood</Link>, <Link href="/category/laminate" className="text-gold font-bold hover:underline transition-colors">laminate</Link>, and <Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">luxury vinyl</Link> need to acclimate to your home's normal living conditions (typically 65-75°F with 35-55% humidity) for at least 48 to 72 hours prior to installation.</p>
                     <p><strong>Clear the Space:</strong> Remove all personal items, electronics, lamps, books, and breakables from the rooms being installed. Strip the beds and remove items from the floors of closets.</p>
                     <p><strong>Furniture Moving:</strong> Unless specifically included in your contractor's quote, the room should be completely empty of furniture. If your team is handling furniture, ensure all drawers are emptied to make the pieces lighter and safer to move.</p>
                 </div>
@@ -68,6 +68,15 @@ export default function InstallationPrepPage() {
             </section>
 
         </div>
+
+        {/* CTA */}
+        <div className="mt-16 text-center">
+            <p className="text-gray-500 mb-6">Need to see the materials before your contractor installs them?</p>
+            <Link href="/locations" className="inline-block bg-black text-white px-8 py-3 rounded-full font-bold uppercase text-xs tracking-widest hover:bg-gold hover:text-black transition-all shadow-md" style={{ textDecoration: 'none' }}>
+                Visit Our Portland or Lake Oswego Showrooms
+            </Link>
+        </div>
+
       </div>
     </main>
   );

@@ -41,7 +41,7 @@ export default function TransitionsPage() {
         <div className="text-center mb-12">
             <h2 className="text-3xl font-black mb-4">Molding Profiles Explained</h2>
             <p className="text-gray-500 max-w-2xl mx-auto">
-                Whether you are installing Luxury Vinyl Plank (LVP), Laminate, or Hardwood, floating floors require expansion gaps. These transition pieces allow your floor to breathe while seamlessly connecting different rooms and heights.
+                Whether you are installing <Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">Luxury Vinyl Plank (LVP)</Link>, <Link href="/category/laminate" className="text-gold font-bold hover:underline transition-colors">Laminate</Link>, or <Link href="/category/hardwood" className="text-gold font-bold hover:underline transition-colors">Hardwood</Link>, floating floors require expansion gaps. These transition pieces allow your floor to breathe while seamlessly connecting different rooms and heights.
             </p>
         </div>
 
@@ -86,7 +86,7 @@ export default function TransitionsPage() {
                         A sloped transition piece used to gracefully step down from a <strong>higher-profile floor to a lower-profile floor</strong>, preventing a blunt tripping hazard.
                     </p>
                     <div className="bg-gray-50 p-4 rounded-xl text-sm text-gray-700">
-                        <strong className="text-black">Where to use it:</strong> Transitioning from thick Hardwood or Laminate down to lower-profile sheet vinyl, stained concrete, or directly to a subfloor.
+                        <strong className="text-black">Where to use it:</strong> Transitioning from thick <Link href="/category/hardwood" className="text-gold font-bold hover:underline transition-colors">Hardwood</Link> or <Link href="/category/laminate" className="text-gold font-bold hover:underline transition-colors">Laminate</Link> down to lower-profile sheet vinyl, stained concrete, or directly to a subfloor.
                     </div>
                 </div>
             </div>
@@ -109,7 +109,7 @@ export default function TransitionsPage() {
                         A squared-off finishing piece used to transition from hard surface floors to a surface of a different height, or to cap off the edge of a floor where it meets an obstacle.
                     </p>
                     <div className="bg-gray-50 p-4 rounded-xl text-sm text-gray-700">
-                        <strong className="text-black">Where to use it:</strong> Butting up against sliding glass door tracks, masonry fireplaces, or transitioning abruptly into thick, plush carpet.
+                        <strong className="text-black">Where to use it:</strong> Butting up against sliding glass door tracks, masonry fireplaces, or transitioning abruptly into thick, plush <Link href="/category/carpet" className="text-gold font-bold hover:underline transition-colors">carpet</Link>.
                     </div>
                 </div>
             </div>
@@ -175,7 +175,7 @@ export default function TransitionsPage() {
                         <div className="flex-1">
                             <h3 className="text-xl font-bold mb-3 text-gray-900">Full Stair Treads & Risers</h3>
                             <p className="text-sm text-gray-600 leading-relaxed">
-                                Instead of piecing together a separate plank and a stair nose, many premium LVP lines offer one-piece Stair Treads. These are solid, pre-formed pieces that cover the entire step with an integrated bullnose. Risers are the vertical back-plates installed between each step (often painted white or matched to the tread).
+                                Instead of piecing together a separate plank and a stair nose, many premium <Link href="/category/luxury-vinyl" className="text-gold font-bold hover:underline transition-colors">LVP lines</Link> offer one-piece Stair Treads. These are solid, pre-formed pieces that cover the entire step with an integrated bullnose. Risers are the vertical back-plates installed between each step (often painted white or matched to the tread).
                             </p>
                         </div>
                     </div>
