@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { analytics } from '../firebase'; // Update this path if your firebase.js is in a different folder
+import { analytics } from '../lib/firebase'; 
 
 export default function FirebaseAnalytics() {
   useEffect(() => {
