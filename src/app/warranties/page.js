@@ -72,3 +72,8 @@ export default function WarrantiesPage() {
                 Contact Our Local Installation Team
             </Link>
         </div>
+
+      </div>
+    </main>
+  );
+}
