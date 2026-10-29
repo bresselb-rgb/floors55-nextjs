@@ -1701,7 +1701,6 @@ function CategoryViewerContent({ initialCategory }) {
                                                 const swatchRawPath = `images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
                                                 const swatchFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(swatchRawPath)}?alt=media`;
                                                 
-                                                // NEW: The fallback path if _swatch fails
                                                 const fallbackMainPath = `images/${folderName}/${safePrefix}${c.sku}_main.jpg`.toLowerCase();
                                                 const fallbackMainFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(fallbackMainPath)}?alt=media`;
 
@@ -1711,11 +1710,9 @@ function CategoryViewerContent({ initialCategory }) {
                                                             src={swatchFbPath} 
                                                             className="w-full h-full object-cover pointer-events-none" 
                                                             onError={(e) => {
-                                                                // If it was trying a swatch and failed, try the main image. Otherwise, go to TBD.
-                                                                if (p.category === 'Carpet' && !e.target.dataset.triedMain) {
-                                                                    e.target.dataset.triedMain = 'true';
+                                                                if (e.target.src.includes('_swatch.jpg')) {
                                                                     e.target.src = fallbackMainFbPath;
-                                                                } else {
+                                                                } else if (e.target.src !== TBD_IMG) {
                                                                     e.target.src = TBD_IMG;
                                                                 }
                                                             }} 
@@ -1758,9 +1755,23 @@ function CategoryViewerContent({ initialCategory }) {
                                                         const sType = p.category === 'Carpet' ? 'swatch' : 'main';
                                                         const swatchRawPath = `images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
                                                         const swatchFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(swatchRawPath)}?alt=media`;
+                                                        
+                                                        const fallbackMainPath = `images/${folderName}/${safePrefix}${c.sku}_main.jpg`.toLowerCase();
+                                                        const fallbackMainFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(fallbackMainPath)}?alt=media`;
+
                                                         return (
                                                             <button key={c.sku} onMouseEnter={() => setActivePreviews(prev => ({...prev, [p.id]: c.sku}))} onClick={(e) => { e.preventDefault(); setActivePreviews(prev => ({...prev, [p.id]: c.sku})); }} className="w-6 h-6 rounded-full border border-gray-200 overflow-hidden shrink-0 transition-transform hover:scale-125 focus:scale-125 focus:outline-none bg-gray-100 cursor-pointer" title={c.name}>
-                                                                <img src={swatchFbPath} className="w-full h-full object-cover pointer-events-none" onError={e => e.target.src=TBD_IMG} />
+                                                                <img 
+                                                                    src={swatchFbPath} 
+                                                                    className="w-full h-full object-cover pointer-events-none" 
+                                                                    onError={(e) => {
+                                                                        if (e.target.src.includes('_swatch.jpg')) {
+                                                                            e.target.src = fallbackMainFbPath;
+                                                                        } else if (e.target.src !== TBD_IMG) {
+                                                                            e.target.src = TBD_IMG;
+                                                                        }
+                                                                    }} 
+                                                                />
                                                             </button>
                                                         )
                                                     })}
