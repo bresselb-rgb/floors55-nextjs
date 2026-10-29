@@ -1429,6 +1429,66 @@ function CategoryViewerContent({ initialCategory }) {
         </div>
       </header>
 
+      {/* LVP SEO Description */}
+      {activeCategory === 'Luxury Vinyl (LVP)' && !isClientMode && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Wholesale Luxury Vinyl Plank (LVP) for Portland Contractors</h2>
+            <p className="text-gray-600 leading-relaxed">
+              Source premium, 100% waterproof Luxury Vinyl Plank (LVP) at exclusive trade margins. Designed for the rigorous demands of Pacific Northwest property management and custom builds, our commercial-grade LVP features thick wear layers, rigid core construction, and fast click-lock installation. Perfect for rapid multi-family unit turnovers in Portland or high-end residential upgrades in Lake Oswego, ensuring your teams always have durable inventory ready for will-call.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Hardwood SEO Description */}
+      {activeCategory === 'Hardwood' && !isClientMode && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Premium Wholesale Hardwood Flooring in Portland</h2>
+            <p className="text-gray-600 leading-relaxed">
+              Elevate your custom builds with top-tier engineered and solid hardwood flooring at direct-to-trade pricing. Sourced specifically for Portland contractors and interior designers, our hardwood collections feature premium top veneers and moisture-resistant cores tailored for the PNW climate. Protect your bids and impress your clients with authentic, timeless wood aesthetics while maintaining full control over your project's material margins.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tile SEO Description */}
+      {activeCategory === 'Tile' && !isClientMode && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Wholesale Porcelain & Ceramic Tile for Custom Builds</h2>
+            <p className="text-gray-600 leading-relaxed">
+              Access an extensive catalog of premium porcelain, ceramic, and natural stone tile at wholesale pricing. From high-end custom shower surrounds to durable commercial floors, our tile collections are hand-selected for Portland and Lake Oswego architects, builders, and designers. Order samples directly to your job site or send your clients to our local showroom while maintaining your exclusive trade discounts.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Carpet SEO Description */}
+      {activeCategory === 'Carpet' && !isClientMode && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Commercial & Residential Wholesale Carpet</h2>
+            <p className="text-gray-600 leading-relaxed">
+              Whether you need heavily stocked builder-grade carpet for rapid apartment turnovers or plush designer textures for luxury residential homes, Floors 55 Pro has you covered. We supply top-tier nylon and polyester carpets to Portland property managers and contractors with fast availability, reliable face weights, and transparent B2B pricing to keep your projects on budget.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Laminate SEO Description */}
+      {activeCategory === 'Laminate' && !isClientMode && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
+          <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Water-Resistant Wholesale Laminate Flooring</h2>
+            <p className="text-gray-600 leading-relaxed">
+              Provide your clients with unmatched scratch and dent resistance using our premium wholesale laminate collections. Featuring heavy-duty AC wear ratings and advanced water-resistant cores, our laminate lines are engineered to withstand active Oregon households. A highly profitable, fast-installing alternative to hardwood for Portland contractors and builders.
+            </p>
+          </div>
+        </div>
+      )}
+
       <section className="py-6 flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row gap-8">
             
