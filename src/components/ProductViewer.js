@@ -783,7 +783,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                                 setActiveColor(c);
                             }}>
                                 <div className={`relative w-full aspect-square border-2 rounded-md transition duration-200 bg-gray-100 overflow-hidden ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`}>
-                                    <img src={fbPath} alt={c.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} />
+                                    <img src={fbPath} alt={c.name} className="w-full h-full object-cover" onError={(e) => { if (e.currentTarget.src.includes('_swatch.jpg')) { e.currentTarget.src = e.currentTarget.src.replace('_swatch.jpg', '_main.jpg'); } else if (e.currentTarget.src !== FALLBACK_IMG) { e.currentTarget.src = FALLBACK_IMG; } }} />
                                 </div>
                                 <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
                             </div>
