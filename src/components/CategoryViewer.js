@@ -1697,7 +1697,7 @@ function CategoryViewerContent({ initialCategory }) {
                                     {!isListView && (
                                         <div className="px-4 py-2 border-b border-gray-50 bg-gray-50/50 flex flex-wrap gap-1.5 min-h-[40px] items-center">
                                             {colors.slice(0, 6).map(c => {
-                                                const sType = p.category === 'Carpet' ? 'swatch' : 'main';
+                                                const sType = p.category === 'Carpet' ? 'main' : 'main';
                                                 const swatchRawPath = `images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
                                                 const swatchFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(swatchRawPath)}?alt=media`;
                                                 
@@ -1752,7 +1752,7 @@ function CategoryViewerContent({ initialCategory }) {
                                                 <p className="text-gray-500 text-xs line-clamp-2">{safeDesc}</p>
                                                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1.5">
                                                     {colors.slice(0, 6).map(c => {
-                                                        const sType = p.category === 'Carpet' ? 'swatch' : 'main';
+                                                        const sType = p.category === 'Carpet' ? 'main' : 'main';
                                                         const swatchRawPath = `images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
                                                         const swatchFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(swatchRawPath)}?alt=media`;
                                                         
