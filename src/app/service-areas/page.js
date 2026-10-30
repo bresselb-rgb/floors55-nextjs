@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { TIER_1_CITIES, TIER_2_TOWNS, SHOWROOM_HUBS } from '@/lib/serviceAreasData';
 
 const CITY_COORDS = {
-    'lake-oswego-or': { lat: 45.4207, lng: -122.6706 },
-    'portland-or': { lat: 45.5152, lng: -122.6784 },
+    'lake-oswego-or': { lat: 45.4207, lng: -122.6706 }, // 25 S State St Ste 2110
+    'portland-or': { lat: 45.5135, lng: -122.6635 },    // 1320 SE Water Ave
     'west-linn-or': { lat: 45.3657, lng: -122.6123 },
     'tigard-or': { lat: 45.4312, lng: -122.7715 },
     'tualatin-or': { lat: 45.3840, lng: -122.7639 },
@@ -37,6 +37,24 @@ export default function ServiceAreasPage() {
         ? TIER_1_CITIES
         : TIER_1_CITIES.filter(c => c.closestHub.toLowerCase().includes(hubFilter.toLowerCase()));
 
+    // Schema linking Floors 55 Pro to Floors 55 Abbey Carpet & Floor (floors55.com) + 15 areaServed cities
+    const serviceAreaJsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'WholesaleStore',
+        name: 'Floors 55 Pro',
+        url: 'https://floors55pro.com/service-areas',
+        telephone: '+1-503-673-1333',
+        parentOrganization: {
+            '@type': 'HomeAndConstructionBusiness',
+            name: 'Floors 55 Abbey Carpet & Floor',
+            url: 'https://www.floors55.com'
+        },
+        areaServed: TIER_1_CITIES.map((c) => ({
+            '@type': 'City',
+            name: `${c.name}, ${c.state}`
+        }))
+    };
+
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
@@ -54,7 +72,7 @@ export default function ServiceAreasPage() {
             const map = new window.maplibregl.Map({
                 container: mapContainerRef.current,
                 style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-                center: [-122.6706, 45.4550],
+                center: [-122.6670, 45.4550],
                 zoom: 9.8,
                 pitch: 46,
                 bearing: -10,
@@ -193,7 +211,7 @@ export default function ServiceAreasPage() {
     const zoomOutFullMetro = () => {
         if (mapInstanceRef.current) {
             mapInstanceRef.current.flyTo({
-                center: [-122.6706, 45.4550],
+                center: [-122.6670, 45.4550],
                 zoom: 9.6,
                 pitch: 45,
                 bearing: -10,
@@ -204,13 +222,20 @@ export default function ServiceAreasPage() {
 
     return (
         <main className="min-h-screen bg-gray-50 text-gray-900 pb-20 md:pb-24">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceAreaJsonLd) }}
+            />
+
             {/* Hero Header */}
             <header className="bg-white border-b border-gray-200 py-10 md:py-14 px-4 sm:px-6">
                 <div className="max-w-7xl mx-auto">
-                    <nav className="text-xs font-semibold uppercase tracking-widest text-[#c5a059] mb-3 flex items-center gap-2">
+                    <nav className="text-xs font-semibold uppercase tracking-widest text-[#c5a059] mb-3 flex flex-wrap items-center gap-2">
                         <Link href="/" className="hover:underline">Home</Link>
                         <span className="text-gray-300">/</span>
-                        <span className="text-gray-500">Showrooms, Measures &amp; Installation</span>
+                        <Link href="/locations" className="hover:underline">Showroom Locations</Link>
+                        <span className="text-gray-300">/</span>
+                        <span className="text-gray-500">Metro Service Areas</span>
                     </nav>
 
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
@@ -223,26 +248,39 @@ export default function ServiceAreasPage() {
                                 <span className="text-[#c5a059]">To Your Jobsite.</span>
                             </h1>
                             <p className="mt-3 md:mt-4 text-gray-600 text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl">
-                                Anchored by our <strong className="text-gray-900">Portland</strong> and <strong className="text-gray-900">Lake Oswego (Oswego Village)</strong> sample showrooms, Floors 55 Pro provides contractors, builders, designers, and property managers with on-site project measuring, rapid <strong className="text-gray-900">will-call at our regional vendor partner warehouses</strong>, and <strong className="text-gray-900">professional flooring installation by request</strong>.
+                                Anchored by our <strong className="text-gray-900">Portland (SE Water Ave)</strong> and <strong className="text-gray-900">Lake Oswego (Oswego Village)</strong> sample showrooms, Floors 55 Pro provides contractors, builders, designers, and property managers with on-site project measuring, rapid <strong className="text-gray-900">will-call at our regional vendor partner warehouses</strong>, and <strong className="text-gray-900">professional flooring installation by request</strong>.
                             </p>
                         </div>
 
-                        {/* Dual Showroom Hub Cards */}
+                        {/* Dual Showroom Hub Cards with Exact Addresses & Phones */}
                         <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                             {SHOWROOM_HUBS.map((hub) => (
                                 <div
                                     key={hub.id}
-                                    className="bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm"
+                                    className="bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm flex flex-col justify-between"
                                 >
-                                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#c5a059] mb-1.5">
-                                        <span className="w-2 h-2 rounded-full bg-[#c5a059]" />
-                                        Sample &amp; Measure Hub
+                                    <div>
+                                        <div className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-[#c5a059] mb-1.5">
+                                            <span className="w-2 h-2 rounded-full bg-[#c5a059]" />
+                                            Sample &amp; Measure Hub
+                                        </div>
+                                        <h2 className="text-base font-bold text-gray-900">{hub.name}</h2>
+                                        <p className="text-xs text-gray-700 font-medium mt-1">{hub.location}</p>
+                                        {hub.phone && (
+                                            <p className="text-xs text-gray-600 mt-1">
+                                                <a href={`tel:${hub.phone.replace(/\D/g, '')}`} className="font-semibold text-gray-900 hover:text-[#c5a059]">
+                                                    {hub.phone}
+                                                </a>
+                                                {hub.hours && <span className="text-gray-400"> · {hub.hours}</span>}
+                                            </p>
+                                        )}
                                     </div>
-                                    <h2 className="text-base sm:text-lg font-bold text-gray-900">{hub.name}</h2>
-                                    <p className="text-xs sm:text-sm text-gray-600 mt-0.5">{hub.location}</p>
-                                    <p className="text-xs text-gray-500 mt-2.5 pt-2.5 border-t border-gray-200 leading-relaxed">
-                                        {hub.coverage}
-                                    </p>
+                                    <div className="mt-3 pt-2.5 border-t border-gray-200 flex items-center justify-between text-xs">
+                                        <span className="text-gray-500 truncate">{hub.coverage}</span>
+                                        <Link href="/locations" className="text-[#c5a059] font-bold hover:underline shrink-0 ml-2">
+                                            Hours &amp; Map →
+                                        </Link>
+                                    </div>
                                 </div>
                             ))}
                         </div>

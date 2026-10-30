@@ -2,18 +2,22 @@
 
 export const SHOWROOM_HUBS = [
     {
-        id: 'lake-oswego',
-        name: 'Lake Oswego Showroom',
-        location: 'Oswego Village · Lake Oswego, OR',
-        coverage: 'South Metro, West Hills, Hwy 217 & I-5 South Corridor',
-        mapCoords: { x: 48, y: 62 }
+        id: 'portland',
+        name: 'Portland Trade & Sample Hub',
+        location: '1320 SE Water Ave · Portland, OR 97214',
+        phone: '(503) 491-1776',
+        hours: 'Mon–Fri: 8:30 AM – 4:30 PM',
+        coverage: 'Central Eastside, Pearl/NW, East County & Clark County WA',
+        mapCoords: { x: 50, y: 42 }
     },
     {
-        id: 'portland',
-        name: 'Portland Showroom',
-        location: 'Portland, OR',
-        coverage: 'Central City, Eastside, NW/SW Hills & Clark County WA',
-        mapCoords: { x: 50, y: 42 }
+        id: 'lake-oswego',
+        name: 'Lake Oswego Trade Showroom',
+        location: '25 S State St Ste 2110 · Lake Oswego, OR 97034',
+        phone: '(503) 673-1333',
+        hours: 'Mon–Thu: 8:30 AM – 4:30 PM',
+        coverage: 'Oswego Village, South Metro, West Hills, Hwy 217 & I-5 South',
+        mapCoords: { x: 48, y: 62 }
     }
 ];
 
