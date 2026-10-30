@@ -40,6 +40,8 @@ const RESOURCE_PAGES = [
     { title: 'Flooring Glossary', path: '/flooring-glossary', keywords: ['terms', 'definition', 'spc', 'wpc', 'wear layer', 'mil', 'ac rating', 'core', 'meaning'] },
     { title: 'Understanding Warranties', path: '/warranties', keywords: ['warranty', 'guarantee', 'wear', 'structural', 'void', 'defect', 'claim'] },
     { title: 'FAQ', path: '/faq', keywords: ['frequently asked questions', 'help', 'support', 'pad attached', 'questions', 'can i'] },
+    { title: 'Showrooms & Locations', path: '/locations', keywords: ['showroom', 'address', 'hours', 'portland', 'lake oswego', 'oswego village', 'water ave', 'directions'] },
+    { title: 'Metro Service Areas & On-Site Measures', path: '/service-areas', keywords: ['service areas', 'measure', 'takeoff', 'will call', 'installation', 'beaverton', 'tigard', 'tualatin', 'west linn', 'vancouver', 'hillsboro', 'oregon city', 'happy valley', 'sherwood', 'wilsonville', 'gresham', 'camas'] },
 ];
 
 // A component to wrap matching search text in your gold theme color
@@ -89,12 +91,11 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // NEW: Auto-Kill Curation Session Watcher
+  // Auto-Kill Curation Session Watcher
   useEffect(() => {
       if (typeof window !== 'undefined') {
           const activeBoard = sessionStorage.getItem('active_curation_board_id');
           
-          // If a session is active, but the user leaves the catalog/product pages
           if (activeBoard && !pathname.startsWith('/category') && !pathname.startsWith('/product')) {
               sessionStorage.removeItem('active_curation_board_id');
               sessionStorage.removeItem('active_curation_board_name');
@@ -109,7 +110,6 @@ export default function Header() {
     if (typeof window !== 'undefined') {
         const search = window.location.search;
         
-        // If the URL has pro tags, keep the header hidden until the redirect runs!
         if (search.includes('pro=') || search.includes('cb=')) {
             setIsProcessingMagicLink(true);
             return;
@@ -154,7 +154,7 @@ export default function Header() {
     return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path)}?alt=media`;
   };
 
-  const getSearchImgUrl = (p) => {
+  const getSearchImgUrl = (p, typeOverride = null) => {
     const safeName = (p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const safeSku = (p.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
     let folderName = p.imageFolder ? p.imageFolder : 'images'; 
@@ -165,7 +165,8 @@ export default function Header() {
     }
 
     const displaySku = p.colors?.[0]?.sku || '01';
-    const mainType = p.category === 'Carpet' ? 'main' : 'main';
+    const isCarpet = (p.category || '').toLowerCase() === 'carpet';
+    const mainType = typeOverride || (isCarpet ? 'swatch' : 'main');
     const rawPath = `images/${folderName}/${p.imgPrefix || ''}${displaySku}_${mainType}.jpg`.toLowerCase();
     
     return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
@@ -210,9 +211,7 @@ export default function Header() {
         }
       });
       
-      // FILTER OUT "Trim & Molding" before updating the menu state
       setCategories([...cats].filter(cat => cat !== 'Trim & Molding').sort());
-      
       setHasSaleItems(sale);
       setAllProducts(productList);
     }, (error) => {
@@ -263,7 +262,6 @@ export default function Header() {
 
   const closeMenu = () => setIsMobileMenuOpen(false);
 
-  // UPDATED: Now includes color search
   const filteredSearchProducts = headerSearchQuery.trim() === '' ? [] : allProducts.filter(p => {
       const query = headerSearchQuery.toLowerCase();
       const catLower = (p.category || '').toLowerCase();
@@ -300,7 +298,10 @@ export default function Header() {
                     <span>📞</span> (503) 491-1776
                 </a>
             </div>
-            <div className="flex gap-4">
+            <div className="flex items-center gap-4 sm:gap-6">
+                <Link href="/service-areas" className="hover:text-gold transition flex items-center gap-1.5" style={{ textDecoration: 'none' }}>
+                    <span>🗺️</span> <span className="hidden sm:inline">Metro </span>Service Areas
+                </Link>
                 <Link href="/locations" className="hover:text-gold transition flex items-center gap-1.5" style={{ textDecoration: 'none' }}>
                     <span>📍</span> <span className="hidden sm:inline">View </span>Showrooms
                 </Link>
@@ -357,7 +358,7 @@ export default function Header() {
                   <button className="transition flex items-center gap-1 py-8 bg-transparent border-none font-bold uppercase cursor-pointer outline-none hover:opacity-70" style={{ color: clientBrand ? brandText : '#000000' }}>
                     Resources ▾
                   </button>
-                  <div className="absolute top-full left-0 bg-white shadow-2xl border border-gray-100 min-w-[240px] hidden group-hover:block animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+                  <div className="absolute top-full left-0 bg-white shadow-2xl border border-gray-100 min-w-[250px] hidden group-hover:block animate-in fade-in slide-in-from-top-2 duration-200 z-50">
                     <Link href="/choosing-your-floor" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
                       Choosing Your Floor
                     </Link>
@@ -379,9 +380,16 @@ export default function Header() {
                     <Link href="/faq" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
                       FAQ
                     </Link>
-                    <Link href="/locations" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold text-xs text-gray-900 font-bold" style={{ textDecoration: 'none' }}>
-                      Showrooms & Locations
-                    </Link>
+                    {!clientBrand && (
+                      <>
+                        <Link href="/locations" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900 font-bold" style={{ textDecoration: 'none' }}>
+                          Showrooms &amp; Locations
+                        </Link>
+                        <Link href="/service-areas" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold text-xs text-[#c5a059] font-bold" style={{ textDecoration: 'none' }}>
+                          Metro Service Areas →
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -479,7 +487,12 @@ export default function Header() {
                 <Link href="/flooring-glossary" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>Glossary</Link>
                 <Link href="/warranties" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>Warranties</Link>
                 <Link href="/faq" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>FAQ</Link>
-                <Link href="/locations" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>Showrooms & Locations</Link>
+                {!clientBrand && (
+                  <>
+                    <Link href="/locations" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>Showrooms &amp; Locations</Link>
+                    <Link href="/service-areas" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-[#c5a059] border-b border-gray-50" style={{ textDecoration: 'none' }}>Metro Service Areas →</Link>
+                  </>
+                )}
               </div>
 
               {!clientBrand && (
@@ -537,7 +550,6 @@ export default function Header() {
                                   const displayTitle = (p.usePrivateName && p.privateName) ? p.privateName : (p.name || 'Unnamed Product');
                                   const isTrim = p.isAccessory || p.category === 'Trim & Molding';
                                   
-                                  // NEW: Find if a specific color matched the search query
                                   const matchedColor = headerSearchQuery.trim() ? (p.colors || []).find(c => 
                                       (c.name || '').toLowerCase().includes(headerSearchQuery.toLowerCase()) || 
                                       (c.sku || '').toLowerCase().includes(headerSearchQuery.toLowerCase())
@@ -551,7 +563,19 @@ export default function Header() {
                                                     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
                                                 </div>
                                             ) : (
-                                                <img src={getSearchImgUrl(p)} className="w-full h-full object-cover" onError={e => e.target.src = getFbUrl('images/tbd.jpg')} alt={displayTitle} />
+                                                <img
+                                                    src={getSearchImgUrl(p)}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        if (e.target.src.includes('_swatch.jpg')) {
+                                                            e.target.src = getSearchImgUrl(p, 'main');
+                                                        } else {
+                                                            e.target.onerror = null;
+                                                            e.target.src = getFbUrl('images/tbd.jpg');
+                                                        }
+                                                    }}
+                                                    alt={displayTitle}
+                                                />
                                             )}
                                          </div>
                                          <div>
@@ -562,7 +586,6 @@ export default function Header() {
                                                 <HighlightMatch text={p.category || ''} query={headerSearchQuery} /> &bull; <span className="font-mono"><HighlightMatch text={p.sku || ''} query={headerSearchQuery} /></span>
                                             </div>
                                             
-                                            {/* NEW: Render the matched color so the highlight is visible */}
                                             {matchedColor && (
                                                 <div className="text-[10px] font-bold text-gray-500 mt-1 flex items-center gap-1">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-gold inline-block"></span>
@@ -579,7 +602,7 @@ export default function Header() {
                       {/* Resource Results */}
                       {filteredSearchResources.length > 0 && (
                           <div className="bg-white">
-                              <div className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-50 border-b border-gray-100">Help & Resources</div>
+                              <div className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400 bg-gray-50 border-b border-gray-100">Help &amp; Resources</div>
                               {filteredSearchResources.map(r => (
                                   <Link key={r.path} href={r.path} onClick={() => { setIsSearchOpen(false); setHeaderSearchQuery(''); }} className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors border-b border-gray-100" style={{ textDecoration: 'none' }}>
                                      <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-lg shadow-sm shrink-0">📘</div>
