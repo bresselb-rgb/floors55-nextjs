@@ -1,255 +1,322 @@
-// src/lib/serviceAreasData.js
+// src/app/service-areas/page.js
+'use client';
 
-export const SHOWROOM_HUBS = [
-    {
-        id: 'lake-oswego',
-        name: 'Lake Oswego Showroom',
-        location: 'Oswego Village · Lake Oswego, OR',
-        coverage: 'South Metro, West Hills, Hwy 217 & I-5 South Corridor',
-        mapCoords: { x: 48, y: 62 }
-    },
-    {
-        id: 'portland',
-        name: 'Portland Showroom',
-        location: 'Portland, OR',
-        coverage: 'Central City, Eastside, NW/SW Hills & Clark County WA',
-        mapCoords: { x: 50, y: 42 }
-    }
-];
+import React, { useState, useRef } from 'react';
+import Link from 'next/link';
+import { TIER_1_CITIES, TIER_2_TOWNS, SHOWROOM_HUBS } from '@/lib/serviceAreasData';
 
-export const TIER_1_CITIES = [
-    {
-        slug: 'lake-oswego-or',
-        name: 'Lake Oswego',
-        state: 'OR',
-        county: 'Clackamas County',
-        isHub: true,
-        closestHub: 'Lake Oswego Showroom',
-        miles: '00',
-        driveTime: 'Showroom Hub',
-        mapCoords: { x: 48, y: 62 },
-        tagline: 'South Metro showroom headquarters & same-day on-site measuring.',
-        description: 'Our Lake Oswego showroom at Oswego Village serves as your private, white-label client selection center for the South & West Metro. Send homeowners in to view full-size hardwood, carpet, LVP, and tile samples with your trade margin locked in, or schedule a same-day jobsite measure.',
-        popularSpecs: ['Wide-Plank European Oak Hardwood', 'Custom Wool & Nylon Broadloom Carpet', 'Large-Format Porcelain Tile & Bullnose'],
-        neighborhoods: ['Oswego Village', 'First Addition', 'Lake Grove', 'Westlake', 'Palisades', 'Mountain Park', 'Stafford']
-    },
-    {
-        slug: 'portland-or',
-        name: 'Portland',
-        state: 'OR',
-        county: 'Multnomah County',
-        isHub: true,
-        closestHub: 'Portland Showroom',
-        miles: '00',
-        driveTime: 'Showroom Hub',
-        mapCoords: { x: 50, y: 42 },
-        tagline: 'Central city showroom hub, multi-family turns & remodel takeoffs.',
-        description: 'Anchored by our Portland showroom, we cover South Waterfront, the Pearl District, West Hills, and Eastside neighborhoods with fast on-site measuring for complex Craftsman and Foursquare remodels, stair runs, and commercial property management turns.',
-        popularSpecs: ['Property Management In-Stock Carpet & LVP', 'Acoustic Sound-Rated Condo Underlayment & SPC', 'Classic Oak Hardwood & Vintage Tile'],
-        neighborhoods: ['South Waterfront', 'Pearl District', 'Sellwood-Moreland', 'Laurelhurst', 'Eastmoreland', 'SW Hills', 'Alberta', 'St. Johns']
-    },
-    {
-        slug: 'west-linn-or',
-        name: 'West Linn',
-        state: 'OR',
-        county: 'Clackamas County',
-        isHub: false,
-        closestHub: 'Lake Oswego Showroom',
-        miles: '04',
-        driveTime: '8 min',
-        mapCoords: { x: 52, y: 70 },
-        tagline: 'Hillside custom builds, hardwood acclimation & stair takeoffs.',
-        description: 'Just 4 miles across the Willamette from our Lake Oswego showroom, West Linn custom builders and remodelers rely on Floors 55 Pro for multi-level project takeoffs, custom flush stair nosings, and rapid sample turnarounds.',
-        popularSpecs: ['Engineered Hardwood & Custom Stair Treads', 'Waterproof Rigid Core SPC LVP', 'Plush Residential Remodel Carpet'],
-        neighborhoods: ['Robinwood', 'Bolton', 'Willamette', 'Hidden Springs', 'Tanner Creek', 'Savanna Oaks']
-    },
-    {
-        slug: 'tigard-or',
-        name: 'Tigard',
-        state: 'OR',
-        county: 'Washington County',
-        isHub: false,
-        closestHub: 'Lake Oswego Showroom',
-        miles: '06',
-        driveTime: '10 min',
-        mapCoords: { x: 38, y: 58 },
-        tagline: 'Bull Mountain to Metzger remodels & fast jobsite quantity verification.',
-        description: 'Minutes up the Kruse Way/Hwy 217 corridor from both our Lake Oswego and Portland hubs, we support Tigard general contractors with on-site square footage verification, waste-factor optimization, and wholesale flooring packages.',
-        popularSpecs: ['20mil Wear-Layer Waterproof LVP', 'AC4/AC5 Water-Resistant Laminate', 'Multi-Family Turnkey Carpet & Pad'],
-        neighborhoods: ['Bull Mountain', 'Metzger', 'Summerfield', 'King City', 'Durham', 'Tigard Triangle']
-    },
-    {
-        slug: 'tualatin-or',
-        name: 'Tualatin',
-        state: 'OR',
-        county: 'Washington & Clackamas County',
-        isHub: false,
-        closestHub: 'Lake Oswego Showroom',
-        miles: '06',
-        driveTime: '11 min',
-        mapCoords: { x: 40, y: 68 },
-        tagline: 'I-5 / I-205 trade corridor supply, commercial LVP & whole-home packages.',
-        description: 'Right next door to our Lake Oswego showroom, Tualatin contractors and commercial tenant-improvement teams get fast on-site estimates, commercial glue-down specs, and seamless showroom access for clients.',
-        popularSpecs: ['Commercial Glue-Down LVT/LVP', 'Heavy-Duty Laminate Flooring', 'Builder Spec Carpet & Cushion Packages'],
-        neighborhoods: ['Ibach', 'Byrom', 'Norwood', 'Tualatin Commons', 'Meridian Park']
-    },
-    {
-        slug: 'milwaukie-or',
-        name: 'Milwaukie & Oak Grove',
-        state: 'OR',
-        county: 'Clackamas County',
-        isHub: false,
-        closestHub: 'Portland & Lake Oswego Hubs',
-        miles: '06',
-        driveTime: '12 min',
-        mapCoords: { x: 56, y: 55 },
-        tagline: 'Mid-century residential upgrades, carpet takeoffs & subfloor spec checks.',
-        description: 'Sitting right between our Portland and Lake Oswego showrooms, we support remodelers across Milwaukie and Oak Grove with accurate field measurements for mid-century layouts, split-level stairs, and whole-home replacements.',
-        popularSpecs: ['Waterproof Pet-Friendly SPC Vinyl', 'Textured Cut-and-Loop Carpet', 'Subfloor Prep & Moisture Barrier Solutions'],
-        neighborhoods: ['Oak Grove', 'Waverly Heights', 'Ardenwald', 'Jennings Lodge', 'Island Station']
-    },
-    {
-        slug: 'beaverton-or',
-        name: 'Beaverton',
-        state: 'OR',
-        county: 'Washington County',
-        isHub: false,
-        closestHub: 'Portland Showroom',
-        miles: '08',
-        driveTime: '14 min',
-        mapCoords: { x: 32, y: 46 },
-        tagline: 'High-volume residential remodels, apartment turns & durable laminate.',
-        description: 'Easily reached from both our Portland and Lake Oswego showrooms via Hwy 26 and Hwy 217, we serve Beaverton remodelers and multi-family operators with reliable on-site takeoff estimates and white-label client consultations.',
-        popularSpecs: ['Waterproof Rigid Core LVP', 'High-Traffic Multi-Family Carpet', 'Porcelain Kitchen & Bath Tile'],
-        neighborhoods: ['Raleigh Hills', 'Cedar Hills', 'Aloha', 'Bethany', 'Progress Ridge', 'Cooper Mountain', 'Murrayhill']
-    },
-    {
-        slug: 'vancouver-wa',
-        name: 'Vancouver',
-        state: 'WA',
-        county: 'Clark County',
-        isHub: false,
-        closestHub: 'Portland Showroom',
-        miles: '09',
-        driveTime: '15 min',
-        mapCoords: { x: 52, y: 20 },
-        tagline: 'Clark County contractor accounts, commercial brokerage & cross-river takeoffs.',
-        description: 'Just a short hop from our Portland showroom, we serve Southwest Washington builders, remodelers, and property managers from the Vancouver Waterfront to Salmon Creek and Felida with on-site measures and dedicated trade pricing.',
-        popularSpecs: ['Custom Home Hardwood & LVP Packages', 'Commercial Tenant Improvement Flooring', 'Multi-Family Turnkey Carpet'],
-        neighborhoods: ['Vancouver Waterfront', 'Salmon Creek', 'Felida', 'Cascade Park', 'Hazel Dell', 'Fishers Landing']
-    },
-    {
-        slug: 'oregon-city-or',
-        name: 'Oregon City',
-        state: 'OR',
-        county: 'Clackamas County',
-        isHub: false,
-        closestHub: 'Lake Oswego Showroom',
-        miles: '10',
-        driveTime: '16 min',
-        mapCoords: { x: 58, y: 74 },
-        tagline: 'Clackamas County custom builders, new construction & on-site takeoffs.',
-        description: 'From historic bluff remodels to acreage custom homes in Redland and Beavercreek, we partner with Oregon City builders out of our Lake Oswego hub to dial in exact material quantities.',
-        popularSpecs: ['Builder Spec Whole-Home Packages', 'Wide-Plank Laminate & LVP', 'Stain-Resistant Family Carpet'],
-        neighborhoods: ['McLoughlin', 'Park Place', 'Redland', 'Beavercreek', 'Gladstone', 'South End']
-    },
-    {
-        slug: 'happy-valley-or',
-        name: 'Happy Valley & Clackamas',
-        state: 'OR',
-        county: 'Clackamas County',
-        isHub: false,
-        closestHub: 'Portland Showroom',
-        miles: '11',
-        driveTime: '18 min',
-        mapCoords: { x: 66, y: 56 },
-        tagline: 'Large-footprint hillside homes, wide-plank oak & multi-level carpet waste math.',
-        description: 'Large square-footage homes on Scouters Mountain and Pleasant Valley demand tight waste-factor math on 12ft/15ft carpet goods and wide-plank hard surfaces. We verify specs on-site from our Portland and Lake Oswego hubs.',
-        popularSpecs: ['Wide-Plank Engineered Hardwood', 'Patterned & Plush Stair/Bedroom Carpet', 'Large-Format Master Bath Porcelain'],
-        neighborhoods: ['Scouters Mountain', 'Pleasant Valley', 'Sunnyside', 'Damascus', 'Mount Talbert']
-    },
-    {
-        slug: 'sherwood-or',
-        name: 'Sherwood',
-        state: 'OR',
-        county: 'Washington County',
-        isHub: false,
-        closestHub: 'Lake Oswego Showroom',
-        miles: '11',
-        driveTime: '18 min',
-        mapCoords: { x: 33, y: 72 },
-        tagline: 'Subdivision builds, family-proof carpet & showroom design consultations.',
-        description: 'Sherwood remodelers and custom builders use our nearby Lake Oswego showroom as their home base for client color selections while relying on our on-site waste-factor calculations for two-story floorplans.',
-        popularSpecs: ['Solution-Dyed Nylon & Triexta Carpet', 'Wide-Plank European Oak & LVP', 'Custom Tile Backsplashes & Floors'],
-        neighborhoods: ['Old Town Sherwood', 'Woodhaven', 'Mandalay', 'Middleton']
-    },
-    {
-        slug: 'wilsonville-or',
-        name: 'Wilsonville',
-        state: 'OR',
-        county: 'Clackamas & Washington County',
-        isHub: false,
-        closestHub: 'Lake Oswego Showroom',
-        miles: '12',
-        driveTime: '16 min',
-        mapCoords: { x: 42, y: 82 },
-        tagline: 'South I-5 planned communities, commercial TI & accurate material estimates.',
-        description: 'Covering Charbonneau, Villebois, and Wilsonville commercial parks with fast on-site measuring and wholesale trade pricing straight down I-5 from our Lake Oswego hub.',
-        popularSpecs: ['Single-Level Luxury Vinyl & Hardwood', 'Commercial Carpet Tile & Glue-Down LVT', 'Zero-Threshold Shower & Floor Tile'],
-        neighborhoods: ['Charbonneau', 'Villebois', 'Frog Pond', 'Morey’s Landing']
-    },
-    {
-        slug: 'gresham-or',
-        name: 'Gresham',
-        state: 'OR',
-        county: 'Multnomah County',
-        isHub: false,
-        closestHub: 'Portland Showroom',
-        miles: '14',
-        driveTime: '22 min',
-        mapCoords: { x: 76, y: 44 },
-        tagline: 'East Multnomah County residential remodels, multi-family turns & bulk pricing.',
-        description: 'From our Portland hub, we provide East County general contractors, landlords, and flooring installers with transparent wholesale pricing, digital proposal tools, and on-site project estimates.',
-        popularSpecs: ['Waterproof Rigid Core LVP', 'Rental & Multi-Family Carpet Packages', 'Scratch-Resistant AC4 Laminate'],
-        neighborhoods: ['Powell Valley', 'Gresham Butte', 'Centennial', 'Rockwood', 'Kelly Creek']
-    },
-    {
-        slug: 'hillsboro-or',
-        name: 'Hillsboro',
-        state: 'OR',
-        county: 'Washington County',
-        isHub: false,
-        closestHub: 'Portland Showroom',
-        miles: '16',
-        driveTime: '22 min',
-        mapCoords: { x: 20, y: 40 },
-        tagline: 'Silicon Forest new-construction packages, commercial specs & residential turns.',
-        description: 'Supporting Washington County builders and commercial contractors across Hillsboro, Orenco Station, and Reed’s Crossing with competitive wholesale brokerage and on-site takeoff verification.',
-        popularSpecs: ['New-Construction Spec LVP & Laminate', 'Commercial Office & Retail Flooring', 'Multi-Family Replacement Carpet'],
-        neighborhoods: ['Orenco Station', 'Reed’s Crossing', 'Tanasbourne', 'AmberGlen', 'Jackson School']
-    },
-    {
-        slug: 'camas-wa',
-        name: 'Camas & Washougal',
-        state: 'WA',
-        county: 'Clark County',
-        isHub: false,
-        closestHub: 'Portland Showroom',
-        miles: '18',
-        driveTime: '24 min',
-        mapCoords: { x: 72, y: 24 },
-        tagline: 'View-property custom builds, designer tile & premium engineered hardwood.',
-        description: 'Partnering with custom home builders and designers in Camas, Prune Hill, and Washougal to supply high-end hardwood, luxury vinyl, and custom carpet with white-label showroom support.',
-        popularSpecs: ['European White Oak Hardwood', 'Designer Porcelain & Natural Stone Look Tile', 'Luxury Cut-Pile & Patterned Carpet'],
-        neighborhoods: ['Prune Hill', 'Lacamas Lake', 'Crown Park', 'Washougal River']
-    }
-];
+const CITY_COORDS = {
+    'lake-oswego-or': { lat: 45.4207, lng: -122.6706 },
+    'portland-or': { lat: 45.5152, lng: -122.6784 },
+    'west-linn-or': { lat: 45.3657, lng: -122.6123 },
+    'tigard-or': { lat: 45.4312, lng: -122.7715 },
+    'tualatin-or': { lat: 45.3840, lng: -122.7639 },
+    'milwaukie-or': { lat: 45.4462, lng: -122.6393 },
+    'beaverton-or': { lat: 45.4871, lng: -122.8037 },
+    'vancouver-wa': { lat: 45.6280, lng: -122.6739 },
+    'oregon-city-or': { lat: 45.3573, lng: -122.6068 },
+    'happy-valley-or': { lat: 45.4451, lng: -122.5315 },
+    'sherwood-or': { lat: 45.3565, lng: -122.8401 },
+    'wilsonville-or': { lat: 45.3001, lng: -122.7726 },
+    'gresham-or': { lat: 45.4982, lng: -122.4315 },
+    'hillsboro-or': { lat: 45.5229, lng: -122.9898 },
+    'camas-wa': { lat: 45.5871, lng: -122.3995 }
+};
 
-export const TIER_2_TOWNS = [
-    { slug: 'canby-or', name: 'Canby', state: 'OR', county: 'Clackamas County', closestHub: 'Lake Oswego Hub', miles: '16', driveTime: '22 min' },
-    { slug: 'troutdale-or', name: 'Troutdale & Fairview', state: 'OR', county: 'Multnomah County', closestHub: 'Portland Hub', miles: '16', driveTime: '20 min' },
-    { slug: 'newberg-or', name: 'Newberg', state: 'OR', county: 'Yamhill County', closestHub: 'Lake Oswego Hub', miles: '19', driveTime: '25 min' },
-    { slug: 'forest-grove-or', name: 'Forest Grove & Cornelius', state: 'OR', county: 'Washington County', closestHub: 'Portland Hub', miles: '22', driveTime: '28 min' },
-    { slug: 'sandy-or', name: 'Sandy & Boring', state: 'OR', county: 'Clackamas County', closestHub: 'Portland Hub', miles: '24', driveTime: '30 min' },
-    { slug: 'ridgefield-battle-ground-wa', name: 'Ridgefield & Battle Ground', state: 'WA', county: 'Clark County', closestHub: 'Portland Hub', miles: '22', driveTime: '26 min' }
-];
+export default function ServiceAreasPage() {
+    const [activeCity, setActiveCity] = useState(TIER_1_CITIES[0]);
+    const [hubFilter, setHubFilter] = useState('ALL');
+    const mapSectionRef = useRef(null);
+
+    const filteredCities = hubFilter === 'ALL'
+        ? TIER_1_CITIES
+        : TIER_1_CITIES.filter(c => c.closestHub.toLowerCase().includes(hubFilter.toLowerCase()));
+
+    const coords = CITY_COORDS[activeCity.slug] || { lat: 45.4650, lng: -122.6750 };
+    const bbox = `${coords.lng - 0.14}%2C${coords.lat - 0.09}%2C${coords.lng + 0.14}%2C${coords.lat + 0.09}`;
+    const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${coords.lat}%2C${coords.lng}`;
+
+    const handleCitySelect = (city, shouldScrollOnMobile = false) => {
+        setActiveCity(city);
+        if (shouldScrollOnMobile && typeof window !== 'undefined' && window.innerWidth < 1024 && mapSectionRef.current) {
+            mapSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
+    return (
+        <main className="min-h-screen bg-gray-50 text-gray-900 pb-20 md:pb-24">
+            {/* Hero Header */}
+            <header className="bg-white border-b border-gray-200 py-10 md:py-14 px-4 sm:px-6">
+                <div className="max-w-7xl mx-auto">
+                    <nav className="text-xs font-semibold uppercase tracking-widest text-[#c5a059] mb-3 flex items-center gap-2">
+                        <Link href="/" className="hover:underline">Home</Link>
+                        <span className="text-gray-300">/</span>
+                        <span className="text-gray-500">Showrooms &amp; On-Site Measure Radius</span>
+                    </nav>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+                        <div className="lg:col-span-7">
+                            <p className="text-xs font-bold uppercase tracking-widest text-[#c5a059] mb-2">
+                                Portland &amp; Lake Oswego Trade Coverage
+                            </p>
+                            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-gray-900 leading-tight">
+                                Two Metro Showrooms. <br className="hidden sm:inline" />
+                                <span className="text-[#c5a059]">On-Site Jobsite Measures.</span>
+                            </h1>
+                            <p className="mt-3 md:mt-4 text-gray-600 text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl">
+                                Anchored by our <strong className="text-gray-900">Portland</strong> and <strong className="text-gray-900">Lake Oswego (Oswego Village)</strong> showrooms, Floors 55 Pro supports general contractors, custom builders, and property managers across the metro with on-site measuring, waste-factor verification, and white-label client showroom consultations.
+                            </p>
+                        </div>
+
+                        {/* Dual Showroom Hub Cards */}
+                        <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+                            {SHOWROOM_HUBS.map((hub) => (
+                                <div
+                                    key={hub.id}
+                                    className="bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm"
+                                >
+                                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#c5a059] mb-1.5">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-[#c5a059]" />
+                                        Showroom Hub
+                                    </div>
+                                    <h2 className="text-base sm:text-lg font-bold text-gray-900">{hub.name}</h2>
+                                    <p className="text-xs sm:text-sm text-gray-600 mt-0.5">{hub.location}</p>
+                                    <p className="text-xs text-gray-500 mt-2.5 pt-2.5 border-t border-gray-200 leading-relaxed">
+                                        {hub.coverage}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            {/* Main Interactive Section */}
+            <section ref={mapSectionRef} className="max-w-7xl mx-auto px-4 sm:px-6 mt-8 md:mt-12 scroll-mt-4">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 md:mb-8">
+                    <div>
+                        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
+                            15 Metro Service Areas · One Short Drive
+                        </h2>
+                        <p className="text-sm sm:text-base text-gray-600 mt-1">
+                            Tap any city to view its map location, closest showroom hub, and local flooring specs.
+                        </p>
+                    </div>
+
+                    {/* Hub Filter Buttons */}
+                    <div className="grid grid-cols-3 sm:inline-flex bg-white p-1 rounded-xl border border-gray-200 shadow-sm text-xs sm:text-sm w-full sm:w-auto">
+                        {['ALL', 'Portland', 'Lake Oswego'].map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setHubFilter(tab)}
+                                className={`px-3 sm:px-4 py-2 rounded-lg font-semibold transition text-center ${
+                                    hubFilter === tab
+                                        ? 'bg-gray-900 text-white shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                {tab === 'ALL' ? 'All (15)' : `${tab}`}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+                    {/* Left Column: Map + Active City Info Card (7 cols) */}
+                    <div className="lg:col-span-7 space-y-5 md:space-y-6 lg:sticky lg:top-6">
+                        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                            <div className="bg-gray-900 text-white p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div>
+                                    <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#c5a059] block">
+                                        Active Measure Zone · Dispatched via {activeCity.closestHub}
+                                    </span>
+                                    <h3 className="text-lg sm:text-xl font-bold mt-0.5">
+                                        {activeCity.name}, {activeCity.state} ({activeCity.isHub ? 'Showroom Hub' : `${activeCity.miles} mi · ${activeCity.driveTime}`})
+                                    </h3>
+                                </div>
+                                <Link
+                                    href={`/service-areas/${activeCity.slug}`}
+                                    className="w-full sm:w-auto text-center bg-[#c5a059] hover:bg-[#b08d48] text-white font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg transition shrink-0"
+                                >
+                                    Open {activeCity.name} Page →
+                                </Link>
+                            </div>
+
+                            <div className="relative w-full h-[250px] sm:h-[340px] md:h-[380px] bg-gray-100">
+                                <iframe
+                                    title={`Map of ${activeCity.name}, ${activeCity.state}`}
+                                    src={mapUrl}
+                                    className="w-full h-full border-0"
+                                    loading="lazy"
+                                />
+                            </div>
+
+                            <div className="p-3 sm:p-4 bg-gray-50 border-t border-gray-200 flex overflow-x-auto lg:flex-wrap gap-1.5">
+                                {TIER_1_CITIES.map((city) => (
+                                    <button
+                                        key={city.slug}
+                                        onClick={() => handleCitySelect(city, false)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition border whitespace-nowrap shrink-0 ${
+                                            activeCity.slug === city.slug
+                                                ? 'bg-gray-900 text-white border-gray-900 shadow-sm'
+                                                : 'bg-white text-gray-700 border-gray-200 hover:border-[#c5a059]'
+                                        }`}
+                                    >
+                                        {city.isHub ? `★ ${city.name}` : city.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 md:p-8 shadow-sm">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 border-b border-gray-100 pb-4">
+                                <div>
+                                    <span className="text-xs font-bold uppercase tracking-wider text-[#c5a059]">
+                                        {activeCity.county} · {activeCity.closestHub}
+                                    </span>
+                                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">
+                                        {activeCity.name}, {activeCity.state} Trade &amp; Measure Coverage
+                                    </h3>
+                                </div>
+                                <Link
+                                    href={`/service-areas/${activeCity.slug}`}
+                                    className="text-sm font-bold text-[#c5a059] hover:underline shrink-0"
+                                >
+                                    View Full {activeCity.name} Details →
+                                </Link>
+                            </div>
+
+                            <p className="text-gray-700 text-sm sm:text-base mt-4 leading-relaxed">
+                                {activeCity.description}
+                            </p>
+
+                            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 pt-5 border-t border-gray-100">
+                                <div>
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+                                        Popular Specs in {activeCity.name}
+                                    </h4>
+                                    <ul className="space-y-2 text-sm text-gray-800 font-medium">
+                                        {activeCity.popularSpecs.map((spec) => (
+                                            <li key={spec} className="flex items-start gap-2">
+                                                <span className="text-[#c5a059] font-bold">✔</span>
+                                                <span>{spec}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+                                        Neighborhoods We Measure
+                                    </h4>
+                                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                                        {activeCity.neighborhoods.map((hood) => (
+                                            <span
+                                                key={hood}
+                                                className="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-gray-200"
+                                            >
+                                                {hood}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Column: City Directory List (5 cols) */}
+                    <aside className="lg:col-span-5 bg-white border border-gray-200 rounded-2xl p-2 sm:p-4 shadow-sm divide-y divide-gray-100">
+                        {filteredCities.map((city) => {
+                            const isSelected = activeCity.slug === city.slug;
+                            return (
+                                <div
+                                    key={city.slug}
+                                    onClick={() => handleCitySelect(city, true)}
+                                    className={`p-3 sm:p-4 flex items-center justify-between gap-3 sm:gap-4 cursor-pointer rounded-xl transition ${
+                                        isSelected
+                                            ? 'bg-amber-50/70 border-l-4 border-[#c5a059]'
+                                            : 'hover:bg-gray-50'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                        <div
+                                            className={`w-14 sm:w-16 text-center py-2 rounded-xl shrink-0 border ${
+                                                city.isHub
+                                                    ? 'bg-gray-900 text-white border-gray-900 font-bold'
+                                                    : isSelected
+                                                    ? 'bg-[#c5a059] text-white border-[#c5a059] font-bold'
+                                                    : 'bg-gray-50 text-gray-900 border-gray-200'
+                                            }`}
+                                        >
+                                            <div className="text-sm sm:text-base font-bold leading-none">
+                                                {city.miles}<small className="text-[11px] ml-0.5 font-normal">mi</small>
+                                            </div>
+                                            <div className="text-[9px] sm:text-[10px] uppercase tracking-wider mt-1 opacity-90">
+                                                {city.isHub ? 'HUB' : city.driveTime}
+                                            </div>
+                                        </div>
+
+                                        <div className="min-w-0">
+                                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                                <span className="text-sm sm:text-base font-bold text-gray-900">
+                                                    {city.name}, {city.state}
+                                                </span>
+                                                <span className="text-[10px] sm:text-[11px] font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md border border-gray-200">
+                                                    {city.closestHub.replace(' Showroom', '')}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-2 leading-snug">
+                                                {city.tagline}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <Link
+                                        href={`/service-areas/${city.slug}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="text-xs font-bold uppercase tracking-wider text-[#c5a059] hover:text-gray-900 shrink-0 px-2.5 py-2 sm:px-3 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition"
+                                    >
+                                        Page →
+                                    </Link>
+                                </div>
+                            );
+                        })}
+                    </aside>
+                </div>
+            </section>
+
+            {/* Tier 2 Outer Metro Coverage Grid */}
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 mt-12 md:mt-16">
+                <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-8 shadow-sm">
+                    <div className="max-w-3xl mb-5 sm:mb-6">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#c5a059] mb-1">
+                            Regional Project Support
+                        </p>
+                        <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                            Extended Valley, Gorge &amp; Clark County Coverage
+                        </h3>
+                        <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                            Working on a larger residential build or multi-unit project further out? We coordinate scheduled on-site takeoffs and showroom sample packages across these outer metro communities:
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                        {TIER_2_TOWNS.map((town) => (
+                            <div
+                                key={town.slug}
+                                className="bg-gray-50 border border-gray-200 rounded-xl p-3.5 sm:p-4 flex items-center justify-between hover:border-[#c5a059] transition"
+                            >
+                                <div>
+                                    <div className="font-bold text-sm sm:text-base text-gray-900">{town.name}, {town.state}</div>
+                                    <div className="text-xs text-gray-600 mt-0.5">{town.county} · via {town.closestHub}</div>
+                                </div>
+                                <span className="text-xs font-bold text-gray-800 bg-white px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-gray-200 shadow-sm shrink-0">
+                                    {town.miles} mi
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+        </main>
+    );
+}
