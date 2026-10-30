@@ -581,7 +581,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 folderName = folderName.replace(/-+$/, '');
             }
             
-            const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
+            const swatchType = productData.category === 'Carpet' ? 'main' : 'main';
             const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${activeColor?.sku || '01'}_${swatchType}.jpg`.toLowerCase();
             const thumbFbUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
 
