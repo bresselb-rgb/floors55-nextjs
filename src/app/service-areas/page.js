@@ -101,7 +101,6 @@ export default function ServiceAreasPage() {
                     }
                 });
 
-                // Compact, low-profile HTML pins so they don't clutter the map
                 TIER_1_CITIES.forEach((city) => {
                     const c = CITY_COORDS[city.slug];
                     if (!c) return;
@@ -168,7 +167,6 @@ export default function ServiceAreasPage() {
             });
         }
 
-        // Update marker styles cleanly without oversized scaling
         Object.entries(markersRef.current).forEach(([slug, { el, city }]) => {
             const pill = el.querySelector('.pin-Wrap');
             if (!pill) return;
@@ -212,20 +210,20 @@ export default function ServiceAreasPage() {
                     <nav className="text-xs font-semibold uppercase tracking-widest text-[#c5a059] mb-3 flex items-center gap-2">
                         <Link href="/" className="hover:underline">Home</Link>
                         <span className="text-gray-300">/</span>
-                        <span className="text-gray-500">Showrooms &amp; On-Site Measure Radius</span>
+                        <span className="text-gray-500">Showrooms, Measures &amp; Installation</span>
                     </nav>
 
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
                         <div className="lg:col-span-7">
                             <p className="text-xs font-bold uppercase tracking-widest text-[#c5a059] mb-2">
-                                Portland &amp; Lake Oswego Trade Coverage
+                                Trade Supply · Vendor Will-Call · Installation by Request
                             </p>
                             <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-gray-900 leading-tight">
                                 From Our Showrooms <br className="hidden sm:inline" />
                                 <span className="text-[#c5a059]">To Your Jobsite.</span>
                             </h1>
                             <p className="mt-3 md:mt-4 text-gray-600 text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl">
-                                Anchored by our <strong className="text-gray-900">Portland</strong> and <strong className="text-gray-900">Lake Oswego (Oswego Village)</strong> sample showrooms, Floors 55 Pro provides contractors, builders, and property managers with on-site project measuring, white-label client consultations, and fast <strong className="text-gray-900">will-call pickup at our regional vendor partner warehouses</strong>.
+                                Anchored by our <strong className="text-gray-900">Portland</strong> and <strong className="text-gray-900">Lake Oswego (Oswego Village)</strong> sample showrooms, Floors 55 Pro provides contractors, builders, designers, and property managers with on-site project measuring, rapid <strong className="text-gray-900">will-call at our regional vendor partner warehouses</strong>, and <strong className="text-gray-900">professional flooring installation by request</strong>.
                             </p>
                         </div>
 
@@ -260,7 +258,7 @@ export default function ServiceAreasPage() {
                             Fifteen Towns, <span className="text-[#c5a059]">One Short Drive.</span>
                         </h2>
                         <p className="text-sm sm:text-base text-gray-600 mt-1">
-                            Select any town to fly to that sub-market and view our on-site measure dispatch and local specs.
+                            Select any town to fly to that sub-market and view our on-site measure dispatch, material specs, and installation options.
                         </p>
                     </div>
 
@@ -290,7 +288,7 @@ export default function ServiceAreasPage() {
                             <div className="bg-gray-900 text-white px-4 py-2.5 sm:px-5 flex items-center justify-between gap-2 border-b border-gray-800">
                                 <div className="flex items-center gap-2 text-xs font-semibold text-gray-300">
                                     <span className="w-2 h-2 rounded-full bg-[#c5a059]" />
-                                    <span>Portland &amp; SW Washington Measure Radius</span>
+                                    <span>Portland &amp; SW Washington Measure &amp; Install Radius</span>
                                 </div>
                                 <button
                                     type="button"
@@ -322,7 +320,7 @@ export default function ServiceAreasPage() {
                                                 {activeCity.name}, {activeCity.state}
                                             </span>
                                             <span className="hidden sm:inline text-xs text-gray-300 ml-2">
-                                                · {activeCity.isHub ? 'Client Sample Showroom & Measure Dispatch' : `${activeCity.driveTime} via ${activeCity.closestHub}`}
+                                                · {activeCity.isHub ? 'Sample Showroom & Measure Dispatch' : `${activeCity.driveTime} via ${activeCity.closestHub}`}
                                             </span>
                                         </div>
                                     </div>
@@ -337,15 +335,20 @@ export default function ServiceAreasPage() {
                             </div>
                         </div>
 
-                        {/* Expanded Specs, Vendor Will-Call & Neighborhoods Card Below Map */}
+                        {/* Expanded Specs, Vendor Will-Call, Install Badge & Neighborhoods Card Below Map */}
                         <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 shadow-sm">
                             <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-100">
                                 <h3 className="text-base sm:text-lg font-bold text-gray-900">
                                     What We Supply &amp; Measure in {activeCity.name}, {activeCity.state}
                                 </h3>
-                                <span className="text-xs font-semibold text-[#c5a059] bg-amber-50 px-2.5 py-1 rounded-md border border-[#c5a059]/30">
-                                    Will-Call at Regional Vendor Warehouses
-                                </span>
+                                <div className="flex flex-wrap gap-1.5">
+                                    <span className="text-[11px] font-semibold text-[#c5a059] bg-amber-50 px-2.5 py-1 rounded-md border border-[#c5a059]/30">
+                                        Vendor Partner Will-Call
+                                    </span>
+                                    <span className="text-[11px] font-semibold text-gray-800 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200">
+                                        Installation Available by Request
+                                    </span>
+                                </div>
                             </div>
 
                             <p className="text-gray-600 text-sm mt-3 leading-relaxed">
@@ -454,8 +457,56 @@ export default function ServiceAreasPage() {
                 </div>
             </section>
 
-            {/* Outer Metro Coverage Grid */}
+            {/* SEO Power Section: All 3 Installation Angles for GCs, Property Managers & Designers */}
             <section className="max-w-7xl mx-auto px-4 sm:px-6 mt-12 md:mt-16">
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-8 shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 pb-5 border-b border-gray-100">
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-widest text-[#c5a059] mb-1">
+                                Material-Only or Turnkey Installed Packages
+                            </p>
+                            <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                                Professional Flooring Installation (Available by Request)
+                            </h3>
+                        </div>
+                        <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 self-start md:self-auto">
+                            Residential · Multi-Family · Commercial TI
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+                            <h4 className="font-bold text-base text-gray-900 mb-2">
+                                1. Turnkey Trade Partner (GCs &amp; Builders)
+                            </h4>
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                Need a complete material-and-labor package to keep your construction schedule moving? While many of our trade accounts use their own crews, we provide vetted residential and commercial flooring installation by request across the Portland and SW Washington metro.
+                            </p>
+                        </div>
+
+                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+                            <h4 className="font-bold text-base text-gray-900 mb-2">
+                                2. Overflow &amp; Schedule Relief (Property Mgmt)
+                            </h4>
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                Crews booked out or tackling a tight multi-unit turnover? In addition to wholesale material supply and vendor partner will-call, Floors 55 Pro offers professional installation services by request—giving you reliable backup labor capacity whenever your timeline demands it.
+                            </p>
+                        </div>
+
+                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+                            <h4 className="font-bold text-base text-gray-900 mb-2">
+                                3. Full-Scope Execution (Designers &amp; Realtors)
+                            </h4>
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                From material specification at our Portland and Lake Oswego showrooms to final jobsite walkthrough, we can take the flooring scope completely off your plate. Ask your account rep to bundle certified installation into your quote alongside your wholesale material order.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Outer Metro Coverage Grid */}
+            <section className="max-w-7xl mx-auto px-4 sm:px-6 mt-8 md:mt-10">
                 <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-8 shadow-sm">
                     <div className="max-w-3xl mb-5">
                         <p className="text-xs font-bold uppercase tracking-widest text-[#c5a059] mb-1">
