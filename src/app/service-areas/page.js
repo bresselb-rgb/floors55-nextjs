@@ -5,6 +5,25 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { TIER_1_CITIES, TIER_2_TOWNS, SHOWROOM_HUBS } from '@/lib/serviceAreasData';
 
+// Real lat/lng coordinates for the interactive map iframe & links
+const CITY_COORDS = {
+    'lake-oswego-or': { lat: 45.4207, lng: -122.6706 },
+    'portland-or': { lat: 45.5152, lng: -122.6784 },
+    'west-linn-or': { lat: 45.3657, lng: -122.6123 },
+    'tigard-or': { lat: 45.4312, lng: -122.7715 },
+    'tualatin-or': { lat: 45.3840, lng: -122.7639 },
+    'milwaukie-or': { lat: 45.4462, lng: -122.6393 },
+    'beaverton-or': { lat: 45.4871, lng: -122.8037 },
+    'vancouver-wa': { lat: 45.6280, lng: -122.6739 },
+    'oregon-city-or': { lat: 45.3573, lng: -122.6068 },
+    'happy-valley-or': { lat: 45.4451, lng: -122.5315 },
+    'sherwood-or': { lat: 45.3565, lng: -122.8401 },
+    'wilsonville-or': { lat: 45.3001, lng: -122.7726 },
+    'gresham-or': { lat: 45.4982, lng: -122.4315 },
+    'hillsboro-or': { lat: 45.5229, lng: -122.9898 },
+    'camas-wa': { lat: 45.5871, lng: -122.3995 }
+};
+
 export default function ServiceAreasPage() {
     const [activeCity, setActiveCity] = useState(TIER_1_CITIES[0]);
     const [hubFilter, setHubFilter] = useState('ALL');
@@ -13,68 +32,80 @@ export default function ServiceAreasPage() {
         ? TIER_1_CITIES
         : TIER_1_CITIES.filter(c => c.closestHub.toLowerCase().includes(hubFilter.toLowerCase()));
 
-    // Determine which hub pin to draw the active dispatch line from
-    const activeHubCoords = activeCity.closestHub.includes('Portland') && !activeCity.closestHub.includes('Lake Oswego')
-        ? { x: 50, y: 42 } // Portland Hub
-        : { x: 48, y: 62 }; // Lake Oswego Hub
+    const coords = CITY_COORDS[activeCity.slug] || { lat: 45.4650, lng: -122.6750 };
+    const bbox = `${coords.lng - 0.14}%2C${coords.lat - 0.09}%2C${coords.lng + 0.14}%2C${coords.lat + 0.09}`;
+    const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${coords.lat}%2C${coords.lng}`;
 
     return (
-        <main className="min-h-screen bg-stone-950 text-stone-100 pb-20">
-            {/* Hero Header */}
-            <section className="relative border-b border-stone-800 bg-gradient-to-b from-stone-900 to-stone-950 py-14 px-6">
+        <main className="min-h-screen bg-gray-50 text-gray-900 pb-24">
+            {/* Hero Header — Matches Floors 55 Pro Aesthetic */}
+            <header className="bg-white border-b border-gray-200 py-14 px-6">
                 <div className="max-w-7xl mx-auto">
-                    <nav className="text-xs uppercase tracking-widest text-amber-500 mb-3 flex items-center gap-2">
+                    <nav className="text-xs font-semibold uppercase tracking-widest text-[#c5a059] mb-3 flex items-center gap-2">
                         <Link href="/" className="hover:underline">Home</Link>
-                        <span>/</span>
-                        <span className="text-stone-400">Showrooms &amp; Measure Radius</span>
+                        <span className="text-gray-300">/</span>
+                        <span className="text-gray-500">Showrooms &amp; On-Site Measure Radius</span>
                     </nav>
-                    <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-                        <div>
-                            <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-white">
-                                Two Metro Showrooms. <span className="text-amber-400">On-Site Jobsite Measures.</span>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                        <div className="lg:col-span-7">
+                            <p className="text-xs font-bold uppercase tracking-widest text-[#c5a059] mb-2">
+                                Portland &amp; Lake Oswego Trade Coverage
+                            </p>
+                            <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-gray-900 leading-tight">
+                                Two Metro Showrooms. <br className="hidden sm:inline" />
+                                <span className="text-[#c5a059]">Precision On-Site Measures.</span>
                             </h1>
-                            <p className="mt-4 text-stone-300 max-w-3xl text-base md:text-lg leading-relaxed">
-                                Anchored by our <strong className="text-white">Portland</strong> and <strong className="text-white">Lake Oswego (Oswego Village)</strong> showrooms, Floors 55 Pro provides contractors, builders, and property managers across the Tri-County &amp; Clark County metro with precision on-site laser measuring, waste-factor verification, and white-label client sample consultations.
+                            <p className="mt-4 text-gray-600 text-base md:text-lg leading-relaxed max-w-2xl">
+                                Anchored by our <strong className="text-gray-900">Portland</strong> and <strong className="text-gray-900">Lake Oswego (Oswego Village)</strong> showrooms, Floors 55 Pro supports general contractors, custom builders, and property managers across the metro with on-site laser measuring, waste-factor verification, and white-label client showroom consultations.
                             </p>
                         </div>
-                        {/* Dual Hub Badges */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0">
+
+                        {/* Dual Showroom Hub Cards */}
+                        <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {SHOWROOM_HUBS.map((hub) => (
-                                <div key={hub.id} className="bg-stone-900/90 border border-amber-500/40 rounded-xl p-4">
-                                    <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
-                                        Showroom &amp; Measure Hub
+                                <div
+                                    key={hub.id}
+                                    className="bg-gray-50 border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition"
+                                >
+                                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#c5a059] mb-2">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-[#c5a059]" />
+                                        Showroom Hub
                                     </div>
-                                    <div className="text-white font-semibold mt-1">{hub.name}</div>
-                                    <div className="text-xs text-stone-400 mt-0.5">{hub.location}</div>
+                                    <h2 className="text-lg font-bold text-gray-900">{hub.name}</h2>
+                                    <p className="text-sm text-gray-600 mt-1">{hub.location}</p>
+                                    <p className="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-200 leading-relaxed">
+                                        {hub.coverage}
+                                    </p>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
-            </section>
+            </header>
 
-            {/* Interactive Map + Ranked City List */}
+            {/* Main Interactive Section */}
             <section className="max-w-7xl mx-auto px-6 mt-12">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
                     <div>
-                        <h2 className="text-2xl font-bold text-white">
-                            15 Core Metro Areas · <span className="text-amber-400">One Short Drive</span>
+                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+                            15 Metro Service Areas · One Short Drive
                         </h2>
-                        <p className="text-sm text-stone-400 mt-1">
-                            Click or hover any town to view nearest showroom dispatch, typical local material specs, and neighborhood coverage.
+                        <p className="text-base text-gray-600 mt-1">
+                            Select any city on the right to view its map location, closest showroom hub, and local flooring specs.
                         </p>
                     </div>
-                    {/* Hub Filter Toggle */}
-                    <div className="flex items-center gap-2 bg-stone-900 p-1 rounded-lg border border-stone-800 text-xs">
+
+                    {/* Hub Filter Buttons */}
+                    <div className="inline-flex bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm text-sm">
                         {['ALL', 'Portland', 'Lake Oswego'].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setHubFilter(tab)}
-                                className={`px-3 py-1.5 rounded-md font-semibold transition ${
+                                className={`px-4 py-2 rounded-lg font-semibold transition ${
                                     hubFilter === tab
-                                        ? 'bg-amber-500 text-stone-950'
-                                        : 'text-stone-400 hover:text-white'
+                                        ? 'bg-gray-900 text-white shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
                                 }`}
                             >
                                 {tab === 'ALL' ? 'All Metro (15)' : `${tab} Hub`}
@@ -84,123 +115,101 @@ export default function ServiceAreasPage() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                    {/* Left Column: Stylized Interactive Metro Map (7 cols) */}
-                    <div className="lg:col-span-7 bg-stone-900 border border-stone-800 rounded-2xl p-6 relative overflow-hidden shadow-2xl">
-                        <div className="relative w-full aspect-square max-h-[620px] bg-stone-950 rounded-xl border border-stone-800/80 overflow-hidden">
-                            {/* Stylized Rivers & Highways SVG Background */}
-                            <svg viewBox="0 0 100 100" className="w-full h-full opacity-45">
-                                <defs>
-                                    <radialGradient id="metroGlow" cx="50%" cy="52%" r="50%">
-                                        <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.18" />
-                                        <stop offset="100%" stopColor="#0c0a09" stopOpacity="0" />
-                                    </radialGradient>
-                                </defs>
-                                <rect width="100" height="100" fill="url(#metroGlow)" />
-                                {/* Grid lines */}
-                                {[20, 40, 60, 80].map((pos) => (
-                                    <React.Fragment key={pos}>
-                                        <line x1={pos} y1="0" x2={pos} y2="100" stroke="#292524" strokeWidth="0.25" />
-                                        <line x1="0" y1={pos} x2="100" y2={pos} stroke="#292524" strokeWidth="0.25" />
-                                    </React.Fragment>
-                                ))}
-                                {/* Columbia River (OR / WA Border) */}
-                                <path d="M 0 18 Q 35 28, 52 26 T 100 30" fill="none" stroke="#0284c7" strokeWidth="2.2" strokeOpacity="0.45" />
-                                <text x="10" y="15" fill="#38bdf8" fontSize="2.2" opacity="0.7" letterSpacing="0.2">COLUMBIA RIVER (WA / OR)</text>
-                                {/* Willamette River */}
-                                <path d="M 46 26 Q 51 45, 49 62 T 42 95" fill="none" stroke="#0284c7" strokeWidth="1.6" strokeOpacity="0.45" />
-                                {/* I-5 & I-205 Corridors */}
-                                <path d="M 52 5 L 50 42 L 45 62 L 42 95" fill="none" stroke="#57534e" strokeWidth="0.6" strokeDasharray="1.5,1.5" />
-                                <path d="M 54 15 Q 64 42, 62 62 T 44 74" fill="none" stroke="#57534e" strokeWidth="0.6" strokeDasharray="1.5,1.5" />
-                                {/* Dispatch Line from Closest Showroom Hub to Active City */}
-                                <line
-                                    x1={activeHubCoords.x}
-                                    y1={activeHubCoords.y}
-                                    x2={activeCity.mapCoords.x}
-                                    y2={activeCity.mapCoords.y}
-                                    stroke="#f59e0b"
-                                    strokeWidth="0.8"
-                                    strokeDasharray="2,1.5"
-                                />
-                            </svg>
-
-                            {/* Interactive City Pins */}
-                            {TIER_1_CITIES.map((city) => {
-                                const isSelected = activeCity.slug === city.slug;
-                                return (
-                                    <button
-                                        key={city.slug}
-                                        onClick={() => setActiveCity(city)}
-                                        onMouseEnter={() => setActiveCity(city)}
-                                        style={{ left: `${city.mapCoords.x}%`, top: `${city.mapCoords.y}%` }}
-                                        className="absolute -translate-x-1/2 -translate-y-1/2 group focus:outline-none z-10"
-                                        aria-label={`Select ${city.name}`}
-                                    >
-                                        <span
-                                            className={`flex items-center justify-center rounded-full transition-all duration-200 ${
-                                                city.isHub
-                                                    ? 'w-5 h-5 bg-amber-400 text-stone-950 ring-4 ring-amber-400/30 font-bold text-[10px]'
-                                                    : isSelected
-                                                    ? 'w-4 h-4 bg-white ring-4 ring-amber-400/50'
-                                                    : 'w-3 h-3 bg-stone-400 hover:bg-amber-300'
-                                            }`}
-                                        >
-                                            {city.isHub ? '★' : ''}
-                                        </span>
-                                        <span
-                                            className={`mt-1 block whitespace-nowrap px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
-                                                isSelected
-                                                    ? 'bg-amber-400 text-stone-950 font-bold shadow-lg scale-105'
-                                                    : city.isHub
-                                                    ? 'bg-stone-900/95 text-amber-300 border border-amber-500/40'
-                                                    : 'bg-stone-900/80 text-stone-300 group-hover:text-white'
-                                            }`}
-                                        >
-                                            {city.name}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        {/* Active City Detail Card (Below Map) */}
-                        <div className="mt-6 bg-stone-950 border border-stone-800 rounded-xl p-5">
-                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-800 pb-3">
+                    {/* Left Column: Real Daytime Map + Active City Info Card (7 cols) */}
+                    <div className="lg:col-span-7 space-y-6 lg:sticky lg:top-6">
+                        {/* Real Map Container */}
+                        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                            <div className="bg-gray-900 text-white px-6 py-4 flex flex-wrap items-center justify-between gap-3">
                                 <div>
-                                    <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                                        Dispatched via {activeCity.closestHub} ({activeCity.miles === '00' ? 'Showroom Hub' : `${activeCity.miles} mi · ${activeCity.driveTime}`})
+                                    <span className="text-xs font-bold uppercase tracking-wider text-[#c5a059] block">
+                                        Active Measure Zone · Dispatched via {activeCity.closestHub}
                                     </span>
-                                    <h3 className="text-2xl font-bold text-white mt-0.5">
-                                        {activeCity.name}, {activeCity.state} <span className="text-sm font-normal text-stone-400">· {activeCity.county}</span>
+                                    <h3 className="text-xl font-bold">
+                                        {activeCity.name}, {activeCity.state} ({activeCity.isHub ? 'Showroom Hub' : `${activeCity.miles} mi · ${activeCity.driveTime}`})
                                     </h3>
                                 </div>
                                 <Link
                                     href={`/service-areas/${activeCity.slug}`}
-                                    className="bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg transition"
+                                    className="bg-[#c5a059] hover:bg-[#b08d48] text-white font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg transition"
                                 >
-                                    {activeCity.name} Trade Details →
+                                    Open {activeCity.name} Page →
                                 </Link>
                             </div>
 
-                            <p className="text-stone-300 text-sm mt-3 leading-relaxed">
+                            <div className="relative w-full h-[380px] bg-gray-100">
+                                <iframe
+                                    title={`Map of ${activeCity.name}, ${activeCity.state}`}
+                                    src={mapUrl}
+                                    className="w-full h-full border-0"
+                                    loading="lazy"
+                                />
+                            </div>
+
+                            {/* Quick City Pills Underneath Map */}
+                            <div className="p-4 bg-gray-50 border-t border-gray-200 flex flex-wrap gap-1.5">
+                                {TIER_1_CITIES.map((city) => (
+                                    <button
+                                        key={city.slug}
+                                        onClick={() => setActiveCity(city)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition border ${
+                                            activeCity.slug === city.slug
+                                                ? 'bg-gray-900 text-white border-gray-900 shadow-sm'
+                                                : 'bg-white text-gray-700 border-gray-200 hover:border-[#c5a059]'
+                                        }`}
+                                    >
+                                        {city.isHub ? `★ ${city.name}` : city.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Readable Active City Details Card */}
+                        <div className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-sm">
+                            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                                <div>
+                                    <span className="text-xs font-bold uppercase tracking-wider text-[#c5a059]">
+                                        {activeCity.county} · {activeCity.closestHub}
+                                    </span>
+                                    <h3 className="text-2xl font-bold text-gray-900 mt-1">
+                                        {activeCity.name}, {activeCity.state} Trade &amp; Measure Coverage
+                                    </h3>
+                                </div>
+                                <Link
+                                    href={`/service-areas/${activeCity.slug}`}
+                                    className="text-sm font-bold text-[#c5a059] hover:underline"
+                                >
+                                    View Full {activeCity.name} Details →
+                                </Link>
+                            </div>
+
+                            <p className="text-gray-700 text-base mt-4 leading-relaxed">
                                 {activeCity.description}
                             </p>
 
-                            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-stone-900 text-xs">
+                            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-gray-100">
                                 <div>
-                                    <span className="text-stone-400 uppercase font-semibold block mb-1.5">Popular Sub-Market Specs:</span>
-                                    <ul className="space-y-1 text-stone-200">
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+                                        Popular Specs in {activeCity.name}
+                                    </h4>
+                                    <ul className="space-y-2 text-sm text-gray-800 font-medium">
                                         {activeCity.popularSpecs.map((spec) => (
-                                            <li key={spec} className="flex items-center gap-1.5">
-                                                <span className="text-amber-400">▪</span> {spec}
+                                            <li key={spec} className="flex items-start gap-2">
+                                                <span className="text-[#c5a059] font-bold">✔</span>
+                                                <span>{spec}</span>
                                             </li>
                                         ))}
                                     </ul>
                                 </div>
                                 <div>
-                                    <span className="text-stone-400 uppercase font-semibold block mb-1.5">Neighborhoods Covered:</span>
-                                    <div className="flex flex-wrap gap-1.5">
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">
+                                        Neighborhoods We Measure
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
                                         {activeCity.neighborhoods.map((hood) => (
-                                            <span key={hood} className="bg-stone-900 border border-stone-800 text-stone-300 px-2 py-0.5 rounded">
+                                            <span
+                                                key={hood}
+                                                className="bg-gray-100 text-gray-800 text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200"
+                                            >
                                                 {hood}
                                             </span>
                                         ))}
@@ -210,41 +219,61 @@ export default function ServiceAreasPage() {
                         </div>
                     </div>
 
-                    {/* Right Column: Triple-SSS Style Mileage & City List (5 cols) */}
-                    <aside className="lg:col-span-5 bg-stone-900 border border-stone-800 rounded-2xl p-4 divide-y divide-stone-800/80">
+                    {/* Right Column: Clean, High-Contrast City Directory List (5 cols) */}
+                    <aside className="lg:col-span-5 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm divide-y divide-gray-100">
                         {filteredCities.map((city) => {
                             const isSelected = activeCity.slug === city.slug;
                             return (
                                 <div
                                     key={city.slug}
-                                    onMouseEnter={() => setActiveCity(city)}
                                     onClick={() => setActiveCity(city)}
-                                    className={`p-3.5 flex items-center justify-between gap-4 cursor-pointer rounded-xl transition ${
-                                        isSelected ? 'bg-stone-800/90 border-l-4 border-amber-400' : 'hover:bg-stone-950/60'
+                                    className={`p-4 flex items-center justify-between gap-4 cursor-pointer rounded-xl transition ${
+                                        isSelected
+                                            ? 'bg-amber-50/70 border-l-4 border-[#c5a059]'
+                                            : 'hover:bg-gray-50'
                                     }`}
                                 >
-                                    <div className="flex items-center gap-3.5 min-w-0">
-                                        <div className={`w-14 text-center py-1.5 rounded-lg font-mono shrink-0 ${
-                                            city.isHub ? 'bg-amber-400 text-stone-950 font-bold' : 'bg-stone-950 text-amber-400 border border-stone-800'
-                                        }`}>
-                                            <div className="text-sm font-bold leading-none">{city.miles}<small className="text-[10px] ml-0.5">mi</small></div>
-                                            <div className="text-[9px] uppercase opacity-80 mt-0.5">{city.isHub ? 'HUB' : city.driveTime}</div>
+                                    <div className="flex items-center gap-4 min-w-0">
+                                        {/* Mileage Badge */}
+                                        <div
+                                            className={`w-16 text-center py-2 rounded-xl shrink-0 border ${
+                                                city.isHub
+                                                    ? 'bg-gray-900 text-white border-gray-900 font-bold'
+                                                    : isSelected
+                                                    ? 'bg-[#c5a059] text-white border-[#c5a059] font-bold'
+                                                    : 'bg-gray-50 text-gray-900 border-gray-200'
+                                            }`}
+                                        >
+                                            <div className="text-base font-bold leading-none">
+                                                {city.miles}<small className="text-xs ml-0.5 font-normal">mi</small>
+                                            </div>
+                                            <div className="text-[10px] uppercase tracking-wider mt-1 opacity-90">
+                                                {city.isHub ? 'HUB' : city.driveTime}
+                                            </div>
                                         </div>
+
+                                        {/* City Name & Tagline */}
                                         <div className="min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-bold text-white truncate">{city.name}, {city.state}</span>
-                                                <span className="text-[10px] bg-stone-950 text-stone-400 px-2 py-0.5 rounded border border-stone-800">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="text-base font-bold text-gray-900">
+                                                    {city.name}, {city.state}
+                                                </span>
+                                                <span className="text-[11px] font-medium bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md border border-gray-200">
                                                     {city.closestHub.replace(' Showroom', '')}
                                                 </span>
                                             </div>
-                                            <p className="text-xs text-stone-400 truncate mt-0.5">{city.tagline}</p>
+                                            <p className="text-sm text-gray-600 mt-1 line-clamp-2 leading-snug">
+                                                {city.tagline}
+                                            </p>
                                         </div>
                                     </div>
+
                                     <Link
                                         href={`/service-areas/${city.slug}`}
-                                        className="text-xs text-amber-400 hover:text-amber-300 font-semibold shrink-0 px-2 py-1"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="text-xs font-bold uppercase tracking-wider text-[#c5a059] hover:text-gray-900 shrink-0 px-3 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 transition"
                                     >
-                                        View →
+                                        Page →
                                     </Link>
                                 </div>
                             );
@@ -254,25 +283,31 @@ export default function ServiceAreasPage() {
             </section>
 
             {/* Tier 2 Outer Metro Coverage Grid */}
-            <section className="max-w-7xl mx-auto px-6 mt-14">
-                <div className="bg-stone-900/60 border border-stone-800 rounded-2xl p-6">
-                    <h3 className="text-lg font-bold text-white">
-                        Extended Valley, Gorge &amp; Clark County Measure Coverage
-                    </h3>
-                    <p className="text-xs text-stone-400 mt-1 mb-5">
-                        Scheduled on-site project estimates, multi-unit takeoffs, and showroom sample support for outer metro communities:
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <section className="max-w-7xl mx-auto px-6 mt-16">
+                <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
+                    <div className="max-w-3xl mb-6">
+                        <p className="text-xs font-bold uppercase tracking-widest text-[#c5a059] mb-1">
+                            Regional Project Support
+                        </p>
+                        <h3 className="text-2xl font-bold text-gray-900">
+                            Extended Valley, Gorge &amp; Clark County Coverage
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Working on a larger residential build or multi-unit project further out? We coordinate scheduled takeoffs and showroom sample packages across these outer metro communities:
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {TIER_2_TOWNS.map((town) => (
                             <div
                                 key={town.slug}
-                                className="bg-stone-950 border border-stone-800/90 rounded-xl p-3.5 flex items-center justify-between"
+                                className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:border-[#c5a059] transition"
                             >
                                 <div>
-                                    <div className="font-semibold text-sm text-white">{town.name}, {town.state}</div>
-                                    <div className="text-xs text-stone-400">{town.county} · via {town.closestHub}</div>
+                                    <div className="font-bold text-base text-gray-900">{town.name}, {town.state}</div>
+                                    <div className="text-xs text-gray-600 mt-0.5">{town.county} · via {town.closestHub}</div>
                                 </div>
-                                <span className="text-xs font-mono text-amber-400 bg-stone-900 px-2.5 py-1 rounded border border-stone-800">
+                                <span className="text-xs font-bold text-gray-800 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
                                     {town.miles} mi
                                 </span>
                             </div>
