@@ -37,7 +37,6 @@ export default function ServiceAreasPage() {
         ? TIER_1_CITIES
         : TIER_1_CITIES.filter(c => c.closestHub.toLowerCase().includes(hubFilter.toLowerCase()));
 
-    // Load MapLibre GL JS (gives the Triple SSS tilted 3D vector map look without needing an API key)
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
@@ -54,11 +53,10 @@ export default function ServiceAreasPage() {
 
             const map = new window.maplibregl.Map({
                 container: mapContainerRef.current,
-                // Clean, high-contrast Positron architectural vector style
                 style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
                 center: [-122.6706, 45.4550],
                 zoom: 9.8,
-                pitch: 46, // Tilted 3D perspective just like Triple SSS
+                pitch: 46,
                 bearing: -10,
                 attributionControl: false
             });
@@ -68,7 +66,6 @@ export default function ServiceAreasPage() {
             map.on('load', () => {
                 setMapLoaded(true);
 
-                // Add dashed dispatch lines connecting Portland & Lake Oswego hubs to each city
                 const features = TIER_1_CITIES.filter(c => !c.isHub).map((city) => {
                     const target = CITY_COORDS[city.slug];
                     const origin = city.closestHub.includes('Portland') && !city.closestHub.includes('Lake Oswego')
@@ -98,13 +95,13 @@ export default function ServiceAreasPage() {
                     source: 'dispatch-lines',
                     paint: {
                         'line-color': '#c5a059',
-                        'line-width': 2,
+                        'line-width': 1.75,
                         'line-dasharray': [2, 2],
-                        'line-opacity': 0.55
+                        'line-opacity': 0.5
                     }
                 });
 
-                // Create custom interactive HTML pins for all 15 cities
+                // Compact, low-profile HTML pins so they don't clutter the map
                 TIER_1_CITIES.forEach((city) => {
                     const c = CITY_COORDS[city.slug];
                     if (!c) return;
@@ -113,12 +110,12 @@ export default function ServiceAreasPage() {
                     el.type = 'button';
                     el.className = 'f55-map-pin group focus:outline-none';
                     el.innerHTML = `
-                        <div class="pin-Wrap flex items-center gap-1.5 px-2.5 py-1 rounded-full shadow-md transition-all duration-200 cursor-pointer border ${
+                        <div class="pin-Wrap flex items-center gap-1 px-2 py-0.5 rounded-full shadow-sm transition-all duration-200 cursor-pointer border ${
                             city.isHub
-                                ? 'bg-gray-900 text-white border-[#c5a059] ring-4 ring-[#c5a059]/30 font-bold text-xs'
-                                : 'bg-white/95 text-gray-900 border-gray-300 hover:border-[#c5a059] font-semibold text-[11px]'
+                                ? 'bg-gray-900 text-white border-[#c5a059] font-bold text-[10px]'
+                                : 'bg-white/90 text-gray-800 border-gray-300 hover:border-[#c5a059] font-semibold text-[10px]'
                         }">
-                            <span class="w-2 h-2 rounded-full shrink-0 ${city.isHub ? 'bg-[#c5a059]' : 'bg-gray-900'}"></span>
+                            <span class="w-1.5 h-1.5 rounded-full shrink-0 ${city.isHub ? 'bg-[#c5a059]' : 'bg-gray-700'}"></span>
                             <span>${city.name}</span>
                         </div>
                     `;
@@ -156,13 +153,12 @@ export default function ServiceAreasPage() {
         };
     }, []);
 
-    // Fly camera smoothly & highlight active marker when activeCity changes
     useEffect(() => {
         const map = mapInstanceRef.current;
         const c = CITY_COORDS[activeCity.slug];
         if (map && c && mapLoaded) {
             map.flyTo({
-                center: [c.lng, c.lat - 0.02], // Slight offset so floating bottom card doesn't cover pin
+                center: [c.lng, c.lat],
                 zoom: activeCity.isHub ? 10.6 : 11.2,
                 pitch: 48,
                 bearing: -10,
@@ -172,18 +168,18 @@ export default function ServiceAreasPage() {
             });
         }
 
-        // Update active marker pill styling
+        // Update marker styles cleanly without oversized scaling
         Object.entries(markersRef.current).forEach(([slug, { el, city }]) => {
             const pill = el.querySelector('.pin-Wrap');
             if (!pill) return;
             if (slug === activeCity.slug) {
-                pill.className = 'pin-Wrap flex items-center gap-1.5 px-3 py-1.5 rounded-full shadow-xl transition-all duration-200 cursor-pointer border-2 border-white bg-[#c5a059] text-white font-bold text-xs scale-110 z-30';
+                pill.className = 'pin-Wrap flex items-center gap-1.5 px-2.5 py-1 rounded-full shadow-md transition-all duration-200 cursor-pointer border border-white bg-[#c5a059] text-white font-bold text-[11px] scale-105';
                 el.style.zIndex = '40';
             } else if (city.isHub) {
-                pill.className = 'pin-Wrap flex items-center gap-1.5 px-2.5 py-1 rounded-full shadow-md transition-all duration-200 cursor-pointer border bg-gray-900 text-white border-[#c5a059] ring-2 ring-[#c5a059]/30 font-bold text-xs';
+                pill.className = 'pin-Wrap flex items-center gap-1 px-2 py-0.5 rounded-full shadow-sm transition-all duration-200 cursor-pointer border bg-gray-900 text-white border-[#c5a059] font-bold text-[10px]';
                 el.style.zIndex = '25';
             } else {
-                pill.className = 'pin-Wrap flex items-center gap-1.5 px-2.5 py-1 rounded-full shadow-md transition-all duration-200 cursor-pointer border bg-white/95 text-gray-900 border-gray-300 hover:border-[#c5a059] font-semibold text-[11px]';
+                pill.className = 'pin-Wrap flex items-center gap-1 px-2 py-0.5 rounded-full shadow-sm transition-all duration-200 cursor-pointer border bg-white/90 text-gray-800 border-gray-300 hover:border-[#c5a059] font-semibold text-[10px]';
                 el.style.zIndex = '10';
             }
         });
@@ -229,7 +225,7 @@ export default function ServiceAreasPage() {
                                 <span className="text-[#c5a059]">To Your Jobsite.</span>
                             </h1>
                             <p className="mt-3 md:mt-4 text-gray-600 text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl">
-                                Anchored by our <strong className="text-gray-900">Portland</strong> and <strong className="text-gray-900">Lake Oswego (Oswego Village)</strong> showrooms, Floors 55 Pro supports general contractors, custom builders, and property managers across the metro with on-site measuring, waste-factor verification, and white-label client showroom consultations.
+                                Anchored by our <strong className="text-gray-900">Portland</strong> and <strong className="text-gray-900">Lake Oswego (Oswego Village)</strong> sample showrooms, Floors 55 Pro provides contractors, builders, and property managers with on-site project measuring, white-label client consultations, and fast <strong className="text-gray-900">will-call pickup at our regional vendor partner warehouses</strong>.
                             </p>
                         </div>
 
@@ -241,8 +237,8 @@ export default function ServiceAreasPage() {
                                     className="bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm"
                                 >
                                     <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#c5a059] mb-1.5">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-[#c5a059]" />
-                                        Showroom Hub
+                                        <span className="w-2 h-2 rounded-full bg-[#c5a059]" />
+                                        Sample &amp; Measure Hub
                                     </div>
                                     <h2 className="text-base sm:text-lg font-bold text-gray-900">{hub.name}</h2>
                                     <p className="text-xs sm:text-sm text-gray-600 mt-0.5">{hub.location}</p>
@@ -256,7 +252,7 @@ export default function ServiceAreasPage() {
                 </div>
             </header>
 
-            {/* Triple-SSS Style Interactive Tilted Map + Numbered Mileage List */}
+            {/* Interactive Tilted Map + Numbered Mileage List */}
             <section ref={mapSectionRef} className="max-w-7xl mx-auto px-4 sm:px-6 mt-8 md:mt-12 scroll-mt-4">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 md:mb-8">
                     <div>
@@ -264,7 +260,7 @@ export default function ServiceAreasPage() {
                             Fifteen Towns, <span className="text-[#c5a059]">One Short Drive.</span>
                         </h2>
                         <p className="text-sm sm:text-base text-gray-600 mt-1">
-                            Pick any town on the map or list to fly to that sub-market and see what we supply and measure there.
+                            Select any town to fly to that sub-market and view our on-site measure dispatch and local specs.
                         </p>
                     </div>
 
@@ -287,14 +283,14 @@ export default function ServiceAreasPage() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-                    {/* Left Column: Tilted 3D Vector Map + Floating Triple-SSS Style Overlay Card (7 cols) */}
+                    {/* Left Column: Tilted 3D Vector Map + Slim Bottom Pill Bar (7 cols) */}
                     <div className="lg:col-span-7 space-y-5 md:space-y-6 lg:sticky lg:top-6">
                         <div className="relative bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-md">
                             {/* Top Map Bar */}
-                            <div className="bg-gray-900 text-white px-4 py-3 sm:px-5 flex items-center justify-between gap-2 border-b border-gray-800">
+                            <div className="bg-gray-900 text-white px-4 py-2.5 sm:px-5 flex items-center justify-between gap-2 border-b border-gray-800">
                                 <div className="flex items-center gap-2 text-xs font-semibold text-gray-300">
                                     <span className="w-2 h-2 rounded-full bg-[#c5a059]" />
-                                    <span>Portland &amp; SW Washington Metro Coverage</span>
+                                    <span>Portland &amp; SW Washington Measure Radius</span>
                                 </div>
                                 <button
                                     type="button"
@@ -306,7 +302,7 @@ export default function ServiceAreasPage() {
                             </div>
 
                             {/* Tilted Vector Map Canvas */}
-                            <div className="relative w-full h-[380px] sm:h-[480px] md:h-[540px] bg-gray-100">
+                            <div className="relative w-full h-[380px] sm:h-[480px] md:h-[520px] bg-gray-100">
                                 <div ref={mapContainerRef} className="w-full h-full" />
 
                                 {!mapLoaded && (
@@ -315,46 +311,44 @@ export default function ServiceAreasPage() {
                                     </div>
                                 )}
 
-                                {/* Triple-SSS Style Floating Overlay Card Inside the Map */}
-                                <div className="absolute bottom-3 left-3 right-3 sm:right-auto sm:max-w-sm bg-white/95 backdrop-blur-md border border-gray-200/90 rounded-xl p-4 shadow-xl z-20">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#c5a059] bg-amber-50 px-2.5 py-0.5 rounded-full border border-[#c5a059]/30">
-                                            {activeCity.isHub ? 'Showroom Headquarters' : `${activeCity.miles} mi from ${activeCity.closestHub.replace(' Showroom', '')}`}
+                                {/* Slim, Non-Occluding Bottom HUD Bar */}
+                                <div className="absolute bottom-3 left-3 right-3 bg-gray-900/90 backdrop-blur-md text-white rounded-xl px-3.5 py-2.5 shadow-lg z-20 flex flex-wrap items-center justify-between gap-3 border border-white/10">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <span className="bg-[#c5a059] text-white text-[11px] font-extrabold px-2 py-0.5 rounded shrink-0">
+                                            {activeCity.isHub ? 'HUB' : `${activeCity.miles} mi`}
                                         </span>
-                                        <span className="text-[11px] font-medium text-gray-500">
-                                            {activeCity.county}
-                                        </span>
+                                        <div className="truncate">
+                                            <span className="font-bold text-sm text-white">
+                                                {activeCity.name}, {activeCity.state}
+                                            </span>
+                                            <span className="hidden sm:inline text-xs text-gray-300 ml-2">
+                                                · {activeCity.isHub ? 'Client Sample Showroom & Measure Dispatch' : `${activeCity.driveTime} via ${activeCity.closestHub}`}
+                                            </span>
+                                        </div>
                                     </div>
 
-                                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mt-1.5">
-                                        {activeCity.name} <small className="text-xs font-semibold text-gray-500">{activeCity.state}</small>
-                                    </h3>
-
-                                    <p className="text-xs sm:text-sm text-gray-600 mt-1 line-clamp-2 leading-relaxed">
-                                        {activeCity.tagline}
-                                    </p>
-
-                                    <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between gap-3">
-                                        <span className="text-[11px] font-semibold text-gray-500">
-                                            {activeCity.isHub ? 'Walk-In Showroom & Will-Call' : `Est. Drive: ${activeCity.driveTime}`}
-                                        </span>
-                                        <Link
-                                            href={`/service-areas/${activeCity.slug}`}
-                                            className="bg-gray-900 hover:bg-[#c5a059] text-white text-xs font-bold uppercase tracking-wider px-3.5 py-1.5 rounded-lg transition"
-                                        >
-                                            Explore {activeCity.name} →
-                                        </Link>
-                                    </div>
+                                    <Link
+                                        href={`/service-areas/${activeCity.slug}`}
+                                        className="bg-[#c5a059] hover:bg-[#b08d48] text-white text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg transition shrink-0"
+                                    >
+                                        {activeCity.name} Page →
+                                    </Link>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Expanded Specs & Neighborhoods Card Below Map */}
+                        {/* Expanded Specs, Vendor Will-Call & Neighborhoods Card Below Map */}
                         <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 shadow-sm">
-                            <h4 className="text-base sm:text-lg font-bold text-gray-900">
-                                What We Supply &amp; Measure in {activeCity.name}, {activeCity.state}
-                            </h4>
-                            <p className="text-gray-600 text-sm mt-2 leading-relaxed">
+                            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-100">
+                                <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                                    What We Supply &amp; Measure in {activeCity.name}, {activeCity.state}
+                                </h3>
+                                <span className="text-xs font-semibold text-[#c5a059] bg-amber-50 px-2.5 py-1 rounded-md border border-[#c5a059]/30">
+                                    Will-Call at Regional Vendor Warehouses
+                                </span>
+                            </div>
+
+                            <p className="text-gray-600 text-sm mt-3 leading-relaxed">
                                 {activeCity.description}
                             </p>
 
@@ -391,7 +385,7 @@ export default function ServiceAreasPage() {
                         </div>
                     </div>
 
-                    {/* Right Column: Triple-SSS Style Ordered Mileage List (5 cols) */}
+                    {/* Right Column: Ordered Mileage List (5 cols) */}
                     <aside className="lg:col-span-5 bg-white border border-gray-200 rounded-2xl p-2 sm:p-3 shadow-sm">
                         <ol className="divide-y divide-gray-100">
                             {filteredCities.map((city) => {
@@ -412,7 +406,6 @@ export default function ServiceAreasPage() {
                                             }`}
                                         >
                                             <div className="flex items-center gap-3.5 min-w-0">
-                                                {/* Bold Mileage Counter like Triple SSS */}
                                                 <b
                                                     className={`w-14 sm:w-16 text-center py-2 rounded-xl shrink-0 border block ${
                                                         city.isHub
@@ -430,7 +423,6 @@ export default function ServiceAreasPage() {
                                                     </span>
                                                 </b>
 
-                                                {/* Town Name & Italicized Micro-Copy */}
                                                 <span className="min-w-0 block">
                                                     <span className="flex flex-wrap items-center gap-1.5">
                                                         <span className="text-sm sm:text-base font-bold text-gray-900">
@@ -462,7 +454,7 @@ export default function ServiceAreasPage() {
                 </div>
             </section>
 
-            {/* Bottom Quick-Link Pill Grid (Just like Triple SSS below the map) + Outer Towns */}
+            {/* Outer Metro Coverage Grid */}
             <section className="max-w-7xl mx-auto px-4 sm:px-6 mt-12 md:mt-16">
                 <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-8 shadow-sm">
                     <div className="max-w-3xl mb-5">
