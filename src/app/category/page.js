@@ -5,6 +5,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { signInAnonymously } from "firebase/auth";
 import { db, auth, appId } from "../../lib/firebase";
 import CategoryViewer from "../../components/CategoryViewer";
+import SeoCatalogWrapper from "../../components/SeoCatalogWrapper";
 
 export const dynamic = 'force-dynamic';
 
@@ -91,42 +92,44 @@ export default async function AllCategoriesPage() {
 
       <CategoryViewer initialCategory="All Products" />
 
-      {/* Server-Rendered Master Catalog Index so Googlebot Crawls All Products & Categories */}
+      {/* Server-Rendered Master Catalog Index (Visible to Googlebot, Auto-Hidden in White-Label Client Mode) */}
       {allServerProducts.length > 0 && (
-        <section className="bg-gray-50 border-t border-gray-200 py-10 px-4 sm:px-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4 pb-4 border-b border-gray-200">
-              <div>
-                <h2 className="text-xs font-bold uppercase tracking-widest text-[#c5a059]">
-                  Complete B2B Flooring Directory ({allServerProducts.length} Active SKUs)
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Direct product specification links for Portland &amp; Lake Oswego trade accounts:
-                </p>
+        <SeoCatalogWrapper>
+          <section className="bg-gray-50 border-t border-gray-200 py-10 px-4 sm:px-6">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-4 pb-4 border-b border-gray-200">
+                <div>
+                  <h2 className="text-xs font-bold uppercase tracking-widest text-[#c5a059]">
+                    Complete B2B Flooring Directory ({allServerProducts.length} Active SKUs)
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Direct product specification links for Portland &amp; Lake Oswego trade accounts:
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs font-bold">
+                  <Link href="/category/luxury-vinyl" className="text-gray-700 hover:text-[#c5a059] bg-white px-3 py-1.5 rounded border border-gray-200" style={{ textDecoration: 'none' }}>Luxury Vinyl (LVP)</Link>
+                  <Link href="/category/hardwood" className="text-gray-700 hover:text-[#c5a059] bg-white px-3 py-1.5 rounded border border-gray-200" style={{ textDecoration: 'none' }}>Hardwood</Link>
+                  <Link href="/category/carpet" className="text-gray-700 hover:text-[#c5a059] bg-white px-3 py-1.5 rounded border border-gray-200" style={{ textDecoration: 'none' }}>Carpet</Link>
+                  <Link href="/category/laminate" className="text-gray-700 hover:text-[#c5a059] bg-white px-3 py-1.5 rounded border border-gray-200" style={{ textDecoration: 'none' }}>Laminate</Link>
+                  <Link href="/category/tile" className="text-gray-700 hover:text-[#c5a059] bg-white px-3 py-1.5 rounded border border-gray-200" style={{ textDecoration: 'none' }}>Tile</Link>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2 text-xs font-bold">
-                <Link href="/category/luxury-vinyl" className="text-gray-700 hover:text-[#c5a059] bg-white px-3 py-1.5 rounded border border-gray-200" style={{ textDecoration: 'none' }}>Luxury Vinyl (LVP)</Link>
-                <Link href="/category/hardwood" className="text-gray-700 hover:text-[#c5a059] bg-white px-3 py-1.5 rounded border border-gray-200" style={{ textDecoration: 'none' }}>Hardwood</Link>
-                <Link href="/category/carpet" className="text-gray-700 hover:text-[#c5a059] bg-white px-3 py-1.5 rounded border border-gray-200" style={{ textDecoration: 'none' }}>Carpet</Link>
-                <Link href="/category/laminate" className="text-gray-700 hover:text-[#c5a059] bg-white px-3 py-1.5 rounded border border-gray-200" style={{ textDecoration: 'none' }}>Laminate</Link>
-                <Link href="/category/tile" className="text-gray-700 hover:text-[#c5a059] bg-white px-3 py-1.5 rounded border border-gray-200" style={{ textDecoration: 'none' }}>Tile</Link>
-              </div>
-            </div>
 
-            <div className="flex flex-wrap gap-2">
-              {allServerProducts.map((prod) => (
-                <Link
-                  key={prod.id}
-                  href={`/product/${prod.id}`}
-                  className="text-xs text-gray-600 hover:text-gray-900 bg-white hover:border-[#c5a059] border border-gray-200 px-2.5 py-1 rounded transition"
-                  style={{ textDecoration: 'none' }}
-                >
-                  {prod.name}
-                </Link>
-              ))}
+              <div className="flex flex-wrap gap-2">
+                {allServerProducts.map((prod) => (
+                  <Link
+                    key={prod.id}
+                    href={`/product/${prod.id}`}
+                    className="text-xs text-gray-600 hover:text-gray-900 bg-white hover:border-[#c5a059] border border-gray-200 px-2.5 py-1 rounded transition"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    {prod.name}
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </SeoCatalogWrapper>
       )}
     </>
   );
