@@ -17,7 +17,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     const [user, setUser] = useState(null);
     const [isStaff, setIsStaff] = useState(false);
 
-    // NEW: State for active curation session
+    // State for active curation session
     const [activeBoardId, setActiveBoardId] = useState(null);
     const [activeBoardName, setActiveBoardName] = useState('');
 
@@ -40,7 +40,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     });
 
     const [failedViews, setFailedViews] = useState({});
-    const [loadedViews, setLoadedViews] = useState({}); // <-- ADD THIS LINE
+    const [loadedViews, setLoadedViews] = useState({});
 
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     const [isBuilderOpen, setIsBuilderOpen] = useState(false);
@@ -194,7 +194,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         }
     }, [searchParams, urlColorSku]);
 
-    // NEW: Check for an active curation session
+    // Check for an active curation session
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const bId = sessionStorage.getItem('active_curation_board_id');
@@ -264,10 +264,6 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
              }
          }
     }, [urlColorSku, productData, activeColor]);
-
-    //useEffect(() => {
-    //    setFailedViews({});
-    //}, [activeColor]);
 
     const handleViewError = (view) => {
         if (activeColor) {
@@ -342,7 +338,6 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
     const getMediaPath = (view) => {
         if (!productData || !activeColor) return null;
-        // Allow accessories with an imageFolder to bypass the generic graphics, otherwise use FALLBACK_IMG
         if (productData.isAccessory && !productData.imageFolder && !productData.imgPrefix) return FALLBACK_IMG;
 
         const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -356,13 +351,9 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
         const prefix = productData.imgPrefix || '';
         const vLower = view.toLowerCase();
-        
-        // Auto-detect if it should be an MP4 or a JPG
         const ext = (vLower.includes('video') || vLower.includes('vid') || vLower.includes('mp4')) ? 'mp4' : 'jpg';
 
         let path = '';
-        
-        // Legacy support for specific primary room scene overrides
         if (view === 'ROOM' && productData.roomPrefix) {
             const suffix = productData.roomSuffix || '_room.jpg';
             path = `images/${folderName}/${productData.roomPrefix}${activeColor.sku}${suffix}`;
@@ -483,8 +474,9 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     const basePrice = productData?.price || 0;
     const isCarpet = productData?.category === 'Carpet' || (productData?.category || '').toLowerCase().includes('carpet');
     const isCarpetCushionOnly = productData?.category === 'Carpet Cushion';
+    const netSqftNum = parseFloat(calcNetSqft) || 0;
     
-    // MEMOIZE: Material Quantities to prevent re-calculating on every slider tick
+    // MEMOIZE: Material Quantities
     const { finalMaterialQty, finalMaterialUnit, finalMaterialCoverageSqft, totalMaterialCost } = useMemo(() => {
         let cartonSqft = parseFloat(productData?.cartonSize);
         if (isNaN(cartonSqft) || cartonSqft <= 0) cartonSqft = parseFloat(productData?.boxSqft);
@@ -495,8 +487,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         }
         cartonSqft = cartonSqft || (isCarpetCushionOnly ? 360 : 20); 
 
-        const netSqftNum = parseFloat(calcNetSqft) || 0;
-        const totalSqftWithWaste = netSqftNum * parseFloat(calcWaste);
+        const nSqft = parseFloat(calcNetSqft) || 0;
+        const totalSqftWithWaste = nSqft * parseFloat(calcWaste);
         
         const requiredSqYd = Math.ceil(totalSqftWithWaste / 9);
         const requiredCartons = Math.ceil(totalSqftWithWaste / cartonSqft);
@@ -559,19 +551,134 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     }, [selectedAddons]);
 
     const totalLaborCost = useMemo(() => {
-        const netSqftNum = parseFloat(calcNetSqft) || 0;
-        return (parseFloat(laborPrep) || 0) + (netSqftNum * (parseFloat(laborInstallPerSqft) || 0)) + (parseFloat(laborDelivery) || 0) + (parseFloat(customLabor1Cost) || 0) + (parseFloat(customLabor2Cost) || 0);
+        const nSqft = parseFloat(calcNetSqft) || 0;
+        return (parseFloat(laborPrep) || 0) + (nSqft * (parseFloat(laborInstallPerSqft) || 0)) + (parseFloat(laborDelivery) || 0) + (parseFloat(customLabor1Cost) || 0) + (parseFloat(customLabor2Cost) || 0);
     }, [laborPrep, calcNetSqft, laborInstallPerSqft, laborDelivery, customLabor1Cost, customLabor2Cost]);
 
     const totalWholesaleProjectCost = totalMaterialCost + totalPadCost + totalAddonsCost + totalLaborCost;
     const turnkeyRetailPrice = totalWholesaleProjectCost * (1 + (builderMargin / 100));
+
+    let normalizedPerSqftPrice = basePrice;
+    if (productData?.unit === 'sqyd') normalizedPerSqftPrice = basePrice / 9;
+
+    const finalPrice = isClientMode ? normalizedPerSqftPrice * (1 + clientMargin / 100) : normalizedPerSqftPrice;
+    const wsPrice = finalPrice.toFixed(2);
+    const displayRetailPrice = (productData?.retailPrice ? parseFloat(productData.retailPrice) : (basePrice * 2.2)).toFixed(2);
+
+    // DOWNLOAD / PRINT 1-PAGE PRODUCT SALES SHEET (White-Label & Colorway Aware)
+    const handleDownloadSalesSheet = () => {
+        // If an external PDF URL is explicitly attached to the product document, open it
+        if (productData?.salesSheetUrl || productData?.specSheetUrl || productData?.pdfUrl) {
+            window.open(productData.salesSheetUrl || productData.specSheetUrl || productData.pdfUrl, '_blank');
+            return;
+        }
+
+        const storedBrand = typeof window !== 'undefined' ? sessionStorage.getItem('client_brand') : null;
+        const storedLogo = typeof window !== 'undefined' ? sessionStorage.getItem('client_logo') : null;
+        const brandHeading = isClientMode
+            ? (storedBrand || 'Your Flooring Professional')
+            : (isPrivateLabel ? 'Architectural Flooring Specification' : 'Floors 55 Pro — Architectural Specification Sheet');
+
+        const sheetPriceLabel = isClientMode
+            ? `$${wsPrice} / ${productData?.unit || 'sqft'}`
+            : `Retail: $${displayRetailPrice} / ${productData?.unit || 'sqft'}`;
+
+        const mainImgUrl = getMediaPath(activeView !== 'VIDEO' ? activeView : 'MAIN') || FALLBACK_IMG;
+        const specsListHtml = (productData?.specs && productData.specs.length > 0)
+            ? productData.specs.map(s => {
+                const [label, ...rest] = s.split(':');
+                if (rest.length === 0) return `<li>${s}</li>`;
+                return `<li><strong>${label}:</strong> ${rest.join(':')}</li>`;
+            }).join('')
+            : '<li>Commercial &amp; Residential Architectural Grade Flooring</li>';
+
+        const printWindow = window.open('', '_blank', 'width=900,height=1100');
+        if (!printWindow) {
+            alert('Please allow pop-ups to download or print the Product Sales Sheet.');
+            return;
+        }
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>${activeTitle || 'Product'} - ${activeColor?.name || ''} Sales Sheet</title>
+                <style>
+                    @page { size: letter; margin: 0.5in; }
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111827; margin: 0; padding: 24px; line-height: 1.5; }
+                    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #c5a059; padding-bottom: 16px; margin-bottom: 24px; }
+                    .brand-title { font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #111827; }
+                    .brand-sub { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
+                    .logo { max-height: 48px; object-fit: contain; }
+                    .hero-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 28px; align-items: start; margin-bottom: 24px; }
+                    .img-box { width: 100%; aspect-ratio: 4/3; border-radius: 10px; overflow: hidden; border: 1px solid #e5e7eb; background: #f9fafb; }
+                    .img-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+                    .cat-badge { display: inline-block; background: #f3f4f6; color: #4b5563; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; padding: 4px 10px; border-radius: 999px; margin-bottom: 8px; }
+                    h1 { font-size: 28px; font-weight: 800; margin: 0 0 6px 0; color: #111827; }
+                    .color-name { font-size: 16px; font-weight: 700; color: #c5a059; margin-bottom: 14px; }
+                    .price-box { background: #fdfdfd; border-left: 4px solid #c5a059; padding: 12px 16px; margin: 16px 0; border-top: 1px solid #f3f4f6; border-right: 1px solid #f3f4f6; border-bottom: 1px solid #f3f4f6; }
+                    .price-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; font-weight: 700; }
+                    .price-val { font-size: 22px; font-weight: 900; color: #111827; margin-top: 2px; }
+                    .desc { font-size: 13px; color: #4b5563; margin-bottom: 16px; }
+                    .specs-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px 22px; margin-top: 16px; }
+                    .specs-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #c5a059; margin: 0 0 10px 0; }
+                    ul { margin: 0; padding-left: 18px; font-size: 13px; color: #374151; }
+                    li { margin-bottom: 6px; }
+                    .footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; font-size: 11px; color: #9ca3af; }
+                    .no-print-bar { background: #111827; color: #fff; padding: 10px 18px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+                    .print-btn { background: #c5a059; color: #000; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 800; font-size: 12px; text-transform: uppercase; cursor: pointer; }
+                    @media print { .no-print-bar { display: none !important; } body { padding: 0; } }
+                </style>
+            </head>
+            <body>
+                <div class="no-print-bar">
+                    <span style="font-size:12px; font-weight:600;">Product Specification &amp; Sales Sheet Preview</span>
+                    <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+                </div>
+                <div class="header">
+                    <div>
+                        <div class="brand-title">${brandHeading}</div>
+                        <div class="brand-sub">${!isClientMode && !isPrivateLabel ? 'Portland (1320 SE Water Ave) · Lake Oswego (25 S State St Ste 2110) · www.floors55pro.com' : 'Curated Flooring Specification'}</div>
+                    </div>
+                    ${storedLogo ? `<img src="${storedLogo}" class="logo" alt="Brand Logo" />` : ''}
+                </div>
+                <div class="hero-grid">
+                    <div class="img-box">
+                        <img src="${mainImgUrl}" alt="${activeTitle || 'Product'}" />
+                    </div>
+                    <div>
+                        <span class="cat-badge">${productData?.category || 'Flooring Collection'}</span>
+                        <h1>${activeTitle || 'Flooring Collection'}</h1>
+                        <div class="color-name">Selected Color: ${activeColor?.name || 'Standard'} ${activeColor?.sku ? `(SKU #${activeColor.sku})` : ''}</div>
+                        <div class="price-box">
+                            <div class="price-label">${isClientMode ? 'Client Material Price' : 'Published Retail Price'}</div>
+                            <div class="price-val">${sheetPriceLabel}</div>
+                        </div>
+                        <div class="desc">${productData?.desc || 'Architectural grade flooring engineered for Pacific Northwest residential and commercial installations.'}</div>
+                    </div>
+                </div>
+                <div class="specs-box">
+                    <div class="specs-title">Technical Specifications &amp; Construction</div>
+                    <ul>${specsListHtml}</ul>
+                </div>
+                <div class="footer">
+                    <span>Specification Date: ${new Date().toLocaleDateString()}</span>
+                    <span>${isClientMode ? `© ${new Date().getFullYear()} ${storedBrand || 'Your Flooring Professional'}` : '© Floors 55 Pro Trade Portal'}</span>
+                </div>
+            </body>
+            </html>
+        `;
+
+        printWindow.document.open();
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+    };
 
     const handleSaveToBoard = async () => {
         if (!selectedBoardId || !db) return alert("Please select a board to save this product to.");
         setIsSavingToBoard(true);
 
         try {
-            // Construct the thumbnail URL
             const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
             const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
             let folderName = productData.imageFolder ? productData.imageFolder : 'images';
@@ -585,9 +692,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${activeColor?.sku || '01'}_${swatchType}.jpg`.toLowerCase();
             const thumbFbUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
 
-            // Calculate standardized wholesale price
-            let wsPrice = productData.price || 0;
-            if (productData.unit === 'sqyd') wsPrice = wsPrice / 9;
+            let wsPriceNum = productData.price || 0;
+            if (productData.unit === 'sqyd') wsPriceNum = wsPriceNum / 9;
 
             const productToSave = {
                 productId: productData.id,
@@ -596,7 +702,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 colorName: activeColor?.name || '',
                 category: productData.category || '',
                 imgPrefix: productData.imgPrefix || '',
-                price: wsPrice,
+                price: wsPriceNum,
                 unit: productData.unit || 'sqft',
                 thumbUrl: thumbFbUrl,
                 quote: null,
@@ -629,8 +735,6 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         setIsSavingToBoard(true);
 
         try {
-            const netSqftNum = parseFloat(calcNetSqft) || 0;
-
             const quoteDoc = {
                 proId: user.uid,
                 clientName: quoteClientName,
@@ -685,12 +789,6 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             setIsSavingToBoard(false);
         }
     };
-
-    let normalizedPerSqftPrice = basePrice;
-    if (productData?.unit === 'sqyd') normalizedPerSqftPrice = basePrice / 9;
-
-    const finalPrice = isClientMode ? normalizedPerSqftPrice * (1 + clientMargin / 100) : normalizedPerSqftPrice;
-    const wsPrice = finalPrice.toFixed(2);
     
     const renderPriceBlock = () => {
         if (isCarpet || isCarpetCushionOnly) {
@@ -736,6 +834,16 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 shrink-0 relative z-20">
+                <button
+                    onClick={handleDownloadSalesSheet}
+                    className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-full transition-all shadow-sm text-sm font-bold shrink-0 cursor-pointer outline-none"
+                    title="Download or Print 1-Page Product Sales Sheet"
+                >
+                    <svg className="w-4 h-4 text-[#c5a059]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    Sales Sheet
+                </button>
                 <button onClick={shareProduct} className="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-700 rounded-full transition-all shadow-sm text-sm font-bold shrink-0 cursor-pointer outline-none">
                     <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316M15 12a3 3 0 100 6 3 3 0 000-6zm0-6a3 3 0 100 6 3 3 0 000-6z"></path></svg>
                     {copied ? "Copied!" : "Share"}
@@ -745,7 +853,6 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     );
 
     const renderColorSwatches = (isDesktop) => {
-        // Automatically hide the color swatches if the product is an accessory/trim
         if (productData?.isAccessory) return null;
 
         return (
@@ -778,7 +885,6 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
                         return (
                             <div key={c.sku} className={`cursor-pointer text-center group ${!isDesktop ? 'snap-start shrink-0 w-[85px]' : ''}`} onClick={() => {
-                                // Bypasses the Next.js router to completely eliminate the server-side flash
                                 window.history.replaceState(null, '', `/product/${productData.id}?color=${c.sku}`);
                                 setActiveColor(c);
                             }}>
@@ -801,7 +907,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     return (
         <div className="flex flex-col flex-1 w-full">
         
-           {/* NEW: ACTIVE CURATION SESSION BANNER */}
+           {/* ACTIVE CURATION SESSION BANNER */}
             {activeBoardId && (
                 <div className="bg-gray-900 text-white px-6 py-3 sticky top-[80px] z-30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xl border-b-4 border-x-4 border-t-0 border-gold w-[95%] md:w-1/2 mx-auto rounded-b-2xl">
                     <div className="flex items-center gap-3">
@@ -813,7 +919,6 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                     </div>
                     <button 
                         onClick={() => {
-                            // Clear the active session and route them back to the boards tab
                             sessionStorage.removeItem('active_curation_board_id');
                             sessionStorage.removeItem('active_curation_board_name');
                             sessionStorage.removeItem('client_margin');
@@ -821,11 +926,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                         }}
                         className="relative overflow-hidden bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-colors w-full sm:w-auto text-center cursor-pointer outline-none shrink-0 shadow-[0_0_15px_rgba(239,68,68,0.5)] group"
                     >
-                        {/* The Twinkle Stars */}
                         <span className="absolute top-1 left-2 text-[10px] animate-ping opacity-75">✨</span>
                         <span className="absolute bottom-1 right-2 text-[10px] animate-pulse opacity-75">✨</span>
-                        
-                        {/* The Button Text */}
                         <span className="relative z-10 px-2">Finish & Return</span>
                     </button>
                 </div>
@@ -844,11 +946,10 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 ) : (
                     <img 
                         src={getMediaPath(activeView) || FALLBACK_IMG} 
-                        alt="Product" 
+                        alt={`${activeTitle || 'Flooring'} - ${activeColor?.name || ''}`} 
                         className={`w-full h-full bg-white transition-opacity duration-200 group-hover:opacity-85 ${activeView === 'MAIN' ? 'object-cover' : 'object-contain'}`} 
                         onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} 
                     />
-                    // replaced above with this <img src={getMediaPath(activeView) || FALLBACK_IMG} alt="Product" className="w-full h-full object-cover transition-opacity duration-200 group-hover:opacity-85" onError={(e) => { e.currentTarget.src = FALLBACK_IMG; }} style={{ objectFit: activeView === '1TO1' ? 'contain' : 'cover' }} />
                 )}
             </div>
 
@@ -856,14 +957,11 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 <div className="mt-4 flex gap-3 overflow-x-auto pb-2 min-h-[85px] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {productData.views.filter(v => !failedViews[`${activeColor?.sku}-${v}`]).map(v => {
                          const isVideo = v.includes('VIDEO');
-                     const viewKey = `${activeColor?.sku}-${v}`;
-                     
-                     // Bypass the wait time for the static video SVG so it never gets stuck invisible
-                     const isLoaded = isVideo || loadedViews[viewKey];
+                         const viewKey = `${activeColor?.sku}-${v}`;
+                         const isLoaded = isVideo || loadedViews[viewKey];
 
-                     // Adding the SKU to the key forces React to fully refresh the element when colors change
-                     return (
-                         <div key={`${activeColor?.sku}-${v}`} className={`relative shrink-0 transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+                         return (
+                             <div key={`${activeColor?.sku}-${v}`} className={`relative shrink-0 transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
                                  {isVideo && (
                                      <video 
                                         key={activeColor?.sku}
@@ -922,17 +1020,23 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                         <div className="absolute top-0 right-0 bg-gold text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-widest flex items-center gap-2 shadow-sm">
                             <span className="w-1.5 h-1.5 rounded-full bg-white inline-block animate-pulse"></span> Wholesale Live
                         </div>
-                        <span className="text-[0.9rem] text-gray-500 line-through mb-1 block">Retail: ${(productData?.retailPrice ? parseFloat(productData.retailPrice) : (basePrice * 2.2)).toFixed(2)} <span className="text-sm">/</span><span className="text-sm">{productData?.unit || 'sqft'}</span></span>
-                        <div className="mt-3 pt-3 border-t border-gray-200">
+                        <span className="text-[0.9rem] text-gray-500 line-through mb-1 block">Retail: ${displayRetailPrice} <span className="text-sm">/</span><span className="text-sm">{productData?.unit || 'sqft'}</span></span>
+                        <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-end gap-2">
                                 <span className="text-[1.1rem] text-gray-900 font-bold text-gold mb-1">Wholesale Price:</span>
                                 {renderWholesalePriceBlock()}
                             </div>
+                            <button
+                                onClick={() => setIsBuilderOpen(true)}
+                                className="bg-gray-900 hover:bg-gold text-white hover:text-black px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors cursor-pointer outline-none"
+                            >
+                                + Build Turnkey Proposal
+                            </button>
                         </div>
                     </>
                 ) : (
                     <>
-                        <span className="text-[1.5rem] text-gray-900 font-bold mb-1 block">Retail: ${(productData?.retailPrice ? parseFloat(productData.retailPrice) : (basePrice * 2.2)).toFixed(2)} <span className="text-sm">/</span><span className="text-sm">{productData?.unit || 'sqft'}</span></span>
+                        <span className="text-[1.5rem] text-gray-900 font-bold mb-1 block">Retail: ${displayRetailPrice} <span className="text-sm">/</span><span className="text-sm">{productData?.unit || 'sqft'}</span></span>
                         <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
                             <button onClick={() => window.dispatchEvent(new Event('open-login-modal'))} className="block w-full text-left text-[10px] font-bold uppercase tracking-widest text-gold hover:text-black transition-colors underline bg-transparent border-none cursor-pointer outline-none">Log in for wholesale pricing</button>
                         </div>
@@ -971,7 +1075,15 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
             {productData?.specs && productData.specs.length > 0 && (
                 <div className="bg-gray-50 p-6 rounded-lg mt-8 border border-gray-200">
-                    <h4 className="mt-0 uppercase tracking-widest text-gold text-sm font-bold mb-4">Technical Specifications</h4>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                        <h4 className="m-0 uppercase tracking-widest text-gold text-sm font-bold">Technical Specifications</h4>
+                        <button
+                            onClick={handleDownloadSalesSheet}
+                            className="text-[11px] font-bold uppercase tracking-widest text-gray-700 hover:text-black bg-white hover:border-gold border border-gray-200 px-3 py-1.5 rounded-full transition flex items-center gap-1.5 cursor-pointer"
+                        >
+                            <span>📄</span> Download Sales Sheet
+                        </button>
+                    </div>
                     <ul className="list-disc pl-5 space-y-2 text-gray-600 text-sm">
                         {productData.specs.map((s, i) => {
                             const [label, ...rest] = s.split(':');
@@ -982,8 +1094,6 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 </div>
             )}
           </div>
-
-      
 
           {/* SLIDE OUT PROPOSAL BUILDER DRAWER */}
           {isBuilderOpen && (
