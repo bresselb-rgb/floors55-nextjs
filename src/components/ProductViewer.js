@@ -565,9 +565,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     const wsPrice = finalPrice.toFixed(2);
     const displayRetailPrice = (productData?.retailPrice ? parseFloat(productData.retailPrice) : (basePrice * 2.2)).toFixed(2);
 
-    // DOWNLOAD / PRINT 1-PAGE PRODUCT SALES SHEET (White-Label & Colorway Aware)
+    // UPGRADED ARCHITECTURAL TEAR SHEET / SALES SHEET GENERATOR
     const handleDownloadSalesSheet = () => {
-        // If an external PDF URL is explicitly attached to the product document, open it
         if (productData?.salesSheetUrl || productData?.specSheetUrl || productData?.pdfUrl) {
             window.open(productData.salesSheetUrl || productData.specSheetUrl || productData.pdfUrl, '_blank');
             return;
@@ -575,24 +574,48 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
         const storedBrand = typeof window !== 'undefined' ? sessionStorage.getItem('client_brand') : null;
         const storedLogo = typeof window !== 'undefined' ? sessionStorage.getItem('client_logo') : null;
+        const f55Logo = "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Flogo-pro.png?alt=media";
+
         const brandHeading = isClientMode
             ? (storedBrand || 'Your Flooring Professional')
             : (isPrivateLabel ? 'Architectural Flooring Specification' : 'Floors 55 Pro — Architectural Specification Sheet');
 
+        const activeUnit = productData?.unit || 'sqft';
         const sheetPriceLabel = isClientMode
-            ? `$${wsPrice} / ${productData?.unit || 'sqft'}`
-            : `Retail: $${displayRetailPrice} / ${productData?.unit || 'sqft'}`;
+            ? (isCarpet || isCarpetCushionOnly
+                ? `$${wsPrice} /sqft  ($${(finalPrice * 9).toFixed(2)} /sqyd)`
+                : `$${wsPrice} / ${activeUnit}`)
+            : (isCarpet || isCarpetCushionOnly
+                ? `$${displayRetailPrice} /sqft  ($${(parseFloat(displayRetailPrice) * 9).toFixed(2)} /sqyd)`
+                : `$${displayRetailPrice} / ${activeUnit}`);
 
-        const mainImgUrl = getMediaPath(activeView !== 'VIDEO' ? activeView : 'MAIN') || FALLBACK_IMG;
-        const specsListHtml = (productData?.specs && productData.specs.length > 0)
-            ? productData.specs.map(s => {
-                const [label, ...rest] = s.split(':');
-                if (rest.length === 0) return `<li>${s}</li>`;
-                return `<li><strong>${label}:</strong> ${rest.join(':')}</li>`;
-            }).join('')
-            : '<li>Commercial &amp; Residential Architectural Grade Flooring</li>';
+        // Resolve both Room Scene and Close-Up Swatch URLs
+        const swatchUrl = getMediaPath('MAIN') || FALLBACK_IMG;
+        const hasRoomView = Array.isArray(productData?.views) && productData.views.includes('ROOM') && !failedViews[`${activeColor?.sku}-ROOM`];
+        const roomUrl = hasRoomView ? getMediaPath('ROOM') : null;
 
-        const printWindow = window.open('', '_blank', 'width=900,height=1100');
+        const primaryPhotoUrl = roomUrl || (activeView !== 'VIDEO' ? getMediaPath(activeView) : swatchUrl) || FALLBACK_IMG;
+        const secondarySwatchUrl = roomUrl ? swatchUrl : null;
+
+        // Build 2-column architectural specification grid items
+        const rawSpecs = Array.isArray(productData?.specs) && productData.specs.length > 0
+            ? productData.specs
+            : ['Grade: Commercial & Residential Architectural Flooring', 'Installation: Professional or Approved Trade Spec'];
+
+        const specsGridHtml = rawSpecs.map((s) => {
+            const parts = String(s).split(':');
+            if (parts.length === 1) {
+                return `<div class="spec-item"><span class="spec-label">Specification</span><span class="spec-val">${parts[0].trim()}</span></div>`;
+            }
+            const label = parts[0].trim();
+            const val = parts.slice(1).join(':').trim();
+            return `<div class="spec-item"><span class="spec-label">${label}</span><span class="spec-val">${val}</span></div>`;
+        }).join('');
+
+        const cleanDesc = (productData?.desc || 'Architectural grade flooring engineered for Pacific Northwest residential and commercial installations.')
+            .replace(/<[^>]*>?/gm, '');
+
+        const printWindow = window.open('', '_blank', 'width=960,height=1150');
         if (!printWindow) {
             alert('Please allow pop-ups to download or print the Product Sales Sheet.');
             return;
@@ -602,68 +625,379 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             <!DOCTYPE html>
             <html>
             <head>
+                <meta charset="utf-8" />
                 <title>${activeTitle || 'Product'} - ${activeColor?.name || ''} Sales Sheet</title>
                 <style>
-                    @page { size: letter; margin: 0.5in; }
-                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #111827; margin: 0; padding: 24px; line-height: 1.5; }
-                    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #c5a059; padding-bottom: 16px; margin-bottom: 24px; }
-                    .brand-title { font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #111827; }
-                    .brand-sub { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
-                    .logo { max-height: 48px; object-fit: contain; }
-                    .hero-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 28px; align-items: start; margin-bottom: 24px; }
-                    .img-box { width: 100%; aspect-ratio: 4/3; border-radius: 10px; overflow: hidden; border: 1px solid #e5e7eb; background: #f9fafb; }
-                    .img-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
-                    .cat-badge { display: inline-block; background: #f3f4f6; color: #4b5563; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; padding: 4px 10px; border-radius: 999px; margin-bottom: 8px; }
-                    h1 { font-size: 28px; font-weight: 800; margin: 0 0 6px 0; color: #111827; }
-                    .color-name { font-size: 16px; font-weight: 700; color: #c5a059; margin-bottom: 14px; }
-                    .price-box { background: #fdfdfd; border-left: 4px solid #c5a059; padding: 12px 16px; margin: 16px 0; border-top: 1px solid #f3f4f6; border-right: 1px solid #f3f4f6; border-bottom: 1px solid #f3f4f6; }
-                    .price-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; font-weight: 700; }
-                    .price-val { font-size: 22px; font-weight: 900; color: #111827; margin-top: 2px; }
-                    .desc { font-size: 13px; color: #4b5563; margin-bottom: 16px; }
-                    .specs-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px 22px; margin-top: 16px; }
-                    .specs-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #c5a059; margin: 0 0 10px 0; }
-                    ul { margin: 0; padding-left: 18px; font-size: 13px; color: #374151; }
-                    li { margin-bottom: 6px; }
-                    .footer { margin-top: 32px; padding-top: 14px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; font-size: 11px; color: #9ca3af; }
-                    .no-print-bar { background: #111827; color: #fff; padding: 10px 18px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-                    .print-btn { background: #c5a059; color: #000; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 800; font-size: 12px; text-transform: uppercase; cursor: pointer; }
-                    @media print { .no-print-bar { display: none !important; } body { padding: 0; } }
+                    @page { size: letter portrait; margin: 0.4in; }
+                    * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                        color: #111827;
+                        margin: 0;
+                        padding: 20px;
+                        background: #ffffff;
+                        line-height: 1.45;
+                    }
+                    .sheet-container {
+                        max-width: 800px;
+                        margin: 0 auto;
+                    }
+                    /* Interactive Preview Control Bar (Hidden on Print/PDF) */
+                    .no-print-bar {
+                        background: #111827;
+                        color: #ffffff;
+                        padding: 12px 18px;
+                        border-radius: 10px;
+                        margin-bottom: 22px;
+                        display: flex;
+                        flex-wrap: wrap;
+                        justify-content: space-between;
+                        align-items: center;
+                        gap: 12px;
+                        border-bottom: 3px solid #c5a059;
+                    }
+                    .bar-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #c5a059; }
+                    .bar-controls { display: flex; align-items: center; gap: 10px; }
+                    .toggle-btn {
+                        background: #1f2937;
+                        color: #e5e7eb;
+                        border: 1px solid #374151;
+                        padding: 7px 13px;
+                        border-radius: 6px;
+                        font-weight: 700;
+                        font-size: 11px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.05em;
+                        cursor: pointer;
+                    }
+                    .toggle-btn:hover { border-color: #c5a059; color: #ffffff; }
+                    .print-btn {
+                        background: #c5a059;
+                        color: #000000;
+                        border: none;
+                        padding: 8px 18px;
+                        border-radius: 6px;
+                        font-weight: 900;
+                        font-size: 11px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                        cursor: pointer;
+                    }
+                    .print-btn:hover { background: #d4b26f; }
+
+                    /* Header */
+                    .header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        border-bottom: 3px solid #c5a059;
+                        padding-bottom: 14px;
+                        margin-bottom: 20px;
+                    }
+                    .brand-title {
+                        font-size: 17px;
+                        font-weight: 900;
+                        text-transform: uppercase;
+                        letter-spacing: 0.07em;
+                        color: #111827;
+                    }
+                    .brand-sub {
+                        font-size: 10.5px;
+                        color: #6b7280;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                        margin-top: 3px;
+                        font-weight: 600;
+                    }
+                    .logo { max-height: 44px; max-width: 180px; object-fit: contain; }
+
+                    /* Hero Section */
+                    .hero-grid {
+                        display: grid;
+                        grid-template-columns: 1.15fr 1fr;
+                        gap: 24px;
+                        align-items: start;
+                        margin-bottom: 20px;
+                    }
+                    .visual-wrap {
+                        position: relative;
+                        width: 100%;
+                    }
+                    .main-img-box {
+                        width: 100%;
+                        aspect-ratio: 4/3;
+                        border-radius: 10px;
+                        overflow: hidden;
+                        border: 1px solid #d1d5db;
+                        background: #f9fafb;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+                    }
+                    .main-img-box img {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        display: block;
+                    }
+                    .swatch-inlay {
+                        position: absolute;
+                        bottom: -10px;
+                        right: 12px;
+                        width: 96px;
+                        height: 96px;
+                        border-radius: 8px;
+                        border: 3px solid #ffffff;
+                        box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+                        overflow: hidden;
+                        background: #ffffff;
+                    }
+                    .swatch-inlay img {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        display: block;
+                    }
+                    .swatch-tag {
+                        position: absolute;
+                        bottom: 0;
+                        left: 0;
+                        right: 0;
+                        background: rgba(17,24,39,0.82);
+                        color: #ffffff;
+                        font-size: 8px;
+                        font-weight: 800;
+                        text-align: center;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                        padding: 2px 0;
+                    }
+
+                    /* Right Column Info */
+                    .cat-badge {
+                        display: inline-block;
+                        background: #111827;
+                        color: #c5a059;
+                        font-size: 9.5px;
+                        font-weight: 800;
+                        text-transform: uppercase;
+                        letter-spacing: 0.12em;
+                        padding: 4px 10px;
+                        border-radius: 4px;
+                        margin-bottom: 8px;
+                    }
+                    h1 {
+                        font-size: 26px;
+                        font-weight: 900;
+                        margin: 0 0 4px 0;
+                        color: #111827;
+                        line-height: 1.15;
+                    }
+                    .color-bar {
+                        font-size: 14px;
+                        font-weight: 800;
+                        color: #c5a059;
+                        margin-bottom: 12px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.03em;
+                    }
+                    .sku-pill {
+                        color: #6b7280;
+                        font-weight: 700;
+                        font-size: 12px;
+                        margin-left: 4px;
+                    }
+                    .price-box {
+                        background: #f9fafb;
+                        border-left: 4px solid #c5a059;
+                        border-top: 1px solid #e5e7eb;
+                        border-right: 1px solid #e5e7eb;
+                        border-bottom: 1px solid #e5e7eb;
+                        padding: 10px 14px;
+                        border-radius: 0 8px 8px 0;
+                        margin: 12px 0;
+                    }
+                    .price-label {
+                        font-size: 9.5px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.1em;
+                        color: #6b7280;
+                        font-weight: 800;
+                    }
+                    .price-val {
+                        font-size: 20px;
+                        font-weight: 900;
+                        color: #111827;
+                        margin-top: 2px;
+                    }
+                    .desc {
+                        font-size: 12.5px;
+                        color: #374151;
+                        line-height: 1.55;
+                        margin-top: 10px;
+                    }
+
+                    /* 2-Column Technical Spec Table */
+                    .specs-section {
+                        margin-top: 22px;
+                        background: #f9fafb;
+                        border: 1px solid #e5e7eb;
+                        border-radius: 10px;
+                        padding: 16px 20px;
+                    }
+                    .specs-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        border-bottom: 2px solid #e5e7eb;
+                        padding-bottom: 8px;
+                        margin-bottom: 12px;
+                    }
+                    .specs-title {
+                        font-size: 11.5px;
+                        font-weight: 900;
+                        text-transform: uppercase;
+                        letter-spacing: 0.12em;
+                        color: #111827;
+                        margin: 0;
+                    }
+                    .specs-sub {
+                        font-size: 10px;
+                        font-weight: 700;
+                        color: #c5a059;
+                        text-transform: uppercase;
+                        letter-spacing: 0.08em;
+                    }
+                    .specs-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 8px 24px;
+                    }
+                    .spec-item {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: baseline;
+                        gap: 10px;
+                        padding: 5px 0;
+                        border-bottom: 1px dashed #e5e7eb;
+                        font-size: 12px;
+                    }
+                    .spec-label {
+                        color: #6b7280;
+                        font-weight: 600;
+                        flex-shrink: 0;
+                    }
+                    .spec-val {
+                        color: #111827;
+                        font-weight: 800;
+                        text-align: right;
+                    }
+
+                    /* Footer */
+                    .footer {
+                        margin-top: 22px;
+                        padding-top: 12px;
+                        border-top: 1px solid #e5e7eb;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        font-size: 10.5px;
+                        color: #6b7280;
+                        font-weight: 600;
+                    }
+
+                    @media print {
+                        .no-print-bar { display: none !important; }
+                        body { padding: 0; }
+                    }
                 </style>
+                <script>
+                    function togglePriceBox() {
+                        var box = document.getElementById('price-block');
+                        var btn = document.getElementById('toggle-price-btn');
+                        if (!box) return;
+                        if (box.style.display === 'none') {
+                            box.style.display = 'block';
+                            btn.innerText = 'Hide Price on PDF';
+                        } else {
+                            box.style.display = 'none';
+                            btn.innerText = 'Show Price on PDF';
+                        }
+                    }
+                    function swapPhotos() {
+                        var mainImg = document.getElementById('primary-photo');
+                        var inlayImg = document.getElementById('secondary-photo');
+                        if (!mainImg || !inlayImg) return;
+                        var temp = mainImg.src;
+                        mainImg.src = inlayImg.src;
+                        inlayImg.src = temp;
+                    }
+                </script>
             </head>
             <body>
-                <div class="no-print-bar">
-                    <span style="font-size:12px; font-weight:600;">Product Specification &amp; Sales Sheet Preview</span>
-                    <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
-                </div>
-                <div class="header">
-                    <div>
-                        <div class="brand-title">${brandHeading}</div>
-                        <div class="brand-sub">${!isClientMode && !isPrivateLabel ? 'Portland (1320 SE Water Ave) · Lake Oswego (25 S State St Ste 2110) · www.floors55pro.com' : 'Curated Flooring Specification'}</div>
-                    </div>
-                    ${storedLogo ? `<img src="${storedLogo}" class="logo" alt="Brand Logo" />` : ''}
-                </div>
-                <div class="hero-grid">
-                    <div class="img-box">
-                        <img src="${mainImgUrl}" alt="${activeTitle || 'Product'}" />
-                    </div>
-                    <div>
-                        <span class="cat-badge">${productData?.category || 'Flooring Collection'}</span>
-                        <h1>${activeTitle || 'Flooring Collection'}</h1>
-                        <div class="color-name">Selected Color: ${activeColor?.name || 'Standard'} ${activeColor?.sku ? `(SKU #${activeColor.sku})` : ''}</div>
-                        <div class="price-box">
-                            <div class="price-label">${isClientMode ? 'Client Material Price' : 'Published Retail Price'}</div>
-                            <div class="price-val">${sheetPriceLabel}</div>
+                <div class="sheet-container">
+                    <div class="no-print-bar">
+                        <span class="bar-title">Architectural Tear Sheet Preview</span>
+                        <div class="bar-controls">
+                            ${secondarySwatchUrl ? `<button class="toggle-btn" onclick="swapPhotos()">Swap Room ↔ Swatch</button>` : ''}
+                            <button id="toggle-price-btn" class="toggle-btn" onclick="togglePriceBox()">Hide Price on PDF</button>
+                            <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
                         </div>
-                        <div class="desc">${productData?.desc || 'Architectural grade flooring engineered for Pacific Northwest residential and commercial installations.'}</div>
                     </div>
-                </div>
-                <div class="specs-box">
-                    <div class="specs-title">Technical Specifications &amp; Construction</div>
-                    <ul>${specsListHtml}</ul>
-                </div>
-                <div class="footer">
-                    <span>Specification Date: ${new Date().toLocaleDateString()}</span>
-                    <span>${isClientMode ? `© ${new Date().getFullYear()} ${storedBrand || 'Your Flooring Professional'}` : '© Floors 55 Pro Trade Portal'}</span>
+
+                    <div class="header">
+                        <div>
+                            <div class="brand-title">${brandHeading}</div>
+                            <div class="brand-sub">${!isClientMode && !isPrivateLabel ? 'Portland Showroom (1320 SE Water Ave) · Lake Oswego Showroom (25 S State St Ste 2110) · www.floors55pro.com' : 'Curated Architectural Flooring Specification'}</div>
+                        </div>
+                        ${storedLogo
+                            ? `<img src="${storedLogo}" class="logo" alt="Brand Logo" onerror="this.style.display='none'" />`
+                            : (!isClientMode && !isPrivateLabel ? `<img src="${f55Logo}" class="logo" alt="Floors 55 Pro" onerror="this.style.display='none'" />` : '')
+                        }
+                    </div>
+
+                    <div class="hero-grid">
+                        <div class="visual-wrap">
+                            <div class="main-img-box">
+                                <img id="primary-photo" src="${primaryPhotoUrl}" alt="${activeTitle || 'Product'}" />
+                            </div>
+                            ${secondarySwatchUrl ? `
+                                <div class="swatch-inlay" id="inlay-box">
+                                    <img id="secondary-photo" src="${secondarySwatchUrl}" alt="Color Swatch" onerror="document.getElementById('inlay-box').style.display='none'" />
+                                    <div class="swatch-tag">Swatch</div>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div>
+                            <span class="cat-badge">${productData?.category || 'Flooring Collection'}</span>
+                            <h1>${activeTitle || 'Flooring Collection'}</h1>
+                            <div class="color-bar">
+                                ${activeColor?.name || 'Standard Colorway'}
+                                ${activeColor?.sku ? `<span class="sku-pill">(SKU #${activeColor.sku})</span>` : ''}
+                            </div>
+
+                            <div id="price-block" class="price-box">
+                                <div class="price-label">${isClientMode ? 'Client Material Price' : 'Published Retail Price'}</div>
+                                <div class="price-val">${sheetPriceLabel}</div>
+                            </div>
+
+                            <div class="desc">${cleanDesc}</div>
+                        </div>
+                    </div>
+
+                    <div class="specs-section">
+                        <div class="specs-header">
+                            <h3 class="specs-title">Technical Specifications &amp; Construction</h3>
+                            <span class="specs-sub">${!isClientMode && !isPrivateLabel && productData?.manufacturer ? `Mfg: ${productData.manufacturer}` : 'Verified Trade Spec'}</span>
+                        </div>
+                        <div class="specs-grid">
+                            ${specsGridHtml}
+                        </div>
+                    </div>
+
+                    <div class="footer">
+                        <span>Specification Date: ${new Date().toLocaleDateString()}</span>
+                        <span>${isClientMode ? `© ${new Date().getFullYear()} ${storedBrand || 'Your Flooring Professional'}` : '© Floors 55 Pro — Portland & Lake Oswego Trade Portal'}</span>
+                    </div>
                 </div>
             </body>
             </html>
