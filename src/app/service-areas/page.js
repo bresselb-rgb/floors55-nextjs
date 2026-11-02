@@ -5,6 +5,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { TIER_1_CITIES, TIER_2_TOWNS, SHOWROOM_HUBS } from '@/lib/serviceAreasData';
 
+const BASE_URL = 'https://www.floors55pro.com';
+
 const CITY_COORDS = {
     'lake-oswego-or': { lat: 45.4207, lng: -122.6706 }, // 25 S State St Ste 2110
     'portland-or': { lat: 45.5135, lng: -122.6635 },    // 1320 SE Water Ave
@@ -37,12 +39,13 @@ export default function ServiceAreasPage() {
         ? TIER_1_CITIES
         : TIER_1_CITIES.filter(c => c.closestHub.toLowerCase().includes(hubFilter.toLowerCase()));
 
-    // Schema linking Floors 55 Pro to Floors 55 Abbey Carpet & Floor (floors55.com) + 15 areaServed cities
+    // 1. Schema linking Floors 55 Pro to Floors 55 Abbey Carpet & Floor (floors55.com) + 15 areaServed cities
     const serviceAreaJsonLd = {
         '@context': 'https://schema.org',
         '@type': 'WholesaleStore',
+        '@id': `${BASE_URL}/#organization`,
         name: 'Floors 55 Pro',
-        url: 'https://floors55pro.com/service-areas',
+        url: `${BASE_URL}/service-areas`,
         telephone: '+1-503-673-1333',
         parentOrganization: {
             '@type': 'HomeAndConstructionBusiness',
@@ -53,6 +56,32 @@ export default function ServiceAreasPage() {
             '@type': 'City',
             name: `${c.name}, ${c.state}`
         }))
+    };
+
+    // 2. BreadcrumbList Schema for Google Search Console Rich Results
+    const breadcrumbSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            {
+                '@type': 'ListItem',
+                position: 1,
+                name: 'Home',
+                item: BASE_URL
+            },
+            {
+                '@type': 'ListItem',
+                position: 2,
+                name: 'Showroom Locations',
+                item: `${BASE_URL}/locations`
+            },
+            {
+                '@type': 'ListItem',
+                position: 3,
+                name: 'Metro Service Areas',
+                item: `${BASE_URL}/service-areas`
+            }
+        ]
     };
 
     useEffect(() => {
@@ -225,6 +254,10 @@ export default function ServiceAreasPage() {
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceAreaJsonLd) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
             />
 
             {/* Hero Header */}

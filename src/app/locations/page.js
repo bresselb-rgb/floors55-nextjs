@@ -3,22 +3,31 @@ import React from 'react';
 import Link from 'next/link';
 import { TIER_1_CITIES } from '@/lib/serviceAreasData';
 
+const BASE_URL = 'https://www.floors55pro.com';
+
+// Note: Root layout.js automatically appends "| Floors 55 Pro Portal"
 export const metadata = {
-    title: 'Portland & Lake Oswego Trade Showrooms | Floors 55 Pro',
+    title: 'Portland & Lake Oswego Trade Showrooms',
     description: 'Visit our Portland (1320 SE Water Ave) and Lake Oswego (Oswego Village) trade showrooms for client sample consultations, on-site project measures, and wholesale flooring support.',
     alternates: {
-        canonical: 'https://floors55pro.com/locations'
+        canonical: `${BASE_URL}/locations`
+    },
+    openGraph: {
+        title: 'Portland & Lake Oswego Trade Showrooms | Floors 55 Pro',
+        description: 'Visit our Portland (1320 SE Water Ave) and Lake Oswego (Oswego Village) trade showrooms for client sample consultations, on-site project measures, and wholesale flooring support.',
+        url: `${BASE_URL}/locations`,
+        type: 'website'
     }
 };
 
 export default function LocationsPage() {
-    // JSON-LD Schema explicitly linking floors55pro.com as the B2B Trade Division of floors55.com
+    // 1. Organization & Department Schema explicitly linking floors55pro.com to floors55.com
     const locationsJsonLd = {
         '@context': 'https://schema.org',
         '@type': 'Organization',
-        '@id': 'https://floors55pro.com/#organization',
+        '@id': `${BASE_URL}/#organization`,
         name: 'Floors 55 Pro',
-        url: 'https://floors55pro.com',
+        url: BASE_URL,
         description: 'Wholesale & commercial flooring trade division serving contractors, builders, designers, and property managers in the Portland & SW Washington metro.',
         parentOrganization: {
             '@type': 'HomeAndConstructionBusiness',
@@ -29,7 +38,9 @@ export default function LocationsPage() {
             {
                 '@type': 'WholesaleStore',
                 name: 'Floors 55 Pro — Portland Trade & Sample Showroom',
+                url: `${BASE_URL}/locations`,
                 telephone: '+1-503-491-1776',
+                priceRange: '$$',
                 address: {
                     '@type': 'PostalAddress',
                     streetAddress: '1320 SE Water Ave',
@@ -55,7 +66,9 @@ export default function LocationsPage() {
             {
                 '@type': 'WholesaleStore',
                 name: 'Floors 55 Pro — Lake Oswego Trade Showroom (Oswego Village)',
+                url: `${BASE_URL}/locations`,
                 telephone: '+1-503-673-1333',
+                priceRange: '$$',
                 address: {
                     '@type': 'PostalAddress',
                     streetAddress: '25 S State St Ste 2110',
@@ -81,16 +94,45 @@ export default function LocationsPage() {
         ]
     };
 
+    // 2. BreadcrumbList Schema for Google Search Console Rich Results
+    const breadcrumbSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            {
+                '@type': 'ListItem',
+                position: 1,
+                name: 'Home',
+                item: BASE_URL
+            },
+            {
+                '@type': 'ListItem',
+                position: 2,
+                name: 'Trade Showrooms & Locations',
+                item: `${BASE_URL}/locations`
+            }
+        ]
+    };
+
     return (
         <main className="min-h-screen bg-gray-50 text-gray-900 pb-20">
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(locationsJsonLd) }}
             />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+            />
 
             {/* Header */}
             <header className="bg-white border-b border-gray-200 py-12 md:py-16 px-4 sm:px-6 text-center">
                 <div className="max-w-4xl mx-auto">
+                    <nav className="text-xs font-semibold uppercase tracking-widest text-[#c5a059] mb-4 flex justify-center items-center gap-2">
+                        <Link href="/" className="hover:underline">Home</Link>
+                        <span className="text-gray-300">/</span>
+                        <span className="text-gray-500">Showrooms &amp; Locations</span>
+                    </nav>
                     <p className="text-xs font-bold uppercase tracking-widest text-[#c5a059] mb-2">
                         White-Label Client Selection &amp; Measure Dispatch
                     </p>
