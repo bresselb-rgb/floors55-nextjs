@@ -336,19 +336,24 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
     const activeTitle = isPrivateLabel && productData?.privateName ? productData.privateName : productData?.displayTitle;
 
-    const getMediaPath = (view) => {
-        if (!productData || !activeColor) return null;
-        if (productData.isAccessory && !productData.imageFolder && !productData.imgPrefix) return FALLBACK_IMG;
-
-        const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        let folderName = productData.imageFolder ? productData.imageFolder : 'images';
-        if (!productData.imageFolder) {
+    const getFolderName = () => {
+        const safeName = (productData?.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        const safeSku = (productData?.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        let folderName = productData?.imageFolder ? productData.imageFolder : 'images';
+        if (!productData?.imageFolder) {
             if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
             else if (safeName) folderName = safeName;
             folderName = folderName.replace(/-+$/, '');
         }
+        return folderName;
+    };
 
+    const getMediaPath = (view, customColorSku) => {
+        const targetSku = customColorSku || activeColor?.sku;
+        if (!productData || !targetSku) return null;
+        if (productData.isAccessory && !productData.imageFolder && !productData.imgPrefix) return FALLBACK_IMG;
+
+        const folderName = getFolderName();
         const prefix = productData.imgPrefix || '';
         const vLower = view.toLowerCase();
         const ext = (vLower.includes('video') || vLower.includes('vid') || vLower.includes('mp4')) ? 'mp4' : 'jpg';
@@ -356,9 +361,9 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         let path = '';
         if (view === 'ROOM' && productData.roomPrefix) {
             const suffix = productData.roomSuffix || '_room.jpg';
-            path = `images/${folderName}/${productData.roomPrefix}${activeColor.sku}${suffix}`;
+            path = `images/${folderName}/${productData.roomPrefix}${targetSku}${suffix}`;
         } else {
-            path = `images/${folderName}/${prefix}${activeColor.sku}_${vLower}.${ext}`;
+            path = `images/${folderName}/${prefix}${targetSku}_${vLower}.${ext}`;
         }
         
         return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path.toLowerCase())}?alt=media`;
@@ -565,7 +570,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     const wsPrice = finalPrice.toFixed(2);
     const displayRetailPrice = (productData?.retailPrice ? parseFloat(productData.retailPrice) : (basePrice * 2.2)).toFixed(2);
 
-    // UPGRADED ARCHITECTURAL TEAR SHEET / SALES SHEET GENERATOR
+    // UPGRADED ARCHITECTURAL TEAR SHEET / SALES SHEET GENERATOR (WITH COLOR SWATCH PALETTE)
     const handleDownloadSalesSheet = () => {
         if (productData?.salesSheetUrl || productData?.specSheetUrl || productData?.pdfUrl) {
             window.open(productData.salesSheetUrl || productData.specSheetUrl || productData.pdfUrl, '_blank');
@@ -612,10 +617,40 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
             return `<div class="spec-item"><span class="spec-label">${label}</span><span class="spec-val">${val}</span></div>`;
         }).join('');
 
+        // Build Full Collection Color Swatches HTML
+        const folderName = getFolderName();
+        const swatchType = productData?.category === 'Carpet' ? 'swatch' : 'main';
+        const hasColors = !productData?.isAccessory && Array.isArray(productData?.colors) && productData.colors.length > 0;
+        const colorCount = hasColors ? productData.colors.length : 0;
+
+        // Automatically adjust swatch card size if a carpet or tile line has 15+ colors so it still fits on 1 page
+        const isDensePalette = colorCount > 12;
+
+        const swatchesGridHtml = hasColors
+            ? productData.colors.map((c) => {
+                const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${c.sku}_${swatchType}.jpg`.toLowerCase();
+                const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+                const fallbackMainPath = rawPath.replace('_swatch.jpg', '_main.jpg');
+                const fbMainPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(fallbackMainPath)}?alt=media`;
+                const isSelected = activeColor?.sku === c.sku;
+
+                return `
+                    <div class="swatch-card ${isSelected ? 'selected' : ''}">
+                        <div class="swatch-thumb">
+                            <img src="${fbPath}" alt="${c.name}" onerror="if(this.src.includes('_swatch.jpg')){this.src='${fbMainPath}';}else{this.src='${FALLBACK_IMG}';}" />
+                            ${isSelected ? `<div class="selected-pill">★ Selected</div>` : ''}
+                        </div>
+                        <div class="swatch-name">${c.name}</div>
+                        ${c.sku ? `<div class="swatch-sku">#${c.sku}</div>` : ''}
+                    </div>
+                `;
+            }).join('')
+            : '';
+
         const cleanDesc = (productData?.desc || 'Architectural grade flooring engineered for Pacific Northwest residential and commercial installations.')
             .replace(/<[^>]*>?/gm, '');
 
-        const printWindow = window.open('', '_blank', 'width=960,height=1150');
+        const printWindow = window.open('', '_blank', 'width=980,height=1180');
         if (!printWindow) {
             alert('Please allow pop-ups to download or print the Product Sales Sheet.');
             return;
@@ -628,44 +663,44 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 <meta charset="utf-8" />
                 <title>${activeTitle || 'Product'} - ${activeColor?.name || ''} Sales Sheet</title>
                 <style>
-                    @page { size: letter portrait; margin: 0.4in; }
+                    @page { size: letter portrait; margin: 0.35in; }
                     * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                     body {
                         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
                         color: #111827;
                         margin: 0;
-                        padding: 20px;
+                        padding: 16px;
                         background: #ffffff;
-                        line-height: 1.45;
+                        line-height: 1.4;
                     }
                     .sheet-container {
-                        max-width: 800px;
+                        max-width: 810px;
                         margin: 0 auto;
                     }
                     /* Interactive Preview Control Bar (Hidden on Print/PDF) */
                     .no-print-bar {
                         background: #111827;
                         color: #ffffff;
-                        padding: 12px 18px;
+                        padding: 11px 16px;
                         border-radius: 10px;
-                        margin-bottom: 22px;
+                        margin-bottom: 18px;
                         display: flex;
                         flex-wrap: wrap;
                         justify-content: space-between;
                         align-items: center;
-                        gap: 12px;
+                        gap: 10px;
                         border-bottom: 3px solid #c5a059;
                     }
-                    .bar-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #c5a059; }
-                    .bar-controls { display: flex; align-items: center; gap: 10px; }
+                    .bar-title { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #c5a059; }
+                    .bar-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
                     .toggle-btn {
                         background: #1f2937;
                         color: #e5e7eb;
                         border: 1px solid #374151;
-                        padding: 7px 13px;
+                        padding: 6px 11px;
                         border-radius: 6px;
                         font-weight: 700;
-                        font-size: 11px;
+                        font-size: 10.5px;
                         text-transform: uppercase;
                         letter-spacing: 0.05em;
                         cursor: pointer;
@@ -675,7 +710,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                         background: #c5a059;
                         color: #000000;
                         border: none;
-                        padding: 8px 18px;
+                        padding: 7px 16px;
                         border-radius: 6px;
                         font-weight: 900;
                         font-size: 11px;
@@ -690,34 +725,34 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
-                        border-bottom: 3px solid #c5a059;
-                        padding-bottom: 14px;
-                        margin-bottom: 20px;
+                        border-bottom: 2.5px solid #c5a059;
+                        padding-bottom: 10px;
+                        margin-bottom: 14px;
                     }
                     .brand-title {
-                        font-size: 17px;
+                        font-size: 16px;
                         font-weight: 900;
                         text-transform: uppercase;
                         letter-spacing: 0.07em;
                         color: #111827;
                     }
                     .brand-sub {
-                        font-size: 10.5px;
+                        font-size: 10px;
                         color: #6b7280;
                         text-transform: uppercase;
-                        letter-spacing: 0.08em;
-                        margin-top: 3px;
+                        letter-spacing: 0.07em;
+                        margin-top: 2px;
                         font-weight: 600;
                     }
-                    .logo { max-height: 44px; max-width: 180px; object-fit: contain; }
+                    .logo { max-height: 40px; max-width: 170px; object-fit: contain; }
 
                     /* Hero Section */
                     .hero-grid {
                         display: grid;
-                        grid-template-columns: 1.15fr 1fr;
-                        gap: 24px;
+                        grid-template-columns: 1.1fr 1fr;
+                        gap: 20px;
                         align-items: start;
-                        margin-bottom: 20px;
+                        margin-bottom: 14px;
                     }
                     .visual-wrap {
                         position: relative;
@@ -725,12 +760,11 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                     }
                     .main-img-box {
                         width: 100%;
-                        aspect-ratio: 4/3;
-                        border-radius: 10px;
+                        aspect-ratio: 16/10;
+                        border-radius: 8px;
                         overflow: hidden;
                         border: 1px solid #d1d5db;
                         background: #f9fafb;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
                     }
                     .main-img-box img {
                         width: 100%;
@@ -740,13 +774,13 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                     }
                     .swatch-inlay {
                         position: absolute;
-                        bottom: -10px;
-                        right: 12px;
-                        width: 96px;
-                        height: 96px;
-                        border-radius: 8px;
-                        border: 3px solid #ffffff;
-                        box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+                        bottom: -8px;
+                        right: 10px;
+                        width: 82px;
+                        height: 82px;
+                        border-radius: 7px;
+                        border: 2.5px solid #ffffff;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.18);
                         overflow: hidden;
                         background: #ffffff;
                     }
@@ -761,9 +795,9 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                         bottom: 0;
                         left: 0;
                         right: 0;
-                        background: rgba(17,24,39,0.82);
+                        background: rgba(17,24,39,0.85);
                         color: #ffffff;
-                        font-size: 8px;
+                        font-size: 7.5px;
                         font-weight: 800;
                         text-align: center;
                         text-transform: uppercase;
@@ -776,33 +810,33 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                         display: inline-block;
                         background: #111827;
                         color: #c5a059;
-                        font-size: 9.5px;
+                        font-size: 9px;
                         font-weight: 800;
                         text-transform: uppercase;
                         letter-spacing: 0.12em;
-                        padding: 4px 10px;
+                        padding: 3px 9px;
                         border-radius: 4px;
-                        margin-bottom: 8px;
+                        margin-bottom: 6px;
                     }
                     h1 {
-                        font-size: 26px;
+                        font-size: 23px;
                         font-weight: 900;
-                        margin: 0 0 4px 0;
+                        margin: 0 0 3px 0;
                         color: #111827;
                         line-height: 1.15;
                     }
                     .color-bar {
-                        font-size: 14px;
+                        font-size: 13px;
                         font-weight: 800;
                         color: #c5a059;
-                        margin-bottom: 12px;
+                        margin-bottom: 8px;
                         text-transform: uppercase;
                         letter-spacing: 0.03em;
                     }
                     .sku-pill {
                         color: #6b7280;
                         font-weight: 700;
-                        font-size: 12px;
+                        font-size: 11.5px;
                         margin-left: 4px;
                     }
                     .price-box {
@@ -811,57 +845,57 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                         border-top: 1px solid #e5e7eb;
                         border-right: 1px solid #e5e7eb;
                         border-bottom: 1px solid #e5e7eb;
-                        padding: 10px 14px;
-                        border-radius: 0 8px 8px 0;
-                        margin: 12px 0;
+                        padding: 7px 12px;
+                        border-radius: 0 6px 6px 0;
+                        margin: 8px 0;
                     }
                     .price-label {
-                        font-size: 9.5px;
+                        font-size: 9px;
                         text-transform: uppercase;
                         letter-spacing: 0.1em;
                         color: #6b7280;
                         font-weight: 800;
                     }
                     .price-val {
-                        font-size: 20px;
+                        font-size: 18px;
                         font-weight: 900;
                         color: #111827;
-                        margin-top: 2px;
+                        margin-top: 1px;
                     }
                     .desc {
-                        font-size: 12.5px;
+                        font-size: 11.5px;
                         color: #374151;
-                        line-height: 1.55;
-                        margin-top: 10px;
+                        line-height: 1.48;
+                        margin-top: 6px;
                     }
 
                     /* 2-Column Technical Spec Table */
                     .specs-section {
-                        margin-top: 22px;
+                        margin-top: 14px;
                         background: #f9fafb;
                         border: 1px solid #e5e7eb;
-                        border-radius: 10px;
-                        padding: 16px 20px;
+                        border-radius: 8px;
+                        padding: 12px 16px;
                     }
                     .specs-header {
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
-                        border-bottom: 2px solid #e5e7eb;
-                        padding-bottom: 8px;
-                        margin-bottom: 12px;
+                        border-bottom: 1.5px solid #e5e7eb;
+                        padding-bottom: 6px;
+                        margin-bottom: 8px;
                     }
                     .specs-title {
-                        font-size: 11.5px;
+                        font-size: 10.5px;
                         font-weight: 900;
                         text-transform: uppercase;
-                        letter-spacing: 0.12em;
+                        letter-spacing: 0.11em;
                         color: #111827;
                         margin: 0;
                     }
                     .specs-sub {
-                        font-size: 10px;
-                        font-weight: 700;
+                        font-size: 9.5px;
+                        font-weight: 800;
                         color: #c5a059;
                         text-transform: uppercase;
                         letter-spacing: 0.08em;
@@ -869,16 +903,16 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                     .specs-grid {
                         display: grid;
                         grid-template-columns: 1fr 1fr;
-                        gap: 8px 24px;
+                        gap: 4px 22px;
                     }
                     .spec-item {
                         display: flex;
                         justify-content: space-between;
                         align-items: baseline;
-                        gap: 10px;
-                        padding: 5px 0;
+                        gap: 8px;
+                        padding: 3.5px 0;
                         border-bottom: 1px dashed #e5e7eb;
-                        font-size: 12px;
+                        font-size: 11px;
                     }
                     .spec-label {
                         color: #6b7280;
@@ -891,15 +925,102 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                         text-align: right;
                     }
 
+                    /* Color Swatches Palette Section */
+                    .swatches-section {
+                        margin-top: 14px;
+                        padding-top: 12px;
+                        border-top: 1.5px solid #e5e7eb;
+                        page-break-inside: avoid;
+                    }
+                    .swatches-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 8px;
+                    }
+                    .swatches-title {
+                        font-size: 10.5px;
+                        font-weight: 900;
+                        text-transform: uppercase;
+                        letter-spacing: 0.11em;
+                        color: #111827;
+                        margin: 0;
+                    }
+                    .swatches-sub {
+                        font-size: 9.5px;
+                        font-weight: 700;
+                        color: #6b7280;
+                    }
+                    .swatches-grid {
+                        display: grid;
+                        grid-template-columns: repeat(${isDensePalette ? 8 : 6}, 1fr);
+                        gap: ${isDensePalette ? '6px' : '8px'};
+                    }
+                    .swatch-card {
+                        text-align: center;
+                        background: #ffffff;
+                        border: 1px solid #e5e7eb;
+                        border-radius: 6px;
+                        padding: 4px;
+                        page-break-inside: avoid;
+                    }
+                    .swatch-card.selected {
+                        border: 2px solid #c5a059;
+                        background: #fffdf9;
+                    }
+                    .swatch-thumb {
+                        position: relative;
+                        width: 100%;
+                        aspect-ratio: 1/1;
+                        border-radius: 4px;
+                        overflow: hidden;
+                        background: #f3f4f6;
+                        margin-bottom: 4px;
+                    }
+                    .swatch-thumb img {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        display: block;
+                    }
+                    .selected-pill {
+                        position: absolute;
+                        bottom: 0;
+                        left: 0;
+                        right: 0;
+                        background: #c5a059;
+                        color: #000000;
+                        font-size: 7px;
+                        font-weight: 900;
+                        text-transform: uppercase;
+                        letter-spacing: 0.05em;
+                        padding: 1.5px 0;
+                    }
+                    .swatch-name {
+                        font-size: ${isDensePalette ? '8.5px' : '9.5px'};
+                        font-weight: 800;
+                        color: #111827;
+                        line-height: 1.15;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                    .swatch-sku {
+                        font-size: 8px;
+                        color: #6b7280;
+                        font-weight: 600;
+                        margin-top: 1px;
+                    }
+
                     /* Footer */
                     .footer {
-                        margin-top: 22px;
-                        padding-top: 12px;
+                        margin-top: 14px;
+                        padding-top: 8px;
                         border-top: 1px solid #e5e7eb;
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
-                        font-size: 10.5px;
+                        font-size: 9.5px;
                         color: #6b7280;
                         font-weight: 600;
                     }
@@ -916,10 +1037,22 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                         if (!box) return;
                         if (box.style.display === 'none') {
                             box.style.display = 'block';
-                            btn.innerText = 'Hide Price on PDF';
+                            btn.innerText = 'Hide Price';
                         } else {
                             box.style.display = 'none';
-                            btn.innerText = 'Show Price on PDF';
+                            btn.innerText = 'Show Price';
+                        }
+                    }
+                    function toggleSwatchesBox() {
+                        var box = document.getElementById('swatches-block');
+                        var btn = document.getElementById('toggle-swatches-btn');
+                        if (!box) return;
+                        if (box.style.display === 'none') {
+                            box.style.display = 'block';
+                            btn.innerText = 'Hide Color Palette';
+                        } else {
+                            box.style.display = 'none';
+                            btn.innerText = 'Show Color Palette';
                         }
                     }
                     function swapPhotos() {
@@ -938,7 +1071,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                         <span class="bar-title">Architectural Tear Sheet Preview</span>
                         <div class="bar-controls">
                             ${secondarySwatchUrl ? `<button class="toggle-btn" onclick="swapPhotos()">Swap Room ↔ Swatch</button>` : ''}
-                            <button id="toggle-price-btn" class="toggle-btn" onclick="togglePriceBox()">Hide Price on PDF</button>
+                            ${hasColors ? `<button id="toggle-swatches-btn" class="toggle-btn" onclick="toggleSwatchesBox()">Hide Color Palette</button>` : ''}
+                            <button id="toggle-price-btn" class="toggle-btn" onclick="togglePriceBox()">Hide Price</button>
                             <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
                         </div>
                     </div>
@@ -994,6 +1128,18 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                         </div>
                     </div>
 
+                    ${hasColors ? `
+                        <div id="swatches-block" class="swatches-section">
+                            <div class="swatches-header">
+                                <h3 class="swatches-title">Available Collection Colorways (${colorCount} Colors)</h3>
+                                <span class="swatches-sub">Featured Selection: ${activeColor?.name || ''}</span>
+                            </div>
+                            <div class="swatches-grid">
+                                ${swatchesGridHtml}
+                            </div>
+                        </div>
+                    ` : ''}
+
                     <div class="footer">
                         <span>Specification Date: ${new Date().toLocaleDateString()}</span>
                         <span>${isClientMode ? `© ${new Date().getFullYear()} ${storedBrand || 'Your Flooring Professional'}` : '© Floors 55 Pro — Portland & Lake Oswego Trade Portal'}</span>
@@ -1013,15 +1159,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
         setIsSavingToBoard(true);
 
         try {
-            const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-            const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-            let folderName = productData.imageFolder ? productData.imageFolder : 'images';
-            if (!productData.imageFolder) {
-                if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-                else if (safeName) folderName = safeName;
-                folderName = folderName.replace(/-+$/, '');
-            }
-            
+            const folderName = getFolderName();
             const swatchType = productData.category === 'Carpet' ? 'main' : 'main';
             const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${activeColor?.sku || '01'}_${swatchType}.jpg`.toLowerCase();
             const thumbFbUrl = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
@@ -1189,6 +1327,8 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     const renderColorSwatches = (isDesktop) => {
         if (productData?.isAccessory) return null;
 
+        const folderName = getFolderName();
+
         return (
             <div className={`${isDesktop ? 'hidden lg:block my-6' : 'block lg:hidden mt-8'}`}>
                 <div className="flex justify-between items-end mb-4 pr-2">
@@ -1205,15 +1345,6 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                 }>
                     {productData?.colors?.map(c => {
                         const swatchType = productData.category === 'Carpet' ? 'swatch' : 'main';
-
-                        const safeName = (productData.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                        const safeSku = (productData.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                        let folderName = productData.imageFolder ? productData.imageFolder : 'images';
-                        if (!productData.imageFolder) {
-                            if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-                            else if (safeName) folderName = safeName;
-                            folderName = folderName.replace(/-+$/, '');
-                        }
                         const rawPath = `images/${folderName}/${productData.imgPrefix || ''}${c.sku}_${swatchType}.jpg`.toLowerCase();
                         const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
 
