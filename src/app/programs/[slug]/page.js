@@ -27,8 +27,8 @@ const PROGRAM_DATA = {
       "Here is our trusted local flooring partner, Floors 55 (Lake Oswego & Portland). You can browse their most popular pre-listing and move-in flooring collections or schedule a free on-site measure right here:",
     primaryCtaText: "Schedule a Free Measure or Estimate",
     primaryCtaHref: "/quote?program=Realtor+Concierge+Request",
-    secondaryCtaText: "Browse Popular Flooring Styles",
-    secondaryCtaHref: "/category",
+    secondaryCtaText: "Browse Pro Select & Realtor Styles",
+    secondaryCtaHref: "/category?program=contractor",
     pillarsTitle: "How We Support Homeowners & Real Estate Timelines",
     pillars: [
       {
@@ -420,7 +420,7 @@ export default async function ProgramDetailPage({ params }) {
     if (!auth.currentUser) {
       await signInAnonymously(auth).catch(() => {});
     }
-    const q = query(collection(db, "artifacts", appId, "public", "data", "pricing"), limit(24));
+    const q = query(collection(db, "artifacts", appId, "public", "data", "pricing"));
     const snap = await getDocs(q);
     const allVisible = [];
     snap.forEach((d) => {
@@ -428,27 +428,68 @@ export default async function ProgramDetailPage({ params }) {
       if (data.isVisible !== false && !data.isAccessory && parseFloat(data.price) > 0) {
         const basePrice = parseFloat(data.price) || 0;
         const retailPrice = data.retailPrice ? parseFloat(data.retailPrice) : basePrice * 2.2;
+        const progStr = String(data.program || data.programs || "").toLowerCase();
+
         allVisible.push({
           id: d.id,
           name: (data.usePrivateName && data.privateName) ? data.privateName : (data.name || "Flooring Collection"),
           category: data.category || "Flooring",
           unit: data.unit || "sqft",
           retailFormatted: retailPrice.toFixed(2),
-          isPropMgt: !!data.isPropMgt,
-          isContractor: !!data.isContractor,
+          isRealtor: !!(data.isRealtor || data.isRealtorProgram || data.realtor || progStr.includes("realtor")),
+          isPropMgt: !!(data.isPropMgt || progStr.includes("propmgt") || progStr.includes("property")),
+          isContractor: !!(data.isContractor || data.isProSelect || progStr.includes("contractor")),
           imgUrl: getGridImgUrl(data),
         });
       }
     });
 
-    if (slug === "property-management") {
+    const pickDiverseFour = (list) => {
+      const preferredOrder = ["luxury vinyl", "carpet", "hardwood", "laminate", "tile"];
+      const picked = [];
+      const usedIds = new Set();
+
+      for (const cat of preferredOrder) {
+        const match = list.find(
+          (item) => !usedIds.has(item.id) && item.category.toLowerCase().includes(cat)
+        );
+        if (match) {
+          picked.push(match);
+          usedIds.add(match.id);
+        }
+        if (picked.length === 4) break;
+      }
+
+      for (const item of list) {
+        if (picked.length >= 4) break;
+        if (!usedIds.has(item.id)) {
+          picked.push(item);
+          usedIds.add(item.id);
+        }
+      }
+      return picked;
+    };
+
+    if (slug === "realtors") {
+      const realtorOnly = allVisible.filter((p) => p.isRealtor);
+      const realtorAndPro = allVisible.filter((p) => p.isRealtor || p.isContractor);
+      const pool =
+        realtorOnly.length >= 4
+          ? realtorOnly
+          : realtorAndPro.length >= 4
+          ? realtorAndPro
+          : allVisible;
+      featuredProducts = pickDiverseFour(pool);
+    } else if (slug === "property-management") {
       const propMatches = allVisible.filter((p) => p.isPropMgt);
-      featuredProducts = (propMatches.length >= 4 ? propMatches : allVisible).slice(0, 4);
+      const pool = propMatches.length >= 4 ? propMatches : allVisible;
+      featuredProducts = pickDiverseFour(pool);
     } else if (slug === "builders-remodelers") {
       const proMatches = allVisible.filter((p) => p.isContractor);
-      featuredProducts = (proMatches.length >= 4 ? proMatches : allVisible).slice(0, 4);
+      const pool = proMatches.length >= 4 ? proMatches : allVisible;
+      featuredProducts = pickDiverseFour(pool);
     } else {
-      featuredProducts = allVisible.slice(0, 4);
+      featuredProducts = pickDiverseFour(allVisible);
     }
   } catch (e) {
     console.error("Error loading featured program products:", e);
