@@ -71,18 +71,22 @@ export async function generateMetadata({ params, searchParams }) {
     ? (data.privateName || 'Custom Collection') 
     : (data.name || 'Unnamed Product');
 
-  const rawTextDesc = cleanTruncate(data.desc, 155);
-  const seoDesc = rawTextDesc || `Source ${title} wholesale ${data.category || 'flooring'} at Floors 55 Pro. Exclusive B2B trade pricing for Portland & Lake Oswego contractors, builders, and property managers.`;
+  const currentPrice = parseFloat(data.price) || 0;
+  const rawRetail = data.retailPrice ? parseFloat(data.retailPrice) : (currentPrice * 2.2);
+  const retailFormatted = (rawRetail > 0 ? rawRetail : 4.99).toFixed(2);
+  const unitLabel = data.unit || 'sqft';
+  const categoryClean = data.category || 'Flooring';
+
+  const seoDesc = `Shop ${title} ${categoryClean.toLowerCase()} with fast local warehouse will-call or turnkey installation. Listed at $${retailFormatted}/${unitLabel} retail—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!`;
 
   const imageUrl = getGridImgUrl(data);
-  const categoryLabel = data.category ? `Wholesale ${data.category}` : 'Wholesale Flooring';
 
   return {
     // Root layout.js automatically appends "| Floors 55 Pro Portal"
-    title: `${title} | ${categoryLabel} | Portland & Lake Oswego`,
+    title: `${title} ${categoryClean} | Portland & Lake Oswego Showrooms`,
     description: seoDesc,
     openGraph: {
-        title: `${title} | ${categoryLabel} | Floors 55 Pro`,
+        title: `${title} ${categoryClean} | Portland & Lake Oswego Showrooms`,
         description: seoDesc,
         url: `${BASE_URL}/product/${id}`,
         images: [{ url: imageUrl, width: 1200, height: 630 }],
@@ -90,7 +94,7 @@ export async function generateMetadata({ params, searchParams }) {
     },
     twitter: {
         card: 'summary_large_image',
-        title: `${title} | Floors 55 Pro`,
+        title: `${title} ${categoryClean} | Portland & Lake Oswego Showrooms`,
         description: seoDesc,
         images: [imageUrl]
     },
@@ -251,12 +255,16 @@ export default async function ProductPageServer({ params, searchParams }) {
       ? similarProducts 
       : similarProducts.slice(0, 4);
 
+  const unitLabel = data.unit || 'sqft';
+  const categoryClean = data.category || 'Flooring';
+  const schemaDesc = `Shop ${productData.displayTitle} ${categoryClean.toLowerCase()} with fast local warehouse will-call or turnkey installation. Listed at $${retailPrice}/${unitLabel} retail—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!`;
+
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": productData.displayTitle,
     "image": imageUrl,
-    "description": data.desc || `Source ${productData.displayTitle} wholesale ${data.category || 'flooring'} from Floors 55 Pro in Portland and Lake Oswego.`,
+    "description": data.desc ? `${schemaDesc} ${cleanTruncate(data.desc, 160)}` : schemaDesc,
     "sku": data.sku || docSnap.id,
     "brand": {
       "@type": "Brand",
@@ -276,11 +284,11 @@ export default async function ProductPageServer({ params, searchParams }) {
       "availability": "https://schema.org/InStock",
       "seller": {
         "@type": "Organization",
-        "name": "Floors 55 Pro"
+        "name": "Floors 55 Pro",
+        "telephone": "+1-503-662-9230"
       }
     }
   };
-
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",

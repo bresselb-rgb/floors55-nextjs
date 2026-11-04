@@ -168,10 +168,10 @@ const PROGRAM_DATA = {
       {
         icon: "🚚",
         tag: "Rapid Logistics",
-        title: "Fast Regional Warehouse Will-Call",
-        desc: "When a tenant moves out on the 30th and the new lease starts on the 5th, you cannot wait three weeks for freight. Our core turnover lines are staged for immediate regional will-call or jobsite delivery.",
+        title: "Fast Local Warehouse Will-Call",
+        desc: "When a tenant moves out on the 30th and the new lease starts on the 5th, you cannot wait three weeks for freight. Our core turnover lines are staged for immediate local warehouse will-call or jobsite delivery.",
         bullets: [
-          "Fast pickup via regional vendor partner warehouses or Portland/Lake Oswego hubs",
+          "Fast local warehouse will-call pickup or direct jobsite delivery",
           "Matching transitions, reducers, stair noses, and adhesives stocked alongside",
           "Pallet and multi-unit volume pricing tiers",
         ],
@@ -301,7 +301,7 @@ const PROGRAM_DATA = {
         title: "Material-Only Will-Call or Turnkey Installed",
         desc: "Whether you have your own finish carpenters laying hardwood and LVP or want our licensed installation crews to handle the entire flooring scope, we adapt to your project schedule.",
         bullets: [
-          "Fast vendor partner warehouse will-call for contractors supplying their own labor",
+          "Fast local warehouse will-call for contractors supplying their own labor",
           "Full material-and-labor installation quotes available on request",
           "Matching flush stair noses, bullnose tile trims, and custom moldings",
         ],
@@ -505,7 +505,7 @@ export default async function ProgramDetailPage({ params }) {
       "@type": "WholesaleStore",
       name: "Floors 55 Pro",
       url: BASE_URL,
-      telephone: "+1-503-555-0155",
+      telephone: "+1-503-662-9230",
       parentOrganization: {
         "@type": "Organization",
         name: "Floors 55 Abbey Carpet & Floor",
