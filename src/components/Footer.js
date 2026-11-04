@@ -77,6 +77,34 @@ export default function Footer() {
                 </p>
             </div>
 
+            {/* Sitewide Trade & Client Programs Bar — Hidden during Client Presentation Mode */}
+            {!clientBrand && (
+                <div className="border-b border-gray-800 pb-8 mb-8 text-left">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                        <span className="text-xs font-bold uppercase tracking-widest text-[#c5a059]">
+                            Dedicated Trade &amp; Client Concierge Portals
+                        </span>
+                        <Link href="/programs" className="text-xs font-bold uppercase tracking-wider text-gray-300 hover:text-[#c5a059] transition" style={{ textDecoration: 'none' }}>
+                            View All Programs →
+                        </Link>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                        <Link href="/programs/realtors" className="bg-gray-900/80 border border-gray-800 hover:border-[#c5a059] rounded-xl p-4 transition group block" style={{ textDecoration: 'none' }}>
+                            <div className="font-black uppercase tracking-wider text-white group-hover:text-[#c5a059] mb-1">🏡 Realtor &amp; Client Concierge</div>
+                            <div className="text-gray-400">Pre-listing refreshes, move-in upgrades &amp; escrow repair quotes</div>
+                        </Link>
+                        <Link href="/programs/property-management" className="bg-gray-900/80 border border-gray-800 hover:border-[#c5a059] rounded-xl p-4 transition group block" style={{ textDecoration: 'none' }}>
+                            <div className="font-black uppercase tracking-wider text-white group-hover:text-[#c5a059] mb-1">🏢 Property Management</div>
+                            <div className="text-gray-400">Standardized 20-mil unit-turn LVP, carpet stock &amp; turn crews</div>
+                        </Link>
+                        <Link href="/programs/builders-remodelers" className="bg-gray-900/80 border border-gray-800 hover:border-[#c5a059] rounded-xl p-4 transition group block" style={{ textDecoration: 'none' }}>
+                            <div className="font-black uppercase tracking-wider text-white group-hover:text-[#c5a059] mb-1">🛠️ Builders &amp; Remodelers</div>
+                            <div className="text-gray-400">Wholesale B2B pricing, white-label client boards &amp; takeoffs</div>
+                        </Link>
+                    </div>
+                </div>
+            )}
+
             {/* Sitewide Local SEO Service Areas Bar — Hidden during Client Presentation Mode */}
             {!clientBrand && (
                 <div className="border-b border-gray-800 pb-10 mb-10 text-left">

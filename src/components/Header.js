@@ -42,6 +42,10 @@ const RESOURCE_PAGES = [
     { title: 'FAQ', path: '/faq', keywords: ['frequently asked questions', 'help', 'support', 'pad attached', 'questions', 'can i'] },
     { title: 'Showrooms & Locations', path: '/locations', keywords: ['showroom', 'address', 'hours', 'portland', 'lake oswego', 'oswego village', 'water ave', 'directions'] },
     { title: 'Metro Service Areas & On-Site Measures', path: '/service-areas', keywords: ['service areas', 'measure', 'takeoff', 'will call', 'installation', 'beaverton', 'tigard', 'tualatin', 'west linn', 'vancouver', 'hillsboro', 'oregon city', 'happy valley', 'sherwood', 'wilsonville', 'gresham', 'camas'] },
+    { title: 'Trade & Client Programs Hub', path: '/programs', keywords: ['programs', 'trade', 'concierge', 'realtors', 'property management', 'builders', 'contractors'] },
+    { title: 'Realtor & Homeowner Flooring Concierge', path: '/programs/realtors', keywords: ['realtor', 'real estate', 'agent', 'broker', 'seller', 'buyer', 'escrow', 'pre-listing', 'concierge'] },
+    { title: 'Property Management & Multi-Family Program', path: '/programs/property-management', keywords: ['property management', 'multi-family', 'apartment', 'turnover', 'unit turn', 'hoa', 'rental', 'maintenance'] },
+    { title: 'Builders, Remodelers & Designers Program', path: '/programs/builders-remodelers', keywords: ['builder', 'remodeler', 'contractor', 'gc', 'designer', 'wholesale', 'white label', 'spec'] },
 ];
 
 // A component to wrap matching search text in your gold theme color
@@ -353,6 +357,29 @@ export default function Header() {
                   </div>
                 </div>
 
+                {/* Programs Dropdown - Hidden in White-Label Client Mode */}
+                {!clientBrand && (
+                  <div className="group relative h-full flex items-center">
+                    <button className="transition flex items-center gap-1 py-8 bg-transparent border-none font-bold uppercase cursor-pointer outline-none hover:opacity-70" style={{ color: '#000000' }}>
+                      Programs ▾
+                    </button>
+                    <div className="absolute top-full left-0 bg-white shadow-2xl border border-gray-100 min-w-[290px] hidden group-hover:block animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+                      <Link href="/programs/realtors" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
+                        🏡 Realtor &amp; Client Concierge
+                      </Link>
+                      <Link href="/programs/property-management" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
+                        🏢 Property Management
+                      </Link>
+                      <Link href="/programs/builders-remodelers" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold border-b border-gray-50 text-xs text-gray-900" style={{ textDecoration: 'none' }}>
+                        🛠️ Builders &amp; Remodelers
+                      </Link>
+                      <Link href="/programs" className="block w-full text-left px-6 py-4 hover:bg-gray-50 hover:text-gold text-xs text-[#c5a059] font-bold" style={{ textDecoration: 'none' }}>
+                        All Trade Programs →
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
                 {/* Resources Dropdown Expanded */}
                 <div className="group relative h-full flex items-center">
                   <button className="transition flex items-center gap-1 py-8 bg-transparent border-none font-bold uppercase cursor-pointer outline-none hover:opacity-70" style={{ color: clientBrand ? brandText : '#000000' }}>
@@ -477,6 +504,16 @@ export default function Header() {
               {categories.map(cat => (
                 <Link key={cat} href={getCategorySlug(cat)} onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>{cat}</Link>
               ))}
+
+              {!clientBrand && (
+                <div className="pt-4 mt-2">
+                  <p className="px-0 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400">Trade &amp; Client Programs</p>
+                  <Link href="/programs/realtors" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>🏡 Realtor &amp; Client Concierge</Link>
+                  <Link href="/programs/property-management" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>🏢 Property Management</Link>
+                  <Link href="/programs/builders-remodelers" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-gray-900 border-b border-gray-50" style={{ textDecoration: 'none' }}>🛠️ Builders &amp; Remodelers</Link>
+                  <Link href="/programs" onClick={() => setIsMobileMenuOpen(false)} className="block py-4 text-sm font-bold uppercase tracking-widest text-[#c5a059] border-b border-gray-50" style={{ textDecoration: 'none' }}>All Trade Programs →</Link>
+                </div>
+              )}
               
               <div className="pt-4 mt-2">
                 <p className="px-0 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400">Resources</p>
