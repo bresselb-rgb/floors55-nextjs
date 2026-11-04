@@ -19,8 +19,12 @@ export default async function sitemap() {
     '/category/laminate',
     '/category/hardwood',
     '/category/tile',
-    '/service-areas', // <-- Main Interactive 3D Metro Service Areas Hub
-    '/locations',     // <-- Showroom Locations Page
+    '/programs',                      // <-- Trade & Client Programs Hub
+    '/programs/realtors',             // <-- Realtor & Homeowner Concierge
+    '/programs/property-management',  // <-- Property Management & Multi-Family
+    '/programs/builders-remodelers',  // <-- Builders, Remodelers & Designers
+    '/service-areas',                 // <-- Main Interactive 3D Metro Service Areas Hub
+    '/locations',                     // <-- Showroom Locations Page
     '/choosing-your-floor',
     '/floor-care',
     '/installation-prep',
@@ -36,7 +40,7 @@ export default async function sitemap() {
     url: `${baseUrl}${route}`,
     lastModified: new Date(),
     changeFrequency: 'weekly',
-    priority: route === '' ? 1 : route === '/service-areas' ? 0.9 : 0.8,
+    priority: route === '' ? 1 : (route === '/service-areas' || route.startsWith('/programs')) ? 0.9 : 0.8,
   }));
 
   // 2. Automatically generate all 15 City SEO Spoke URLs (/service-areas/lake-oswego-or, etc.)
@@ -61,7 +65,7 @@ export default async function sitemap() {
       if (data.isVisible !== false) {
         productRoutes.push({
           url: `${baseUrl}/product/${doc.id}`,
-          lastModified: data.addedAt ? new Date(data.addedAt) : new Date(),
+          lastModified: new Date(),
           changeFrequency: 'daily',
           priority: 0.9,
         });
