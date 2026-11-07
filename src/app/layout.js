@@ -25,7 +25,7 @@ export const metadata = {
   keywords: 'wholesale flooring Portland, contractor flooring supplier Lake Oswego, LVP wholesale Oregon, property management flooring, on-site flooring takeoffs, Floors 55 Pro',
   openGraph: {
     title: 'Floors 55 Pro | Portland & Lake Oswego Wholesale Flooring',
-    description: 'Exclusive B2B trade portal, on-site project measures, vendor will-call, and showroom support for Pacific Northwest pros.',
+    description: 'Exclusive B2B trade portal, on-site project measures, Local Warehouse Will-Call, and showroom support for Pacific Northwest pros.',
     url: 'https://www.floors55pro.com',
     siteName: 'Floors 55 Pro',
     locale: 'en_US',
@@ -42,7 +42,7 @@ export default function RootLayout({ children }) {
     "name": "Floors 55 Pro",
     "url": "https://www.floors55pro.com",
     "image": "https://www.floors55pro.com/images/f55-pros-logo.jpg",
-    "description": "Wholesale flooring supplier providing exclusive trade pricing, on-site project measures, vendor partner will-call, and installation by request for contractors, builders, designers, and property managers.",
+    "description": "Wholesale flooring supplier providing exclusive trade pricing, on-site project measures, local warehouse, and installation by request for contractors, builders, designers, and property managers.",
     "telephone": "+1-503-673-1333",
     "parentOrganization": {
       "@type": "HomeAndConstructionBusiness",

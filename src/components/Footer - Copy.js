@@ -82,7 +82,7 @@ export default function Footer() {
                 <div className="border-b border-gray-800 pb-10 mb-10 text-left">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                         <span className="text-xs font-bold uppercase tracking-widest text-[#c5a059]">
-                            Portland &amp; SW Washington Trade Coverage · On-Site Measures · Vendor Will-Call
+                            Portland &amp; SW Washington Trade Coverage · On-Site Measures · Local Warehouse Will-Call
                         </span>
                         <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-wider">
                             <Link href="/locations" className="text-gray-300 hover:text-[#c5a059] transition" style={{ textDecoration: 'none' }}>

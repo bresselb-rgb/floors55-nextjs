@@ -241,14 +241,14 @@ export default function ServiceAreasPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
                         <div className="lg:col-span-7">
                             <p className="text-xs font-bold uppercase tracking-widest text-[#c5a059] mb-2">
-                                Trade Supply · Vendor Will-Call · Installation by Request
+                                Trade Supply · Local Warehouse Will-Call · Installation by Request
                             </p>
                             <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-gray-900 leading-tight">
                                 From Our Showrooms <br className="hidden sm:inline" />
                                 <span className="text-[#c5a059]">To Your Jobsite.</span>
                             </h1>
                             <p className="mt-3 md:mt-4 text-gray-600 text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl">
-                                Anchored by our <strong className="text-gray-900">Portland (SE Water Ave)</strong> and <strong className="text-gray-900">Lake Oswego (Oswego Village)</strong> sample showrooms, Floors 55 Pro provides contractors, builders, designers, and property managers with on-site project measuring, rapid <strong className="text-gray-900">will-call at our regional vendor partner warehouses</strong>, and <strong className="text-gray-900">professional flooring installation by request</strong>.
+                                Anchored by our <strong className="text-gray-900">Portland (SE Water Ave)</strong> and <strong className="text-gray-900">Lake Oswego (Oswego Village)</strong> sample showrooms, Floors 55 Pro provides contractors, builders, designers, and property managers with on-site project measuring, rapid <strong className="text-gray-900">will-call at our local warehouse</strong>, and <strong className="text-gray-900">professional flooring installation by request</strong>.
                             </p>
                         </div>
 
@@ -373,7 +373,7 @@ export default function ServiceAreasPage() {
                             </div>
                         </div>
 
-                        {/* Expanded Specs, Vendor Will-Call, Install Badge & Neighborhoods Card Below Map */}
+                        {/* Expanded Specs, Local Warehouse Will-Call, Install Badge & Neighborhoods Card Below Map */}
                         <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 shadow-sm">
                             <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-100">
                                 <h3 className="text-base sm:text-lg font-bold text-gray-900">
@@ -381,7 +381,7 @@ export default function ServiceAreasPage() {
                                 </h3>
                                 <div className="flex flex-wrap gap-1.5">
                                     <span className="text-[11px] font-semibold text-[#c5a059] bg-amber-50 px-2.5 py-1 rounded-md border border-[#c5a059]/30">
-                                        Vendor Partner Will-Call
+                                        local warehouse
                                     </span>
                                     <span className="text-[11px] font-semibold text-gray-800 bg-gray-100 px-2.5 py-1 rounded-md border border-gray-200">
                                         Installation Available by Request
@@ -527,7 +527,7 @@ export default function ServiceAreasPage() {
                                 2. Overflow &amp; Schedule Relief (Property Mgmt)
                             </h4>
                             <p className="text-sm text-gray-600 leading-relaxed">
-                                Crews booked out or tackling a tight multi-unit turnover? In addition to wholesale material supply and vendor partner will-call, Floors 55 Pro offers professional installation services by request—giving you reliable backup labor capacity whenever your timeline demands it.
+                                Crews booked out or tackling a tight multi-unit turnover? In addition to wholesale material supply and local warehouse, Floors 55 Pro offers professional installation services by request—giving you reliable backup labor capacity whenever your timeline demands it.
                             </p>
                         </div>
 

@@ -5,7 +5,7 @@ export const SHOWROOM_HUBS = [
         id: 'portland',
         name: 'Portland Trade & Sample Hub',
         location: '1320 SE Water Ave · Portland, OR 97214',
-        phone: '(503) 491-1776',
+        phone: '(503) 662-9230',
         hours: 'Mon–Fri: 8:30 AM – 4:30 PM',
         coverage: 'Central Eastside, Pearl/NW, East County & Clark County WA',
         mapCoords: { x: 50, y: 42 }

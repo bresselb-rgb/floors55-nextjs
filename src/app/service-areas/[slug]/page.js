@@ -23,13 +23,13 @@ function getCityInstallCopy(city) {
         return {
             title: '4. On-Demand Installation Support',
             badge: 'Overflow & Turnkey Installation by Request',
-            body: `Crews booked out or tackling a tight ${city.name} multi-unit turnover? In addition to wholesale material supply and vendor will-call, Floors 55 Pro offers professional installation services by request—giving you reliable backup labor capacity whenever your project timeline demands it.`
+            body: `Crews booked out or tackling a tight ${city.name} multi-unit turnover? In addition to wholesale material supply and Local Warehouse Will-Call, Floors 55 Pro offers professional installation services by request—giving you reliable backup labor capacity whenever your project timeline demands it.`
         };
     }
 
     return {
         title: '4. Professional Installation Upon Request',
-        badge: 'Trade Supply · Vendor Will-Call · Install by Request',
+        badge: 'Trade Supply · Local Warehouse Will-Call · Install by Request',
         body: `From material specification at our Portland and Lake Oswego showrooms to final walkthrough in ${city.name}, we can take the flooring scope completely off your plate. Ask your account rep to bundle certified installation into your quote alongside your wholesale material order.`
     };
 }
@@ -45,7 +45,7 @@ export async function generateMetadata({ params }) {
 
     // Root layout.js automatically appends "| Floors 55 Pro Portal"
     const pageTitle = `Wholesale Flooring, On-Site Measures & Installation near ${city.name}, ${city.state}`;
-    const pageDesc = `${city.tagline} Serving ${city.name} contractors, builders, and property managers via our ${city.closestHub} (${city.miles} mi). Vendor will-call & professional installation by request.`;
+    const pageDesc = `${city.tagline} Serving ${city.name} contractors, builders, and property managers via our ${city.closestHub} (${city.miles} mi). Local Warehouse Will-Call & professional installation by request.`;
 
     return {
         title: pageTitle,
@@ -178,10 +178,10 @@ export default async function CityServiceAreaPage({ params }) {
                             </div>
                             <div className="bg-gray-50 border border-gray-200 p-5 sm:p-6 rounded-xl">
                                 <h2 className="text-gray-900 font-bold text-base mb-2">
-                                    3. Vendor Partner Will-Call
+                                    3. local warehouse
                                 </h2>
                                 <p className="text-sm text-gray-600 leading-relaxed">
-                                    Skip showroom bottlenecks—your material orders are staged for rapid will-call pickup directly at our regional vendor partner distribution warehouses located along the major metro freight corridors.
+                                    Skip showroom bottlenecks—your material orders are staged for rapid will-call pickup directly at our local warehouses located along the major metro freight corridors.
                                 </p>
                             </div>
                             <div className="bg-amber-50/50 border border-[#c5a059]/40 p-5 sm:p-6 rounded-xl">

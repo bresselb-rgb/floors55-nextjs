@@ -13,14 +13,14 @@ const BASE_URL = "https://www.floors55pro.com";
 
 // Note: Root layout.js automatically appends "| Floors 55 Pro Portal"
 export const metadata = {
-  title: "All Wholesale Flooring Collections | Portland & Lake Oswego",
-  description: "Browse our complete B2B wholesale catalog of luxury vinyl plank (LVP), engineered hardwood, commercial & residential carpet, laminate, and porcelain tile.",
+  title: "All Flooring Collections | Portland & Lake Oswego Showrooms",
+  description: "Shop our complete catalog of LVP, engineered hardwood, carpet, laminate, and tile with fast local warehouse will-call or turnkey installation. Retail prices shown—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!",
   alternates: {
     canonical: `${BASE_URL}/category`,
   },
   openGraph: {
-    title: "All Wholesale Flooring Collections | Floors 55 Pro",
-    description: "Browse our complete B2B wholesale catalog of LVP, hardwood, carpet, laminate, and tile for Portland and Lake Oswego pros.",
+    title: "All Flooring Collections | Portland & Lake Oswego Showrooms",
+    description: "Shop LVP, hardwood, carpet, laminate, and tile with fast local warehouse will-call or turnkey installation. Retail prices shown—verified pros sign in for trade pricing. Call or text (503) 662-9230!",
     url: `${BASE_URL}/category`,
     type: "website",
   },
@@ -71,9 +71,9 @@ export default async function AllCategoriesPage() {
   const collectionPageSchema = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    "name": "All Wholesale Flooring Collections | Floors 55 Pro",
+    "name": "All Flooring Collections | Floors 55 Pro",
     "url": `${BASE_URL}/category`,
-    "description": "Complete wholesale flooring catalog for Portland, Lake Oswego, and SW Washington contractors, builders, designers, and property managers.",
+    "description": "Shop our complete flooring catalog of LVP, hardwood, carpet, laminate, and tile with fast local warehouse will-call or turnkey installation in Portland & Lake Oswego. Listed at retail—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!",
     "isPartOf": {
       "@id": `${BASE_URL}/#organization`
     }

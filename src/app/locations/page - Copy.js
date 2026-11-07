@@ -136,7 +136,7 @@ export default function LocationsPage() {
                                 <div className="flex items-center gap-3">
                                     <span className="text-[#c5a059] font-bold">📞</span>
                                     <a href="tel:5034911776" className="font-semibold text-gray-900 hover:text-[#c5a059] transition">
-                                        (503) 491-1776
+                                        (503) 662-9230
                                     </a>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -218,17 +218,17 @@ export default function LocationsPage() {
                     </div>
                 </div>
 
-                {/* Vendor Partner Will-Call & Installation Note */}
+                {/* local warehouse & Installation Note */}
                 <div className="mt-6 bg-amber-50/70 border border-[#c5a059]/40 rounded-2xl p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <span className="text-xs font-bold uppercase tracking-wider text-[#c5a059]">
                             Trade Logistics &amp; Turnkey Support
                         </span>
                         <h3 className="text-lg font-bold text-gray-900 mt-0.5">
-                            Vendor Partner Will-Call &amp; Installation by Request
+                            local warehouse &amp; Installation by Request
                         </h3>
                         <p className="text-sm text-gray-700 mt-1">
-                            While our Portland and Lake Oswego showrooms handle sample selections and on-site measure dispatch, bulk material orders are staged for rapid <strong>will-call pickup at our regional vendor partner warehouses</strong>. Need labor support? We also offer <strong>professional installation by request</strong>.
+                            While our Portland and Lake Oswego showrooms handle sample selections and on-site measure dispatch, bulk material orders are staged for rapid <strong>will-call pickup at our local warehouse</strong>. Need labor support? We also offer <strong>professional installation by request</strong>.
                         </p>
                     </div>
                 </div>

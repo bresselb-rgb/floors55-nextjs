@@ -17,7 +17,7 @@ const CATEGORY_MAP = {
     matchKeys: ["luxury vinyl", "lvp", "vinyl", "spc", "wpc"],
     title: "Wholesale Luxury Vinyl Plank (LVP) Flooring | Portland & Lake Oswego",
     description:
-      "Commercial and residential 100% waterproof SPC & WPC Luxury Vinyl Plank (LVP) flooring. Exclusive B2B wholesale pricing, vendor partner will-call, and on-site measures across Portland & Lake Oswego.",
+      "Commercial and residential 100% waterproof SPC & WPC Luxury Vinyl Plank (LVP) flooring. Exclusive B2B wholesale pricing, local warehouse, and on-site measures across Portland & Lake Oswego.",
     lowPrice: "1.99",
     highPrice: "6.99",
   },
