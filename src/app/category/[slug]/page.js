@@ -15,45 +15,45 @@ const CATEGORY_MAP = {
   "luxury-vinyl": {
     name: "Luxury Vinyl (LVP)",
     matchKeys: ["luxury vinyl", "lvp", "vinyl", "spc", "wpc"],
-    title: "Wholesale Luxury Vinyl Plank (LVP) Flooring | Portland & Lake Oswego",
+    title: "Luxury Vinyl Plank (LVP) Flooring | Portland & Lake Oswego Showrooms",
     description:
-      "Commercial and residential 100% waterproof SPC & WPC Luxury Vinyl Plank (LVP) flooring. Exclusive B2B wholesale pricing, vendor partner will-call, and on-site measures across Portland & Lake Oswego.",
+      "Shop 100% waterproof SPC & WPC Luxury Vinyl Plank (LVP) with fast local warehouse will-call or turnkey installation. Retail prices shown—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!",
     lowPrice: "1.99",
     highPrice: "6.99",
   },
   carpet: {
     name: "Carpet",
     matchKeys: ["carpet", "cushion", "pad"],
-    title: "Wholesale Designer & Multi-Family Turn Carpet | Portland & Lake Oswego",
+    title: "Designer & Multi-Family Broadloom Carpet | Portland & Lake Oswego Showrooms",
     description:
-      "Plush residential designer carpet, solution-dyed pet-proof styles, and multi-family turnover carpet in stock for Portland, Lake Oswego, and SW Washington contractors and property managers.",
+      "Shop residential designer carpet, pet-proof styles, and multi-family turnover carpet with fast local warehouse will-call or turnkey installation. Retail prices shown—verified pros sign in for trade pricing. Call or text (503) 662-9230!",
     lowPrice: "1.49",
     highPrice: "8.99",
   },
   hardwood: {
     name: "Hardwood",
     matchKeys: ["hardwood", "wood", "oak", "hickory", "maple"],
-    title: "Wholesale Engineered & Solid Hardwood Flooring | Portland & Lake Oswego",
+    title: "Engineered & Solid Hardwood Flooring | Portland & Lake Oswego Showrooms",
     description:
-      "Wide-plank European White Oak, Hickory, and Pacific Northwest engineered hardwood flooring at protected B2B wholesale trade pricing. Showroom sample selection in Portland & Lake Oswego.",
+      "Shop wide-plank European White Oak, Hickory, and engineered hardwood with fast local warehouse will-call or turnkey installation. Retail prices shown—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!",
     lowPrice: "4.49",
     highPrice: "14.99",
   },
   laminate: {
     name: "Laminate",
     matchKeys: ["laminate"],
-    title: "Wholesale Waterproof & AC4/AC5 Laminate Flooring | Portland & Lake Oswego",
+    title: "Waterproof AC4/AC5 Laminate Flooring | Portland & Lake Oswego Showrooms",
     description:
-      "Scratch-resistant, waterproof AC4 and AC5 commercial-grade laminate flooring for custom builders, remodelers, and property managers in the Portland & Lake Oswego metro.",
+      "Shop scratch-resistant, waterproof AC4 and AC5 laminate flooring with fast local warehouse will-call or turnkey installation. Retail prices shown—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!",
     lowPrice: "2.29",
     highPrice: "5.99",
   },
   tile: {
     name: "Tile",
     matchKeys: ["tile", "porcelain", "ceramic", "mosaic", "stone"],
-    title: "Wholesale Porcelain, Ceramic & Natural Stone Tile | Portland & Lake Oswego",
+    title: "Porcelain, Ceramic & Natural Stone Tile | Portland & Lake Oswego Showrooms",
     description:
-      "Large-format porcelain tile, architectural wall tile, and waterproof shower & floor tile specifications for Portland and Lake Oswego builders, designers, and remodelers.",
+      "Shop large-format porcelain, ceramic, and natural stone tile with fast local warehouse will-call or turnkey installation. Retail prices shown—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!",
     lowPrice: "2.49",
     highPrice: "12.99",
   },
@@ -79,10 +79,11 @@ function matchesCategorySlug(productCategory = "", slug = "") {
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const cleanSlug = String(slug || "").toLowerCase();
+  const cleanName = cleanSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
   const config = CATEGORY_MAP[cleanSlug] || {
-    name: cleanSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-    title: `Wholesale ${cleanSlug.replace(/-/g, " ")} Flooring | Portland & Lake Oswego`,
-    description: `Browse wholesale ${cleanSlug.replace(/-/g, " ")} flooring for contractors, builders, designers, and property managers in Portland and Lake Oswego.`,
+    name: cleanName,
+    title: `${cleanName} Flooring | Portland & Lake Oswego Showrooms`,
+    description: `Shop ${cleanName.toLowerCase()} flooring with fast local warehouse will-call or turnkey installation. Listed at retail—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!`,
   };
 
   return {
@@ -104,10 +105,11 @@ export default async function CategorySlugPage({ params }) {
   const { slug } = await params;
   const cleanSlug = String(slug || "").toLowerCase();
 
+  const cleanName = cleanSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
   const config = CATEGORY_MAP[cleanSlug] || {
-    name: cleanSlug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-    title: `Wholesale ${cleanSlug.replace(/-/g, " ")} Flooring`,
-    description: `Wholesale ${cleanSlug.replace(/-/g, " ")} flooring for Portland & Lake Oswego trade accounts.`,
+    name: cleanName,
+    title: `${cleanName} Flooring | Portland & Lake Oswego Showrooms`,
+    description: `Shop ${cleanName.toLowerCase()} flooring with fast local warehouse will-call or turnkey installation. Listed at retail—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!`,
     lowPrice: "1.99",
     highPrice: "9.99",
   };
@@ -184,7 +186,7 @@ export default async function CategorySlugPage({ params }) {
   const categoryProductSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: `Floors 55 Pro — Wholesale ${config.name} Collection`,
+    name: `Floors 55 Pro — ${config.name} Collection`,
     description: config.description,
     brand: {
       "@type": "Brand",
@@ -203,6 +205,7 @@ export default async function CategorySlugPage({ params }) {
         "@type": "Organization",
         name: "Floors 55 Pro",
         url: BASE_URL,
+        telephone: "+1-503-662-9230",
       },
     },
     aggregateRating: {
