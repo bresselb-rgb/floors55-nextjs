@@ -193,17 +193,27 @@
                                 </div>
                             </div>
 
-                            <div class="pt-3 mt-3 border-t border-gray-850">
-                                <label class="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Set Retail Margin (%)</label>
-                                <div class="flex gap-2 mb-2">
-                                    <input type="number" id="batch-retail-margin" placeholder="e.g. 50" class="flex-1 bg-gray-950 border border-gray-800 rounded px-2.5 py-1.5 text-xs text-white outline-none focus:border-gold">
-                                    <select id="batch-target-type" class="flex-1 bg-gray-950 border border-gray-800 rounded px-2 py-1 text-[10px] text-white font-bold outline-none focus:border-gold cursor-pointer">
-                                        <option value="all">All Products</option>
+                            <div class="pt-3 mt-3 border-t border-gray-850 space-y-2.5">
+                                <label class="block text-[10px] font-black uppercase tracking-wider text-gold">Reset Margins From Landed Cost (%)</label>
+                                <div>
+                                    <label class="block text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1">Target Items</label>
+                                    <select id="batch-target-type" class="w-full bg-gray-950 border border-gray-800 rounded px-2.5 py-1.5 text-xs text-white font-bold outline-none focus:border-gold cursor-pointer">
                                         <option value="accessories">Trims & Accessories Only</option>
+                                        <option value="all">All Products</option>
                                     </select>
                                 </div>
-                                <button onclick="window.applyBatchRetailMargin()" class="w-full bg-gray-800 hover:bg-gold hover:text-black transition-all px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider">
-                                    Apply Retail Margin
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1">Wholesale Margin %</label>
+                                        <input type="number" id="batch-ws-margin" placeholder="e.g. 25" class="w-full bg-gray-950 border border-gray-800 rounded px-2.5 py-1.5 text-xs text-white outline-none focus:border-gold">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[9px] font-bold uppercase tracking-wider text-gray-500 mb-1">Retail Margin %</label>
+                                        <input type="number" id="batch-retail-margin" placeholder="e.g. 50" class="w-full bg-gray-950 border border-gray-800 rounded px-2.5 py-1.5 text-xs text-white outline-none focus:border-gold">
+                                    </div>
+                                </div>
+                                <button onclick="window.applyBatchRetailMargin()" class="w-full bg-gray-800 hover:bg-gold hover:text-black transition-all px-3 py-2 rounded text-xs font-bold uppercase tracking-wider">
+                                    Apply WS & Retail Margins
                                 </button>
                             </div>
 
@@ -978,44 +988,64 @@ window.applyBatchRetailMargin = async () => {
                 return;
             }
 
-            const marginInput = parseFloat(document.getElementById('batch-retail-margin').value);
-            if (isNaN(marginInput) || marginInput <= 0 || marginInput >= 100) {
-                window.customAlert("Invalid Margin", "Please enter a valid margin percentage (e.g. 50).");
+            const wsRaw = document.getElementById('batch-ws-margin').value.trim();
+            const retRaw = document.getElementById('batch-retail-margin').value.trim();
+
+            const wsMargin = wsRaw !== '' ? parseFloat(wsRaw) : null;
+            const retMargin = retRaw !== '' ? parseFloat(retRaw) : null;
+
+            if (wsMargin === null && retMargin === null) {
+                window.customAlert("Missing Margin", "Please enter a Wholesale Margin %, a Retail Margin %, or both.");
+                return;
+            }
+
+            if ((wsMargin !== null && (isNaN(wsMargin) || wsMargin <= 0 || wsMargin >= 100)) ||
+                (retMargin !== null && (isNaN(retMargin) || retMargin <= 0 || retMargin >= 100))) {
+                window.customAlert("Invalid Margin", "Margin percentages must be between 1 and 99 (e.g. 25 for Wholesale, 50 for Retail).");
                 return;
             }
 
             const targetType = document.getElementById('batch-target-type').value;
             const targetText = targetType === 'accessories' ? "all Trims & Accessories" : "ALL products";
 
-            const consent = await window.customConfirm("Set Retail Margin", `Are you sure you want to hard-reset the retail margin to ${marginInput}% for ${targetText}?`);
+            const summaryParts = [];
+            if (wsMargin !== null) summaryParts.push(`Wholesale (${wsMargin}% margin)`);
+            if (retMargin !== null) summaryParts.push(`Retail (${retMargin}% margin)`);
+
+            const consent = await window.customConfirm(
+                "Reset Margins From Cost",
+                `Hard-reset ${summaryParts.join(' & ')} based on landedCost for ${targetText}? (Items without a valid landedCost > $0 will be safely skipped.)`
+            );
             if (!consent) return;
 
-            logEvent(`Initiating batch retail margin reset to ${marginInput}% for ${targetType}...`, "warn");
+            logEvent(`Initiating batch margin reset (${summaryParts.join(', ')}) for ${targetType}...`, "warn");
             let processed = 0;
+            let skippedNoCost = 0;
 
             for (const prod of documentsCache) {
                 let isMatch = false;
-                
+
                 if (targetType === 'all') {
                     isMatch = true;
                 } else if (targetType === 'accessories') {
-                    // Check if it's flagged as an accessory or categorized as Trim & Molding
                     if (prod.isAccessory === true || prod.category === 'Trim & Molding') {
                         isMatch = true;
                     }
                 }
 
                 if (isMatch) {
-                    // Cost basis: prioritize landedCost, fallback to wholesale price if landedCost is missing
-                    let baseCost = parseFloat(prod.landedCost);
-                    if (isNaN(baseCost)) baseCost = parseFloat(prod.price);
-                    
+                    const baseCost = parseFloat(prod.landedCost);
+
                     if (!isNaN(baseCost) && baseCost > 0) {
-                        const newRetail = Math.round((baseCost / (1 - (marginInput / 100))) * 100) / 100;
-                        
                         const cleanProd = { ...prod };
                         delete cleanProd.id;
-                        cleanProd.retailPrice = newRetail;
+
+                        if (wsMargin !== null) {
+                            cleanProd.price = Math.round((baseCost / (1 - (wsMargin / 100))) * 100) / 100;
+                        }
+                        if (retMargin !== null) {
+                            cleanProd.retailPrice = Math.round((baseCost / (1 - (retMargin / 100))) * 100) / 100;
+                        }
 
                         try {
                             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pricing', prod.id), cleanProd);
@@ -1023,12 +1053,15 @@ window.applyBatchRetailMargin = async () => {
                         } catch (e) {
                             logEvent(`Failed to update ${prod.id}: ${e.message}`, "error");
                         }
+                    } else {
+                        skippedNoCost++;
+                        logEvent(`Skipped ${prod.id} (${prod.name || 'Unnamed'}): missing landedCost`, "warn");
                     }
                 }
             }
 
-            showToast(`Adjusted ${processed} items!`);
-            logEvent(`Completed retail margin update on ${processed} documents.`, "success");
+            showToast(`Updated ${processed} items (${skippedNoCost} skipped)!`);
+            logEvent(`Completed margin update on ${processed} docs (${skippedNoCost} skipped for missing landedCost).`, "success");
         };
 
         window.setBatchVisibility = async (status) => {
