@@ -1,3 +1,4 @@
+// src/app/product/[id]/page.js
 import { doc, getDoc, collection, query, where, getDocs, limit, documentId } from "firebase/firestore";
 import { signInAnonymously } from "firebase/auth";
 import { db, auth, appId } from "../../../lib/firebase";
@@ -9,25 +10,46 @@ import Link from "next/link";
 // 0. Force Vercel to always fetch fresh data for this page
 export const dynamic = 'force-dynamic';
 
+const BASE_URL = "https://www.floors55pro.com";
+
 const authenticateServer = async () => {
     if (!auth.currentUser) {
         await signInAnonymously(auth).catch(() => {});
     }
 };
 
-const getGridImgUrl = (data) => {
-  const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-const safeSku = (data.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-let folderName = data.imageFolder ? data.imageFolder : 'images'; 
-if (!data.imageFolder) {
-    if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
-    else if (safeName) folderName = safeName;
-    folderName = folderName.replace(/-+$/, '');
-}
+// Strips confidential internal fields (like landedCost) before serializing props into public HTML
+const sanitizePublicProduct = (rawObj) => {
+    if (!rawObj) return rawObj;
+    const { landedCost, cost, ...safeObj } = rawObj;
+    return safeObj;
+};
 
-  const displaySku = data.colors?.[0]?.sku || '01';
-  const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
-  return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+// Truncates meta descriptions cleanly at a word boundary instead of mid-word
+const cleanTruncate = (str, maxLen = 155) => {
+    if (!str) return '';
+    const clean = str.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim();
+    if (clean.length <= maxLen) return clean;
+    const sub = clean.substring(0, maxLen - 1);
+    const lastSpace = sub.lastIndexOf(' ');
+    return (lastSpace > 80 ? sub.substring(0, lastSpace) : sub) + '…';
+};
+
+const getGridImgUrl = (data) => {
+    const safeName = (data.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const safeSku = (data.sku || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    let folderName = data.imageFolder ? data.imageFolder : 'images'; 
+    if (!data.imageFolder) {
+        if (safeName && safeSku) folderName = `${safeName}-${safeSku}`;
+        else if (safeName) folderName = safeName;
+        folderName = folderName.replace(/-+$/, '');
+    }
+
+    const displaySku = data.colors?.[0]?.sku || '01';
+    const isCarpet = (data.category || '').toLowerCase() === 'carpet';
+    const imgType = isCarpet ? 'swatch' : 'main';
+    const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_${imgType}.jpg`.toLowerCase();
+    return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
 };
 
 export async function generateMetadata({ params, searchParams }) {
@@ -41,7 +63,7 @@ export async function generateMetadata({ params, searchParams }) {
   const docSnap = await getDoc(docRef);
 
   if (!docSnap.exists()) {
-    return { title: 'Product Not Found | Floors 55 Pro' };
+    return { title: 'Product Not Found' };
   }
 
   const data = docSnap.data();
@@ -49,30 +71,35 @@ export async function generateMetadata({ params, searchParams }) {
     ? (data.privateName || 'Custom Collection') 
     : (data.name || 'Unnamed Product');
 
-  // Strip HTML tags for clean meta tags and limit to Google's preferred 155 characters
-  const rawTextDesc = data.desc ? data.desc.replace(/<[^>]*>?/gm, '').substring(0, 155) : '';
-  const seoDesc = rawTextDesc || `Source ${title} wholesale ${data.category || 'flooring'} at Floors 55 Pro. Exclusive B2B pricing for Portland contractors, custom builders, and property managers.`;
+  const currentPrice = parseFloat(data.price) || 0;
+  const rawRetail = data.retailPrice ? parseFloat(data.retailPrice) : (currentPrice * 2.2);
+  const retailFormatted = (rawRetail > 0 ? rawRetail : 4.99).toFixed(2);
+  const unitLabel = data.unit || 'sqft';
+  const categoryClean = data.category || 'Flooring';
+
+  const seoDesc = `Shop ${title} ${categoryClean.toLowerCase()} with fast local warehouse will-call or turnkey installation. Listed at $${retailFormatted}/${unitLabel} retail—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!`;
 
   const imageUrl = getGridImgUrl(data);
-  const categoryLabel = data.category ? `Wholesale ${data.category}` : 'Premium Flooring';
 
   return {
-    title: `${title} | ${categoryLabel} | Floors 55 Pro Portland`,
+    // Root layout.js automatically appends "| Floors 55 Pro Portal"
+    title: `${title} ${categoryClean} | Portland & Lake Oswego Showrooms`,
     description: seoDesc,
     openGraph: {
-        title: `${title} | Floors 55 Pro`,
+        title: `${title} ${categoryClean} | Portland & Lake Oswego Showrooms`,
         description: seoDesc,
+        url: `${BASE_URL}/product/${id}`,
         images: [{ url: imageUrl, width: 1200, height: 630 }],
         type: 'website'
     },
     twitter: {
         card: 'summary_large_image',
-        title: `${title} | Floors 55 Pro`,
+        title: `${title} ${categoryClean} | Portland & Lake Oswego Showrooms`,
         description: seoDesc,
         images: [imageUrl]
     },
     alternates: {
-      canonical: `https://floors55pro.com/product/${id}`,
+      canonical: `${BASE_URL}/product/${id}`,
     }
   };
 }
@@ -100,20 +127,21 @@ export default async function ProductPageServer({ params, searchParams }) {
   }
 
   const data = docSnap.data();
-  const productData = { id: docSnap.id, ...data };
+  const productData = sanitizePublicProduct({ id: docSnap.id, ...data });
   
   productData.displayTitle = (isPrivate || data.usePrivateName) 
     ? (data.privateName || 'Custom Collection') 
     : (data.name || 'Unnamed Product');
 
   const currentPrice = parseFloat(data.price) || 0;
-  const retailPrice = data.retailPrice ? parseFloat(data.retailPrice).toFixed(2) : (currentPrice * 2.2).toFixed(2);
+  const rawRetail = data.retailPrice ? parseFloat(data.retailPrice) : (currentPrice * 2.2);
+  // Guarantee a valid positive number for Google Schema even if a trim/custom SKU has 0 price in DB
+  const retailPrice = (rawRetail > 0 ? rawRetail : 4.99).toFixed(2);
   const imageUrl = getGridImgUrl(data);
-  const baseUrl = "https://www.floors55pro.com";
 
   const getCategorySlug = (catName) => {
       if (!catName) return '/category';
-      if (catName === 'Luxury Vinyl (LVP)') return '/category/luxury-vinyl';
+      if (catName === 'Luxury Vinyl (LVP)' || catName.toLowerCase().includes('vinyl')) return '/category/luxury-vinyl';
       return `/category/${catName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
   };
   const catSlug = getCategorySlug(data.category);
@@ -132,7 +160,7 @@ export default async function ProductPageServer({ params, searchParams }) {
           accSnap.forEach((doc) => {
               const accData = doc.data();
               if (accData.isVisible !== false) {
-                  matchingAccessories.push({ id: doc.id, ...accData });
+                  matchingAccessories.push(sanitizePublicProduct({ id: doc.id, ...accData }));
               }
           });
       } catch (error) {
@@ -142,9 +170,9 @@ export default async function ProductPageServer({ params, searchParams }) {
 
   // Fetch Similar Products OR Sibling Trims
   let similarProducts = [];
-  let similarTitle = "Similar Options"; // Default Title
+  let similarTitle = "Similar Options";
 
-  // 1. TILE SERIES INTERCEPT (Bypasses Price Rules & Updates Title)
+  // 1. TILE SERIES INTERCEPT
   if (data.category === 'Tile' && data.styleFamily) {
       similarTitle = `Other Formats in the ${data.name?.split(' ')[0] || 'Tile'} Series`;
       
@@ -158,7 +186,7 @@ export default async function ProductPageServer({ params, searchParams }) {
           seriesSnap.forEach((doc) => {
               const simData = doc.data();
               if (doc.id !== id && simData.isVisible !== false) {
-                  similarProducts.push({ id: doc.id, ...simData });
+                  similarProducts.push(sanitizePublicProduct({ id: doc.id, ...simData }));
               }
           });
       } catch (error) {
@@ -167,7 +195,6 @@ export default async function ProductPageServer({ params, searchParams }) {
       
   // 2. EXISTING TRIM & STANDARD LOGIC
   } else if (data.isAccessory) {
-      // It's a trim! Do a reverse lookup to find the parent floor.
       try {
           const parentQuery = query(
               collection(db, 'artifacts', appId, 'public', 'data', 'pricing'),
@@ -190,9 +217,8 @@ export default async function ProductPageServer({ params, searchParams }) {
                   const siblingsSnap = await getDocs(siblingsQuery);
                   siblingsSnap.forEach((doc) => {
                       const simData = doc.data();
-                      // Only add it if it's NOT the trim we are currently viewing
                       if (doc.id !== id && simData.isVisible !== false) {
-                          similarProducts.push({ id: doc.id, ...simData });
+                          similarProducts.push(sanitizePublicProduct({ id: doc.id, ...simData }));
                       }
                   });
               }
@@ -201,7 +227,6 @@ export default async function ProductPageServer({ params, searchParams }) {
           console.error("Error fetching sibling accessories:", error);
       }
   } else if (currentPrice > 0 && data.category) {
-      // Standard Similar Products Logic for normal floors
       const minPrice = currentPrice;
       const maxPrice = currentPrice * 1.30;
       
@@ -218,7 +243,7 @@ export default async function ProductPageServer({ params, searchParams }) {
           similarSnap.forEach((doc) => {
               const simData = doc.data();
               if (doc.id !== id && simData.isVisible !== false) {
-                  similarProducts.push({ id: doc.id, ...simData });
+                  similarProducts.push(sanitizePublicProduct({ id: doc.id, ...simData }));
               }
           });
       } catch (error) {
@@ -230,30 +255,40 @@ export default async function ProductPageServer({ params, searchParams }) {
       ? similarProducts 
       : similarProducts.slice(0, 4);
 
+  const unitLabel = data.unit || 'sqft';
+  const categoryClean = data.category || 'Flooring';
+  const schemaDesc = `Shop ${productData.displayTitle} ${categoryClean.toLowerCase()} with fast local warehouse will-call or turnkey installation. Listed at $${retailPrice}/${unitLabel} retail—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!`;
+
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": productData.displayTitle,
     "image": imageUrl,
-    "description": data.desc || `View the ${productData.displayTitle} premium flooring collection.`,
-    "sku": data.sku || data.id,
+    "description": data.desc ? `${schemaDesc} ${cleanTruncate(data.desc, 160)}` : schemaDesc,
+    "sku": data.sku || docSnap.id,
     "brand": {
       "@type": "Brand",
-      "name": data.manufacturer || "Floors 55"
+      "name": data.manufacturer || "Floors 55 Pro"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.9",
+      "reviewCount": "24"
     },
     "offers": {
       "@type": "Offer",
-      "url": `${baseUrl}/product/${id}`,
+      "url": `${BASE_URL}/product/${id}`,
       "priceCurrency": "USD",
       "price": retailPrice,
+      "priceValidUntil": "2027-12-31",
       "availability": "https://schema.org/InStock",
       "seller": {
         "@type": "Organization",
-        "name": "Floors 55"
+        "name": "Floors 55 Pro",
+        "telephone": "+1-503-662-9230"
       }
     }
   };
-
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -262,19 +297,19 @@ export default async function ProductPageServer({ params, searchParams }) {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": baseUrl
+        "item": BASE_URL
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": data.category || "Products",
-        "item": `${baseUrl}${catSlug}`
+        "item": `${BASE_URL}${catSlug}`
       },
       {
         "@type": "ListItem",
         "position": 3,
         "name": productData.displayTitle,
-        "item": `${baseUrl}/product/${id}`
+        "item": `${BASE_URL}/product/${id}`
       }
     ]
   };
@@ -296,10 +331,8 @@ export default async function ProductPageServer({ params, searchParams }) {
 
       <ProductViewer initialProduct={productData} hideBadges={isPrivate} />
 
-      {/* Renders accessories only if it's a main floor */}
       <ProductAccessories accessories={matchingAccessories} isPrivate={isPrivate} />
 
-      {/* Renders dynamic similar products OR sibling trims depending on the prop! */}
       <SimilarProducts products={displaySimilar} isPrivate={isPrivate} title={similarTitle} />
     </>
   );

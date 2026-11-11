@@ -47,9 +47,25 @@ const getGridImgUrl = (data) => {
 
     const displaySku = data.colors?.[0]?.sku || '01';
     const isCarpet = (data.category || '').toLowerCase() === 'carpet';
-    const imgType = isCarpet ? 'swatch' : 'main';
+    const viewsUpper = Array.isArray(data.views) ? data.views.map(v => String(v).toUpperCase()) : [];
+    let imgType = isCarpet ? 'swatch' : 'main';
+    if (viewsUpper.length > 0 && !viewsUpper.includes(imgType.toUpperCase())) {
+        const firstValidView = viewsUpper.find(v => v !== 'VIDEO');
+        if (firstValidView) imgType = firstValidView.toLowerCase();
+    }
     const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_${imgType}.jpg`.toLowerCase();
     return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
+};
+
+// Avoids "Tile Tile" or "Carpet Carpet" when the product name already contains the category word
+const buildCleanProductHeading = (title, categoryClean) => {
+    const tLower = String(title || '').toLowerCase();
+    const cLower = String(categoryClean || '').toLowerCase();
+    const baseWord = cLower.split(' ')[0];
+    if (tLower.includes(cLower) || (baseWord.length > 3 && tLower.includes(baseWord)) || tLower.includes('lvp')) {
+        return title;
+    }
+    return `${title} ${categoryClean}`;
 };
 
 export async function generateMetadata({ params, searchParams }) {
@@ -76,17 +92,19 @@ export async function generateMetadata({ params, searchParams }) {
   const retailFormatted = (rawRetail > 0 ? rawRetail : 4.99).toFixed(2);
   const unitLabel = data.unit || 'sqft';
   const categoryClean = data.category || 'Flooring';
+  const titleWithCat = buildCleanProductHeading(title, categoryClean);
+  const fullSeoTitle = `${titleWithCat} | Portland & Lake Oswego`;
 
-  const seoDesc = `Shop ${title} ${categoryClean.toLowerCase()} with fast local warehouse will-call or turnkey installation. Listed at $${retailFormatted}/${unitLabel} retail—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!`;
+  const seoDesc = `Shop ${titleWithCat} with fast local warehouse will-call or turnkey installation. Listed at $${retailFormatted}/${unitLabel} retail—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!`;
 
   const imageUrl = getGridImgUrl(data);
 
   return {
     // Root layout.js automatically appends "| Floors 55 Pro Portal"
-    title: `${title} ${categoryClean} | Portland & Lake Oswego Showrooms`,
+    title: fullSeoTitle,
     description: seoDesc,
     openGraph: {
-        title: `${title} ${categoryClean} | Portland & Lake Oswego Showrooms`,
+        title: `${titleWithCat} | Portland & Lake Oswego Showrooms`,
         description: seoDesc,
         url: `${BASE_URL}/product/${id}`,
         images: [{ url: imageUrl, width: 1200, height: 630 }],
@@ -94,7 +112,7 @@ export async function generateMetadata({ params, searchParams }) {
     },
     twitter: {
         card: 'summary_large_image',
-        title: `${title} ${categoryClean} | Portland & Lake Oswego Showrooms`,
+        title: `${titleWithCat} | Portland & Lake Oswego Showrooms`,
         description: seoDesc,
         images: [imageUrl]
     },
@@ -257,19 +275,55 @@ export default async function ProductPageServer({ params, searchParams }) {
 
   const unitLabel = data.unit || 'sqft';
   const categoryClean = data.category || 'Flooring';
-  const schemaDesc = `Shop ${productData.displayTitle} ${categoryClean.toLowerCase()} with fast local warehouse will-call or turnkey installation. Listed at $${retailPrice}/${unitLabel} retail—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!`;
+  const titleWithCat = buildCleanProductHeading(productData.displayTitle, categoryClean);
+  const schemaDesc = `Shop ${titleWithCat} with fast local warehouse will-call or turnkey installation. Listed at $${retailPrice}/${unitLabel} retail—verified pros sign in for trade pricing. Call or text (503) 662-9230 for a quote!`;
+
+  // Map technical specs + carton coverage + color count into structured PropertyValue schema for AI Overviews
+  const additionalProperties = [];
+  if (Array.isArray(data.specs)) {
+    data.specs.forEach((specLine) => {
+      const idx = String(specLine).indexOf(':');
+      if (idx > 0) {
+        additionalProperties.push({
+          "@type": "PropertyValue",
+          "name": specLine.substring(0, idx).trim(),
+          "value": specLine.substring(idx + 1).trim(),
+        });
+      }
+    });
+  }
+  if (data.cartonSize) {
+    additionalProperties.push({
+      "@type": "PropertyValue",
+      "name": "Carton Coverage",
+      "value": `${data.cartonSize} sqft`,
+    });
+  }
+  if (Array.isArray(data.colors) && data.colors.length > 0) {
+    additionalProperties.push({
+      "@type": "PropertyValue",
+      "name": "Available Colorways",
+      "value": data.colors.map((c) => c.name).filter(Boolean).join(', '),
+    });
+  }
+
+  const brandName = (isPrivate || data.usePrivateName)
+    ? (data.privateManufacturer || "Floors 55 Pro")
+    : (data.manufacturer || "Floors 55 Pro");
 
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": productData.displayTitle,
+    "category": categoryClean,
     "image": imageUrl,
     "description": data.desc ? `${schemaDesc} ${cleanTruncate(data.desc, 160)}` : schemaDesc,
-    "sku": data.sku || docSnap.id,
+    "sku": (isPrivate || data.usePrivateName) ? (data.privateSku || docSnap.id) : (data.sku || docSnap.id),
     "brand": {
       "@type": "Brand",
-      "name": data.manufacturer || "Floors 55 Pro"
+      "name": brandName
     },
+    ...(additionalProperties.length > 0 ? { "additionalProperty": additionalProperties } : {}),
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "4.9",
@@ -289,6 +343,7 @@ export default async function ProductPageServer({ params, searchParams }) {
       }
     }
   };
+
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
