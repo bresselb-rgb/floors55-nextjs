@@ -1,3 +1,4 @@
+// src/components/SimilarProducts.js
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -5,7 +6,6 @@ import Link from 'next/link';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
-// We added the `title` prop here
 export default function SimilarProducts({ products, isPrivate, title }) {
     const [user, setUser] = useState(null);
     const [clientMargin, setClientMargin] = useState(null);
@@ -57,10 +57,19 @@ export default function SimilarProducts({ products, isPrivate, title }) {
         const colorCount = data.colors?.length || 1;
         const colorIndex = data.category === 'Tile' ? (index % colorCount) : 0;
         const displaySku = data.colors?.[colorIndex]?.sku || '01';
+
+        const isCarpet = (data.category || '').toLowerCase() === 'carpet';
+        const viewsUpper = Array.isArray(data.views) ? data.views.map(v => String(v).toUpperCase()) : [];
+        let imgType = isCarpet ? 'swatch' : 'main';
+        if (viewsUpper.length > 0 && !viewsUpper.includes(imgType.toUpperCase())) {
+            const firstValidView = viewsUpper.find(v => v !== 'VIDEO');
+            if (firstValidView) imgType = firstValidView.toLowerCase();
+        }
         
-        const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_main.jpg`.toLowerCase();
+        const rawPath = `images/${folderName}/${data.imgPrefix || ''}${displaySku}_${imgType}.jpg`.toLowerCase();
         return `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
     };
+
     if (!products || products.length === 0) return null;
 
     return (
@@ -106,6 +115,12 @@ export default function SimilarProducts({ products, isPrivate, title }) {
                             priceLabel = "Est. Retail";
                         }
 
+                        const defaultFallback = product.isAccessory 
+                            ? (product.category === 'Tile' 
+                                ? `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/bullnose.jpg')}?alt=media` 
+                                : `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/moldings.png')}?alt=media`)
+                            : `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
+
                         return (
                             <Link 
                                 key={product.id} 
@@ -116,12 +131,17 @@ export default function SimilarProducts({ products, isPrivate, title }) {
                                 <div className="bg-gray-50 rounded-xl aspect-square mb-4 overflow-hidden border border-gray-100">
                                     <img 
                                         src={getGridImgUrl(product, index)} 
+                                        loading="lazy"
+                                        decoding="async"
                                         onError={(e) => {
-                                            e.currentTarget.src = product.isAccessory 
-                                                ? (product.category === 'Tile' 
-                                                    ? `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/bullnose.jpg')}?alt=media` 
-                                                    : `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/moldings.png')}?alt=media`)
-                                                : `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent('images/tbd.jpg')}?alt=media`;
+                                            const currentSrc = e.currentTarget.src;
+                                            if (currentSrc.includes('_swatch.jpg')) {
+                                                e.currentTarget.src = currentSrc.replace('_swatch.jpg', '_main.jpg');
+                                            } else if (currentSrc.includes('_main.jpg')) {
+                                                e.currentTarget.src = currentSrc.replace('_main.jpg', '_room.jpg');
+                                            } else if (currentSrc !== defaultFallback) {
+                                                e.currentTarget.src = defaultFallback;
+                                            }
                                         }}
                                         alt={simTitle} 
                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
