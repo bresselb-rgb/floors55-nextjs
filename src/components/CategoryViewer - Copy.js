@@ -1697,12 +1697,26 @@ function CategoryViewerContent({ initialCategory }) {
                                     {!isListView && (
                                         <div className="px-4 py-2 border-b border-gray-50 bg-gray-50/50 flex flex-wrap gap-1.5 min-h-[40px] items-center">
                                             {colors.slice(0, 6).map(c => {
-                                                const sType = p.category === 'Carpet' ? 'swatch' : 'main';
+                                                const sType = p.category === 'Carpet' ? 'main' : 'main';
                                                 const swatchRawPath = `images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
                                                 const swatchFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(swatchRawPath)}?alt=media`;
+                                                
+                                                const fallbackMainPath = `images/${folderName}/${safePrefix}${c.sku}_main.jpg`.toLowerCase();
+                                                const fallbackMainFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(fallbackMainPath)}?alt=media`;
+
                                                 return (
                                                     <button key={c.sku} onMouseEnter={() => setActivePreviews(prev => ({...prev, [p.id]: c.sku}))} onClick={(e) => { e.preventDefault(); setActivePreviews(prev => ({...prev, [p.id]: c.sku})); }} className="w-6 h-6 rounded-full border border-gray-200 overflow-hidden shrink-0 transition-transform hover:scale-125 focus:scale-125 focus:outline-none bg-gray-100 cursor-pointer" title={c.name}>
-                                                        <img src={swatchFbPath} className="w-full h-full object-cover pointer-events-none" onError={e => e.target.src=TBD_IMG} />
+                                                        <img 
+                                                            src={swatchFbPath} 
+                                                            className="w-full h-full object-cover pointer-events-none" 
+                                                            onError={(e) => {
+                                                                if (e.target.src.includes('_swatch.jpg')) {
+                                                                    e.target.src = fallbackMainFbPath;
+                                                                } else if (e.target.src !== TBD_IMG) {
+                                                                    e.target.src = TBD_IMG;
+                                                                }
+                                                            }} 
+                                                        />
                                                     </button>
                                                 )
                                             })}
@@ -1738,12 +1752,26 @@ function CategoryViewerContent({ initialCategory }) {
                                                 <p className="text-gray-500 text-xs line-clamp-2">{safeDesc}</p>
                                                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1.5">
                                                     {colors.slice(0, 6).map(c => {
-                                                        const sType = p.category === 'Carpet' ? 'swatch' : 'main';
+                                                        const sType = p.category === 'Carpet' ? 'main' : 'main';
                                                         const swatchRawPath = `images/${folderName}/${safePrefix}${c.sku}_${sType}.jpg`.toLowerCase();
                                                         const swatchFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(swatchRawPath)}?alt=media`;
+                                                        
+                                                        const fallbackMainPath = `images/${folderName}/${safePrefix}${c.sku}_main.jpg`.toLowerCase();
+                                                        const fallbackMainFbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(fallbackMainPath)}?alt=media`;
+
                                                         return (
                                                             <button key={c.sku} onMouseEnter={() => setActivePreviews(prev => ({...prev, [p.id]: c.sku}))} onClick={(e) => { e.preventDefault(); setActivePreviews(prev => ({...prev, [p.id]: c.sku})); }} className="w-6 h-6 rounded-full border border-gray-200 overflow-hidden shrink-0 transition-transform hover:scale-125 focus:scale-125 focus:outline-none bg-gray-100 cursor-pointer" title={c.name}>
-                                                                <img src={swatchFbPath} className="w-full h-full object-cover pointer-events-none" onError={e => e.target.src=TBD_IMG} />
+                                                                <img 
+                                                                    src={swatchFbPath} 
+                                                                    className="w-full h-full object-cover pointer-events-none" 
+                                                                    onError={(e) => {
+                                                                        if (e.target.src.includes('_swatch.jpg')) {
+                                                                            e.target.src = fallbackMainFbPath;
+                                                                        } else if (e.target.src !== TBD_IMG) {
+                                                                            e.target.src = TBD_IMG;
+                                                                        }
+                                                                    }} 
+                                                                />
                                                             </button>
                                                         )
                                                     })}

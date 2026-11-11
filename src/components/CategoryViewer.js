@@ -1433,9 +1433,9 @@ function CategoryViewerContent({ initialCategory }) {
       {activeCategory === 'Luxury Vinyl (LVP)' && !isClientMode && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Wholesale Luxury Vinyl Plank (LVP) for Portland Contractors</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">100% Waterproof Luxury Vinyl Plank (LVP) in Portland & Lake Oswego</h2>
             <p className="text-gray-600 leading-relaxed">
-              Source premium, 100% waterproof Luxury Vinyl Plank (LVP) at exclusive trade margins. Designed for the rigorous demands of Pacific Northwest property management and custom builds, our commercial-grade LVP features thick wear layers, rigid core construction, and fast click-lock installation. Perfect for rapid multi-family unit turnovers in Portland or high-end residential upgrades in Lake Oswego, ensuring your teams always have durable inventory ready for will-call.
+              Shop commercial-grade, 100% waterproof Luxury Vinyl Plank (LVP) with fast local warehouse will-call or turnkey installation. Designed for Pacific Northwest homes, multi-family property turnovers, and custom builds, our WPC and SPC rigid-core collections feature heavy-duty 20-mil wear layers and attached acoustical pads. View full-size displays at our Portland and Lake Oswego showrooms—verified pros sign in for exclusive trade pricing.
             </p>
           </div>
         </div>
@@ -1445,9 +1445,9 @@ function CategoryViewerContent({ initialCategory }) {
       {activeCategory === 'Hardwood' && !isClientMode && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Premium Wholesale Hardwood Flooring in Portland</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Engineered & Solid Hardwood Flooring in Portland & Lake Oswego</h2>
             <p className="text-gray-600 leading-relaxed">
-              Elevate your custom builds with top-tier engineered and solid hardwood flooring at direct-to-trade pricing. Sourced specifically for Portland contractors and interior designers, our hardwood collections feature premium top veneers and moisture-resistant cores tailored for the PNW climate. Protect your bids and impress your clients with authentic, timeless wood aesthetics while maintaining full control over your project's material margins.
+              Elevate your home or custom build with wide-plank European White Oak, Hickory, and Maple engineered and solid hardwood flooring. Sourced for dimensional stability in the Pacific Northwest climate, our hardwood collections are available for local warehouse will-call or turnkey installation. Visit our Portland or Lake Oswego showrooms to compare samples—verified contractors, builders, and designers sign in for trade pricing.
             </p>
           </div>
         </div>
@@ -1457,9 +1457,9 @@ function CategoryViewerContent({ initialCategory }) {
       {activeCategory === 'Tile' && !isClientMode && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Wholesale Porcelain & Ceramic Tile for Custom Builds</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Porcelain, Ceramic & Mosaic Tile in Portland & Lake Oswego</h2>
             <p className="text-gray-600 leading-relaxed">
-              Access an extensive catalog of premium porcelain, ceramic, and natural stone tile at wholesale pricing. From high-end custom shower surrounds to durable commercial floors, our tile collections are hand-selected for Portland and Lake Oswego architects, builders, and designers. Order samples directly to your job site or send your clients to our local showroom while maintaining your exclusive trade discounts.
+              Explore large-format porcelain field tile, decorative mosaics, and coordinating bullnose trims for custom showers, bathrooms, entries, and commercial spaces. Curated for Portland and Lake Oswego homeowners, architects, builders, and interior designers with fast local warehouse will-call or turnkey installation. Order samples to your jobsite or visit our showrooms—verified pros sign in for trade pricing.
             </p>
           </div>
         </div>
@@ -1469,9 +1469,9 @@ function CategoryViewerContent({ initialCategory }) {
       {activeCategory === 'Carpet' && !isClientMode && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Commercial & Residential Wholesale Carpet</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Designer Residential & Multi-Family Carpet in Portland & Lake Oswego</h2>
             <p className="text-gray-600 leading-relaxed">
-              Whether you need heavily stocked builder-grade carpet for rapid apartment turnovers or plush designer textures for luxury residential homes, Floors 55 Pro has you covered. We supply top-tier nylon and polyester carpets to Portland property managers and contractors with fast availability, reliable face weights, and transparent B2B pricing to keep your projects on budget.
+              From plush stain-resistant nylon, SmartStrand Triexta, and wool carpets for luxury bedrooms to stocked apartment-turn broadloom for property managers, Floors 55 delivers fast local warehouse will-call and turnkey installation across the Portland and SW Washington metro. Browse samples at our Portland or Lake Oswego showrooms—verified pros sign in for trade pricing.
             </p>
           </div>
         </div>
@@ -1481,9 +1481,9 @@ function CategoryViewerContent({ initialCategory }) {
       {activeCategory === 'Laminate' && !isClientMode && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-2">
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Water-Resistant Wholesale Laminate Flooring</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Water-Resistant AC4/AC5 Laminate Flooring in Portland & Lake Oswego</h2>
             <p className="text-gray-600 leading-relaxed">
-              Provide your clients with unmatched scratch and dent resistance using our premium wholesale laminate collections. Featuring heavy-duty AC wear ratings and advanced water-resistant cores, our laminate lines are engineered to withstand active Oregon households. A highly profitable, fast-installing alternative to hardwood for Portland contractors and builders.
+              Get unmatched scratch and dent resistance with our waterproof and water-resistant laminate flooring collections. Featuring heavy-duty AC4 and AC5 wear ratings and realistic embossed wood textures, our laminate lines are built for active Oregon households, pets, and high-traffic remodels with fast local warehouse will-call or turnkey installation—verified pros sign in for trade pricing.
             </p>
           </div>
         </div>
@@ -1597,11 +1597,15 @@ function CategoryViewerContent({ initialCategory }) {
                             <span className="absolute right-3 top-2.5 text-gray-400 text-xs">🔍</span>
                         </div>
 
-                        <span className="hidden sm:inline-block text-xs font-bold text-gray-400 uppercase tracking-widest shrink-0">{isDataLoaded ? `Showing ${filteredProducts.length} Results` : 'Loading...'}</span>
+                        <span className="hidden sm:inline-block text-xs font-bold text-gray-400 uppercase tracking-widest shrink-0">
+                            {isDataLoaded && liveProductsRaw.length > 0 ? `Showing ${filteredProducts.length} Results` : 'Interactive Catalog'}
+                        </span>
                     </div>
 
                     <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
-                        <span className="sm:hidden text-xs font-bold text-gray-400 uppercase tracking-widest">{isDataLoaded ? `${filteredProducts.length} Results` : '...'}</span>
+                        <span className="sm:hidden text-xs font-bold text-gray-400 uppercase tracking-widest">
+                            {isDataLoaded && liveProductsRaw.length > 0 ? `${filteredProducts.length} Results` : 'Catalog'}
+                        </span>
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Sort:</span>
                             <select value={sortMode} onChange={e => setSortMode(e.target.value)} className="bg-gray-50 border border-gray-200 text-xs rounded-xl px-3 py-2 outline-none focus:border-gold font-bold text-gray-700 cursor-pointer">
@@ -1620,8 +1624,12 @@ function CategoryViewerContent({ initialCategory }) {
                     </div>
                 </div>
 
-                {!isDataLoaded ? (
-                    <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold border-t-transparent"></div></div>
+                {!isDataLoaded || liveProductsRaw.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 bg-white border border-gray-100 rounded-2xl text-center px-4">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gold border-t-transparent mb-4"></div>
+                        <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Loading interactive filters &amp; color swatches…</p>
+                        <p className="text-[11px] text-gray-400 mt-1">Browse the complete direct collection links in the catalog index below.</p>
+                    </div>
                 ) : filteredProducts.length === 0 ? (
                     <div className="text-center py-20 text-gray-400 text-sm italic bg-white border border-gray-200 rounded-2xl">No products matched your currently selected active filters.</div>
                 ) : (
@@ -1660,7 +1668,12 @@ function CategoryViewerContent({ initialCategory }) {
                                 folderName = folderName.replace(/-+$/, '');
                             }
 
-                            const mainType = p.category === 'Carpet' ? 'main' : 'main';
+                            const viewsUpper = Array.isArray(p.views) ? p.views.map(v => String(v).toUpperCase()) : [];
+                            let mainType = p.category === 'Carpet' ? 'swatch' : 'main';
+                            if (viewsUpper.length > 0 && !viewsUpper.includes(mainType.toUpperCase())) {
+                                const firstValidView = viewsUpper.find(v => v !== 'VIDEO');
+                                if (firstValidView) mainType = firstValidView.toLowerCase();
+                            }
                             const rawPath = `images/${folderName}/${safePrefix}${displaySku}_${mainType}.jpg`.toLowerCase();
                             const fbPath = `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(rawPath)}?alt=media`;
                             
@@ -1691,7 +1704,23 @@ function CategoryViewerContent({ initialCategory }) {
                                     )}
 
                                     <Link href={`/product/${p.id}${isPrivateLabel ? '?pl=1' : ''}`} onClick={saveScrollPosition} className={isListView ? "w-full sm:w-40 h-28 rounded-lg overflow-hidden shrink-0 bg-gray-50 mt-8 sm:mt-0 block" : "block overflow-hidden h-52 bg-gray-50 relative"} style={{ textDecoration: 'none' }}>
-                                        <img src={fbPath} className="w-full h-full object-cover transition duration-300 hover:scale-105" onError={e => e.target.src=TBD_IMG} />
+                                        <img 
+                                            src={fbPath} 
+                                            alt={displayTitle}
+                                            loading="lazy"
+                                            decoding="async"
+                                            className="w-full h-full object-cover transition duration-300 hover:scale-105" 
+                                            onError={e => {
+                                                const cur = e.currentTarget.src;
+                                                if (cur.includes('_swatch.jpg')) {
+                                                    e.currentTarget.src = cur.replace('_swatch.jpg', '_main.jpg');
+                                                } else if (cur.includes('_main.jpg')) {
+                                                    e.currentTarget.src = cur.replace('_main.jpg', '_room.jpg');
+                                                } else if (cur !== TBD_IMG) {
+                                                    e.currentTarget.src = TBD_IMG;
+                                                }
+                                            }} 
+                                        />
                                     </Link>
 
                                     {!isListView && (
