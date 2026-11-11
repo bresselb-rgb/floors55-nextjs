@@ -1289,7 +1289,11 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
     const renderTitleBlock = (isDesktop) => (
         <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 lg:mb-2 gap-4 ${isDesktop ? 'hidden lg:flex' : 'flex lg:hidden'}`}>
             <div className="flex-1 min-w-0">
-                <h1 className="text-3xl font-bold m-0 leading-tight text-gray-900">{activeTitle || 'Loading...'}</h1>
+                {isDesktop ? (
+                    <h1 className="text-3xl font-bold m-0 leading-tight text-gray-900">{activeTitle || 'Loading...'}</h1>
+                ) : (
+                    <div role="heading" aria-level="1" className="text-3xl font-bold m-0 leading-tight text-gray-900">{activeTitle || 'Loading...'}</div>
+                )}
                 <div className="flex flex-wrap items-center gap-2 mt-2 mb-2 sm:mb-4">
                     <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0">{productData?.category || 'Collection'}</span>
                     
@@ -1354,7 +1358,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                                 setActiveColor(c);
                             }}>
                                 <div className={`relative w-full aspect-square border-2 rounded-md transition duration-200 bg-gray-100 overflow-hidden ${activeColor?.sku === c.sku ? 'border-gold shadow-[0_0_8px_rgba(197,160,89,0.4)]' : 'border-transparent group-hover:border-gray-300'}`}>
-                                    <img src={fbPath} alt={c.name} className="w-full h-full object-cover" onError={(e) => { if (e.currentTarget.src.includes('_swatch.jpg')) { e.currentTarget.src = e.currentTarget.src.replace('_swatch.jpg', '_main.jpg'); } else if (e.currentTarget.src !== FALLBACK_IMG) { e.currentTarget.src = FALLBACK_IMG; } }} />
+                                    <img src={fbPath} alt={c.name} loading="lazy" decoding="async" className="w-full h-full object-cover" onError={(e) => { if (e.currentTarget.src.includes('_swatch.jpg')) { e.currentTarget.src = e.currentTarget.src.replace('_swatch.jpg', '_main.jpg'); } else if (e.currentTarget.src !== FALLBACK_IMG) { e.currentTarget.src = FALLBACK_IMG; } }} />
                                 </div>
                                 <span className="text-[11px] mt-1.5 block text-gray-600 h-[2.5em] overflow-hidden leading-tight">{c.name}</span>
                             </div>
@@ -1455,10 +1459,10 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
 
             <div className="flex gap-4 mt-6">
                 {!isClientMode && (
-                    <Link href={`/quote?product=${encodeURIComponent(activeTitle || '')}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-black text-white text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-gold transition-colors border-2 border-black hover:border-gold" style={{ textDecoration: 'none' }}>Get A Quote</Link>
+                    <Link href={`/quote?product=${encodeURIComponent(activeTitle || '')}&color=${encodeURIComponent(activeColor?.name || '')}`} rel="nofollow" className="flex-1 bg-black text-white text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:bg-gold transition-colors border-2 border-black hover:border-gold" style={{ textDecoration: 'none' }}>Get A Quote</Link>
                 )}
                 {!productData?.isAccessory && (
-                    <Link href={`/order-sample?product=${encodeURIComponent(activeTitle || '')}&color=${encodeURIComponent(activeColor?.name || '')}`} className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
+                    <Link href={`/order-sample?product=${encodeURIComponent(activeTitle || '')}&color=${encodeURIComponent(activeColor?.name || '')}`} rel="nofollow" className="flex-1 bg-white text-black text-center py-4 rounded font-bold uppercase tracking-widest text-sm hover:text-gold transition-colors border-2 border-gray-200 hover:border-gold" style={{ textDecoration: 'none' }}>Order Sample</Link>
                 )}
             </div>
 
@@ -1503,7 +1507,7 @@ function ProductViewerContent({ initialProduct, hideBadges }) {
                     <>
                         <span className="text-[1.5rem] text-gray-900 font-bold mb-1 block">Retail: ${displayRetailPrice} <span className="text-sm">/</span><span className="text-sm">{productData?.unit || 'sqft'}</span></span>
                         <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                            <button onClick={() => window.dispatchEvent(new Event('open-login-modal'))} className="block w-full text-left text-[10px] font-bold uppercase tracking-widest text-gold hover:text-black transition-colors underline bg-transparent border-none cursor-pointer outline-none">Log in for wholesale pricing</button>
+                            <button onClick={() => window.dispatchEvent(new Event('open-login-modal'))} className="block w-full text-left text-[10px] font-bold uppercase tracking-widest text-gold hover:text-black transition-colors underline bg-transparent border-none cursor-pointer outline-none">Verified Pros: Sign in for trade pricing</button>
                         </div>
                     </>
                 )}
