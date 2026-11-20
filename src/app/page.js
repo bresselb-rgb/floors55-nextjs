@@ -21,17 +21,17 @@ export default function Home() {
   // Helper function to easily grab Firebase Storage URLs for your local paths
   const getFbUrl = (path) => `https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/${encodeURIComponent(path)}?alt=media`;
 
-  // WebSite + FAQPage JSON-LD Schema for Homepage Authority & AI Search Snippets
+  // FAQPage JSON-LD Schema for Homepage Authority & AI Search Snippets
   const homeFaqSchema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
     mainEntity: [
       {
         '@type': 'Question',
-        name: 'How do I qualify for wholesale flooring pricing in Portland?',
+        name: 'How do I qualify for trade flooring pricing in Portland and Lake Oswego?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'To access our exclusive trade portal, you must be a licensed contractor, custom builder, realtor, interior designer, or property manager operating in the Portland metro, Lake Oswego, or SW Washington area. Once your B2B account is approved, you unlock hidden trade margins on premium LVP, engineered hardwood, laminate, porcelain tile, and carpet.'
+          text: 'To access our exclusive trade portal, you must be a licensed contractor, custom builder, realtor, interior designer, or property manager operating in the Portland metro, Lake Oswego, or SW Washington area. Once your B2B account is approved, you unlock protected trade margins on premium LVP, engineered hardwood, laminate, porcelain tile, and carpet.'
         }
       },
       {
@@ -39,7 +39,7 @@ export default function Home() {
         name: 'Do you stock commercial LVP for property management turnovers?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Yes. We understand multi-family unit turnovers require speed and consistency. We supply durable, 100% waterproof Luxury Vinyl Plank (LVP) and builder-grade carpet lines staged for rapid vendor partner warehouse will-call across the Portland and SW Washington metro.'
+          text: 'Yes. We understand multi-family unit turnovers require speed and consistency. We supply durable, 100% waterproof Luxury Vinyl Plank (LVP) and multi-family turn carpet lines staged for rapid local warehouse will-call across the Portland and SW Washington metro.'
         }
       },
       {
@@ -75,7 +75,7 @@ export default function Home() {
         <div className="absolute inset-0 z-0">
             <Image 
                 src={getFbUrl('images/heros/main-hero.jpg')} 
-                alt="Floors 55 Pro Wholesale Flooring Showrooms in Portland and Lake Oswego" 
+                alt="Floors 55 Pro Flooring Showrooms in Portland and Lake Oswego" 
                 fill
                 priority
                 fetchPriority="high"
@@ -95,14 +95,14 @@ export default function Home() {
             <p className="text-base md:text-lg mb-6 text-gray-200 font-light leading-relaxed">
               {isClientMode 
                 ? "Discover our premium selection of Luxury Vinyl, Hardwood, Tile, and Designer Carpet tailored for your home."
-                : "The Northwest's premier B2B flooring trade portal. Secure wholesale pricing on Luxury Vinyl, Hardwood, Tile, Laminate, and Designer Carpet."}
+                : "Portland & Lake Oswego flooring showrooms and B2B trade portal. Exclusive trade pricing on Luxury Vinyl, Hardwood, Tile, Laminate, and Designer Carpet."}
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-3">
                 <Link href="/category" className="bg-gold text-black px-6 py-3 rounded-full font-bold uppercase text-xs hover:bg-white transition-all shadow-lg" style={{ textDecoration: 'none' }}>Explore Collections</Link>
                 {!isClientMode && (
                     <>
                         <Link href="/become-a-pro" className="bg-white/10 backdrop-blur-md border border-white/20 px-6 py-3 rounded-full font-bold uppercase text-xs hover:bg-gold hover:text-black transition-all shadow-lg" style={{ textDecoration: 'none' }}>Partner With Us</Link>
-                        <Link href="/locations" className="bg-white/10 backdrop-blur-md border border-white/20 px-6 py-3 rounded-full font-bold uppercase text-xs hover:bg-white hover:text-black transition-all shadow-lg" style={{ textDecoration: 'none' }}>Trade Showrooms</Link>
+                        <Link href="/locations" className="bg-white/10 backdrop-blur-md border border-white/20 px-6 py-3 rounded-full font-bold uppercase text-xs hover:bg-white hover:text-black transition-all shadow-lg" style={{ textDecoration: 'none' }}>View Showrooms</Link>
                     </>
                 )}
             </div>
@@ -113,7 +113,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
                 <Link href="/category/luxury-vinyl" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/lvp.jpg')} alt="Wholesale Luxury Vinyl Plank (LVP) Flooring Portland & Lake Oswego" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
+                    <Image src={getFbUrl('images/heros/lvp.jpg')} alt="Luxury Vinyl Plank (LVP) Flooring in Portland & Lake Oswego Showrooms" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h2 className="text-white text-3xl font-bold mb-1">Luxury Vinyl</h2>
@@ -123,7 +123,7 @@ export default function Home() {
                 </Link>
                 
                 <Link href="/category/carpet" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/carpet.jpg')} alt="Wholesale Designer & Multi-Family Turn Carpet Portland" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
+                    <Image src={getFbUrl('images/heros/carpet.jpg')} alt="Designer & Multi-Family Turn Carpet in Portland & Lake Oswego Showrooms" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h2 className="text-white text-3xl font-bold mb-1">Designer Carpet</h2>
@@ -133,7 +133,7 @@ export default function Home() {
                 </Link>
 
                 <Link href="/category/laminate" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/laminate.jpg')} alt="Wholesale Waterproof Laminate Flooring Portland & Lake Oswego" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
+                    <Image src={getFbUrl('images/heros/laminate.jpg')} alt="Waterproof AC4 & AC5 Laminate Flooring in Portland & Lake Oswego Showrooms" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h2 className="text-white text-3xl font-bold mb-1">Premium Laminate</h2>
@@ -143,7 +143,7 @@ export default function Home() {
                 </Link>
 
                 <Link href="/category/hardwood" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/hardwood.jpg')} alt="Wholesale Engineered Hardwood Flooring Portland & Lake Oswego" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
+                    <Image src={getFbUrl('images/heros/hardwood.jpg')} alt="Engineered Hardwood Flooring in Portland & Lake Oswego Showrooms" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h2 className="text-white text-3xl font-bold mb-1">Hardwood</h2>
@@ -154,7 +154,7 @@ export default function Home() {
 
                 {/* TILE CATEGORY */}
                 <Link href="/category/tile" className="group relative h-[450px] rounded-2xl overflow-hidden shadow-xl hover:scale-105 transition-transform duration-500" style={{ textDecoration: 'none' }}>
-                    <Image src={getFbUrl('images/heros/tile-hero.jpg')} alt="Wholesale Porcelain & Ceramic Tile Flooring Portland & Lake Oswego" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
+                    <Image src={getFbUrl('images/heros/tile-hero.jpg')} alt="Porcelain & Ceramic Tile Flooring in Portland & Lake Oswego Showrooms" fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" className="object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div className="absolute bottom-8 left-8 right-8">
                         <h2 className="text-white text-3xl font-bold mb-1">Premium Tile</h2>
@@ -173,10 +173,10 @@ export default function Home() {
             <div className="max-w-7xl mx-auto">
               <div className="text-center mb-12">
                 <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
-                  Wholesale Flooring Solutions for Portland &amp; Lake Oswego Professionals
+                  Flooring Showrooms &amp; Trade Solutions in Portland &amp; Lake Oswego
                 </h2>
                 <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
-                  Protect your bids and streamline your material sourcing. Floors 55 Pro provides exclusive trade pricing, on-site project measures, rapid vendor partner warehouse will-call, and installation by request across{' '}
+                  Protect your bids and streamline your material sourcing. Floors 55 Pro provides exclusive trade pricing, on-site project measures, rapid local warehouse will-call, and installation by request across{' '}
                   <Link href="/service-areas" className="text-[#c5a059] font-semibold hover:underline">15+ Portland Metro &amp; SW Washington cities</Link>.
                 </p>
               </div>
@@ -188,7 +188,7 @@ export default function Home() {
                     Multi-Family &amp; Property Management
                   </h3>
                   <p className="text-gray-600 leading-relaxed mb-6">
-                    Accelerate your unit turnovers with our heavily stocked commercial LVP and builder-grade carpet. Engineered for high-traffic durability and rigorous PNW weather, our waterproof vinyl plank lines are staged for rapid vendor partner warehouse will-call and overflow installation support.
+                    Accelerate your unit turnovers with our heavily stocked commercial LVP and multi-family turn carpet. Engineered for high-traffic durability and rigorous PNW weather, our waterproof vinyl plank lines are staged for rapid local warehouse will-call and overflow installation support.
                   </p>
                   <Link href="/category?program=propmgt" className="inline-block border border-gray-300 text-gray-700 px-6 py-2 rounded-full font-bold uppercase text-[10px] tracking-widest hover:bg-gray-50 transition-colors">
                       Explore Prop Mgt
@@ -201,7 +201,7 @@ export default function Home() {
                     Contractors &amp; Custom Builders
                   </h3>
                   <p className="text-gray-600 leading-relaxed mb-6">
-                    Maintain your profit margins without sacrificing material quality. We supply top-tier engineered hardwood, laminate, and transition pieces with on-site project takeoffs and turnkey installation by request. With trade pricing hidden behind our gated portal, your clients see the value of your work—not your wholesale costs.
+                    Maintain your profit margins without sacrificing material quality. We supply top-tier engineered hardwood, laminate, and transition pieces with on-site project takeoffs and turnkey installation by request. With trade pricing protected inside our gated portal, your clients see the value of your work—not your trade costs.
                   </p>
                   <Link href="/category?program=contractor" className="inline-block border border-gray-300 text-gray-700 px-6 py-2 rounded-full font-bold uppercase text-[10px] tracking-widest hover:bg-gray-50 transition-colors">
                       Explore Pro Select
@@ -233,7 +233,7 @@ export default function Home() {
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-500 z-10 pointer-events-none"></div>
                     <Image 
                         src={getFbUrl('images/heros/samples.jpg')} 
-                        alt="Wholesale Flooring Samples Delivered to Portland & Lake Oswego Jobsites"
+                        alt="Flooring Samples Delivered to Portland & Lake Oswego Homes and Jobsites"
                         fill
                         sizes="(max-width: 768px) 100vw, 50vw"
                         className="object-cover transition-transform duration-700 group-hover:scale-105" 
@@ -264,13 +264,13 @@ export default function Home() {
                 {/* FAQ 1 */}
                 <details className="group bg-gray-50 rounded-lg p-6 [&_summary::-webkit-details-marker]:hidden cursor-pointer shadow-sm border border-gray-100">
                   <summary className="flex items-center justify-between gap-1.5 text-gray-900 font-semibold">
-                    <h3 className="text-lg">How do I qualify for wholesale flooring pricing in Portland?</h3>
+                    <h3 className="text-lg">How do I qualify for trade flooring pricing in Portland and Lake Oswego?</h3>
                     <span className="shrink-0 rounded-full bg-white p-2 text-gray-900 shadow-sm group-open:-rotate-180 transition-transform duration-300">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
                     </span>
                   </summary>
                   <p className="mt-4 leading-relaxed text-gray-600">
-                    To access our exclusive trade portal, you must be a licensed contractor, custom builder, realtor, interior designer, or property manager operating in the Portland metro, Lake Oswego, or SW Washington area. Once your B2B account is approved, you unlock hidden margins on premium LVP, hardwood, laminate, tile, and carpet.
+                    To access our exclusive trade portal, you must be a licensed contractor, custom builder, realtor, interior designer, or property manager operating in the Portland metro, Lake Oswego, or SW Washington area. Once your B2B account is approved, you unlock protected trade margins on premium LVP, hardwood, laminate, tile, and carpet.
                   </p>
                 </details>
 
@@ -283,7 +283,7 @@ export default function Home() {
                     </span>
                   </summary>
                   <p className="mt-4 leading-relaxed text-gray-600">
-                    Yes. We understand multi-family unit turnovers require speed and consistency. We supply durable, 100% waterproof Luxury Vinyl Plank (LVP) and builder-grade carpet lines staged for rapid vendor partner warehouse will-call across the Pacific Northwest.
+                    Yes. We understand multi-family unit turnovers require speed and consistency. We supply durable, 100% waterproof Luxury Vinyl Plank (LVP) and multi-family turn carpet lines staged for rapid local warehouse will-call across the Portland and SW Washington metro.
                   </p>
                 </details>
 

@@ -17,15 +17,18 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   metadataBase: new URL('https://www.floors55pro.com'),
-  title: {
-    default: 'Floors 55 Pro | Wholesale Flooring for Portland & Lake Oswego Contractors',
-    template: '%s | Floors 55 Pro Portal',
+  alternates: {
+    canonical: './',
   },
-  description: 'Exclusive B2B trade portal for Portland, Lake Oswego, and SW Washington contractors, custom builders, designers, and property managers. Wholesale LVP, hardwood, carpet, laminate & tile.',
-  keywords: 'wholesale flooring Portland, contractor flooring supplier Lake Oswego, LVP wholesale Oregon, property management flooring, on-site flooring takeoffs, Floors 55 Pro',
+  title: {
+    default: 'Floors 55 Pro | Portland & Lake Oswego Flooring Showrooms & Trade Portal',
+    template: '%s | Floors 55 Pro',
+  },
+  description: 'Portland and Lake Oswego flooring showrooms and B2B trade portal for contractors, custom builders, realtors, designers, and property managers. Trade pricing on LVP, hardwood, carpet, laminate & tile with local warehouse will-call.',
+  keywords: 'Portland flooring showroom, Lake Oswego flooring showroom, trade flooring pricing Portland, contractor flooring supplier Oregon, LVP flooring Portland, property management flooring, on-site flooring takeoffs, Floors 55 Pro',
   openGraph: {
-    title: 'Floors 55 Pro | Portland & Lake Oswego Wholesale Flooring',
-    description: 'Exclusive B2B trade portal, on-site project measures, Local Warehouse Will-Call, and showroom support for Pacific Northwest pros.',
+    title: 'Floors 55 Pro | Portland & Lake Oswego Flooring Showrooms & Trade Portal',
+    description: 'Portland & Lake Oswego flooring showrooms, exclusive B2B trade pricing, on-site project measures, and local warehouse will-call for Pacific Northwest pros and homeowners.',
     url: 'https://www.floors55pro.com',
     siteName: 'Floors 55 Pro',
     locale: 'en_US',
@@ -34,47 +37,33 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
-  // Sitewide Local & B2B Trade SEO Schema (Accurate Addresses + Parent Organization Link)
-  const localBusinessSchema = {
+  // Sitewide Local Showroom + B2B Trade SEO Schema
+  const siteSchema = {
     "@context": "https://schema.org",
-    "@type": "WholesaleStore",
-    "@id": "https://www.floors55pro.com/#organization",
-    "name": "Floors 55 Pro",
-    "url": "https://www.floors55pro.com",
-    "image": "https://www.floors55pro.com/images/f55-pros-logo.jpg",
-    "description": "Wholesale flooring supplier providing exclusive trade pricing, on-site project measures, local warehouse, and installation by request for contractors, builders, designers, and property managers.",
-    "telephone": "+1-503-673-1333",
-    "parentOrganization": {
-      "@type": "HomeAndConstructionBusiness",
-      "name": "Floors 55 Abbey Carpet & Floor",
-      "url": "https://www.floors55.com"
-    },
-    "address": {
-      "@type": "PostalAddress",
-      "streetAddress": "25 S State St Ste 2110",
-      "addressLocality": "Lake Oswego",
-      "addressRegion": "OR",
-      "postalCode": "97034",
-      "addressCountry": "US"
-    },
-    "location": [
+    "@graph": [
       {
-        "@type": "Place",
-        "name": "Floors 55 Pro — Lake Oswego Showroom (Oswego Village)",
-        "telephone": "+1-503-673-1333",
-        "address": {
-          "@type": "PostalAddress",
-          "streetAddress": "25 S State St Ste 2110",
-          "addressLocality": "Lake Oswego",
-          "addressRegion": "OR",
-          "postalCode": "97034",
-          "addressCountry": "US"
+        "@type": "WebSite",
+        "@id": "https://www.floors55pro.com/#website",
+        "url": "https://www.floors55pro.com",
+        "name": "Floors 55 Pro",
+        "publisher": {
+          "@id": "https://www.floors55pro.com/#organization"
         }
       },
       {
-        "@type": "Place",
-        "name": "Floors 55 Pro — Portland Showroom",
-        "telephone": "+1-503-491-1776",
+        "@type": ["HomeGoodsStore", "HomeAndConstructionBusiness"],
+        "@id": "https://www.floors55pro.com/#organization",
+        "name": "Floors 55 Pro",
+        "url": "https://www.floors55pro.com",
+        "logo": "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Ff55-pros-logo.jpg?alt=media",
+        "image": "https://firebasestorage.googleapis.com/v0/b/floors-55.firebasestorage.app/o/images%2Fheros%2Fmain-hero.jpg?alt=media",
+        "description": "Portland and Lake Oswego flooring showrooms and B2B trade portal providing exclusive trade pricing, on-site project measures, local warehouse will-call, and installation by request for contractors, builders, realtors, designers, property managers, and homeowners.",
+        "telephone": "+1-503-662-9230",
+        "parentOrganization": {
+          "@type": "HomeAndConstructionBusiness",
+          "name": "Floors 55 Abbey Carpet & Floor",
+          "url": "https://www.floors55.com"
+        },
         "address": {
           "@type": "PostalAddress",
           "streetAddress": "1320 SE Water Ave",
@@ -82,32 +71,60 @@ export default function RootLayout({ children }) {
           "addressRegion": "OR",
           "postalCode": "97214",
           "addressCountry": "US"
-        }
+        },
+        "location": [
+          {
+            "@type": "Place",
+            "name": "Floors 55 Pro — Portland Showroom",
+            "telephone": "+1-503-662-9230",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "1320 SE Water Ave",
+              "addressLocality": "Portland",
+              "addressRegion": "OR",
+              "postalCode": "97214",
+              "addressCountry": "US"
+            }
+          },
+          {
+            "@type": "Place",
+            "name": "Floors 55 Pro — Lake Oswego Showroom (Oswego Village)",
+            "telephone": "+1-503-662-9230",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "25 S State St Ste 2110",
+              "addressLocality": "Lake Oswego",
+              "addressRegion": "OR",
+              "postalCode": "97034",
+              "addressCountry": "US"
+            }
+          }
+        ],
+        "areaServed": [
+          "Portland, OR",
+          "Lake Oswego, OR",
+          "West Linn, OR",
+          "Tigard, OR",
+          "Tualatin, OR",
+          "Beaverton, OR",
+          "Milwaukie, OR",
+          "Oregon City, OR",
+          "Happy Valley, OR",
+          "Sherwood, OR",
+          "Wilsonville, OR",
+          "Hillsboro, OR",
+          "Gresham, OR",
+          "Vancouver, WA",
+          "Camas, WA"
+        ],
+        "audience": {
+          "@type": "Audience",
+          "audienceType": "Contractors, Custom Builders, Interior Designers, Realtors, Property Managers, Homeowners"
+        },
+        "sameAs": [
+          "https://www.floors55.com"
+        ]
       }
-    ],
-    "areaServed": [
-      "Lake Oswego, OR",
-      "Portland, OR",
-      "West Linn, OR",
-      "Tigard, OR",
-      "Tualatin, OR",
-      "Beaverton, OR",
-      "Milwaukie, OR",
-      "Oregon City, OR",
-      "Happy Valley, OR",
-      "Sherwood, OR",
-      "Wilsonville, OR",
-      "Hillsboro, OR",
-      "Gresham, OR",
-      "Vancouver, WA",
-      "Camas, WA"
-    ],
-    "audience": {
-      "@type": "Audience",
-      "audienceType": "Contractors, Custom Builders, Interior Designers, Property Managers"
-    },
-    "sameAs": [
-      "https://www.floors55.com"
     ]
   };
 
@@ -119,7 +136,7 @@ export default function RootLayout({ children }) {
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema) }}
         />
       </head>
       <body className="min-h-full flex flex-col">

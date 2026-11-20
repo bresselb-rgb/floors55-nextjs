@@ -298,7 +298,7 @@ export default function Header() {
       {!clientBrand && (
         <div className="bg-gray-900 text-white py-1.5 px-4 sm:px-6 lg:px-8 text-[10px] sm:text-xs font-bold uppercase tracking-widest flex justify-between items-center z-[60] relative">
             <div className="flex gap-4">
-                <a href="tel:+15034911776" className="hover:text-gold transition flex items-center gap-1.5" style={{ textDecoration: 'none' }}>
+                <a href="tel:+15036629230" className="hover:text-gold transition flex items-center gap-1.5" style={{ textDecoration: 'none' }}>
                     <span>📞</span> (503) 662-9230
                 </a>
             </div>

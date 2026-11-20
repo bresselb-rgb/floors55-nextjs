@@ -99,7 +99,7 @@ export default function Footer() {
                         </Link>
                         <Link href="/programs/builders-remodelers" className="bg-gray-900/80 border border-gray-800 hover:border-[#c5a059] rounded-xl p-4 transition group block" style={{ textDecoration: 'none' }}>
                             <div className="font-black uppercase tracking-wider text-white group-hover:text-[#c5a059] mb-1">🛠️ Builders &amp; Remodelers</div>
-                            <div className="text-gray-400">Wholesale B2B pricing, white-label client boards &amp; takeoffs</div>
+                            <div className="text-gray-400">Exclusive B2B trade pricing, white-label client boards &amp; takeoffs</div>
                         </Link>
                     </div>
                 </div>
@@ -107,7 +107,7 @@ export default function Footer() {
 
             {/* Sitewide Local SEO Service Areas Bar — Hidden during Client Presentation Mode */}
             {!clientBrand && (
-                <div className="border-b border-gray-800 pb-10 mb-10 text-left">
+                <div className="border-b border-gray-800 pb-10 mb-8 text-left">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                         <span className="text-xs font-bold uppercase tracking-widest text-[#c5a059]">
                             Portland &amp; SW Washington Trade Coverage · On-Site Measures · Local Warehouse Will-Call
@@ -135,6 +135,18 @@ export default function Footer() {
                             </Link>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {/* Sitewide NAP Bar for Local Search Consistency */}
+            {!clientBrand && (
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 text-xs text-gray-400 mb-6 text-center md:text-left">
+                    <div>
+                        <strong className="text-gray-300">Portland Showroom:</strong> 1320 SE Water Ave, Portland, OR 97214 &nbsp;·&nbsp; <strong className="text-gray-300">Lake Oswego Showroom:</strong> 25 S State St Ste 2110, Lake Oswego, OR 97034
+                    </div>
+                    <a href="tel:+15036629230" className="text-[#c5a059] font-bold hover:text-white transition" style={{ textDecoration: 'none' }}>
+                        📞 (503) 662-9230
+                    </a>
                 </div>
             )}
 

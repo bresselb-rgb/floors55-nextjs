@@ -14,7 +14,7 @@ export const SHOWROOM_HUBS = [
         id: 'lake-oswego',
         name: 'Lake Oswego Trade Showroom',
         location: '25 S State St Ste 2110 · Lake Oswego, OR 97034',
-        phone: '(503) 673-1333',
+        phone: '(503) 662-9230',
         hours: 'Mon–Thu: 8:30 AM – 4:30 PM',
         coverage: 'Oswego Village, South Metro, West Hills, Hwy 217 & I-5 South',
         mapCoords: { x: 48, y: 62 }
@@ -78,7 +78,7 @@ export const TIER_1_CITIES = [
         driveTime: '10 min',
         mapCoords: { x: 38, y: 58 },
         tagline: 'Bull Mountain to Metzger remodels & fast jobsite quantity verification.',
-        description: 'Minutes up the Kruse Way/Hwy 217 corridor from both our Lake Oswego and Portland hubs, we support Tigard general contractors with on-site square footage verification, waste-factor optimization, and wholesale flooring packages.',
+        description: 'Minutes up the Kruse Way/Hwy 217 corridor from both our Lake Oswego and Portland hubs, we support Tigard general contractors with on-site square footage verification, waste-factor optimization, and trade flooring packages.',
         popularSpecs: ['20mil Wear-Layer Waterproof LVP', 'AC4/AC5 Water-Resistant Laminate', 'Multi-Family Turnkey Carpet & Pad'],
         neighborhoods: ['Bull Mountain', 'Metzger', 'Summerfield', 'King City', 'Durham', 'Tigard Triangle']
     },
@@ -198,7 +198,7 @@ export const TIER_1_CITIES = [
         driveTime: '16 min',
         mapCoords: { x: 42, y: 82 },
         tagline: 'South I-5 planned communities, commercial TI & precision material estimates.',
-        description: 'Covering Charbonneau, Villebois, and Wilsonville commercial parks with fast on-site laser measuring and wholesale trade pricing straight down I-5 from our Lake Oswego hub.',
+        description: 'Covering Charbonneau, Villebois, and Wilsonville commercial parks with fast on-site laser measuring and exclusive trade pricing straight down I-5 from our Lake Oswego hub.',
         popularSpecs: ['Single-Level Luxury Vinyl & Hardwood', 'Commercial Carpet Tile & Glue-Down LVT', 'Zero-Threshold Shower & Floor Tile'],
         neighborhoods: ['Charbonneau', 'Villebois', 'Frog Pond', 'Morey’s Landing']
     },
@@ -213,7 +213,7 @@ export const TIER_1_CITIES = [
         driveTime: '22 min',
         mapCoords: { x: 76, y: 44 },
         tagline: 'East Multnomah County residential remodels, multi-family turns & bulk pricing.',
-        description: 'From our Portland hub, we provide East County general contractors, landlords, and flooring installers with transparent wholesale pricing, digital proposal tools, and on-site project estimates.',
+        description: 'From our Portland hub, we provide East County general contractors, landlords, and flooring installers with transparent trade pricing, digital proposal tools, and on-site project estimates.',
         popularSpecs: ['Waterproof Rigid Core LVP', 'Rental & Multi-Family Carpet Packages', 'Scratch-Resistant AC4 Laminate'],
         neighborhoods: ['Powell Valley', 'Gresham Butte', 'Centennial', 'Rockwood', 'Kelly Creek']
     },
@@ -228,7 +228,7 @@ export const TIER_1_CITIES = [
         driveTime: '22 min',
         mapCoords: { x: 20, y: 40 },
         tagline: 'Silicon Forest new-construction packages, commercial specs & residential turns.',
-        description: 'Supporting Washington County builders and commercial contractors across Hillsboro, Orenco Station, and Reed’s Crossing with competitive wholesale brokerage and on-site takeoff verification.',
+        description: 'Supporting Washington County builders and commercial contractors across Hillsboro, Orenco Station, and Reed’s Crossing with competitive trade pricing and on-site takeoff verification.',
         popularSpecs: ['New-Construction Spec LVP & Laminate', 'Commercial Office & Retail Flooring', 'Multi-Family Replacement Carpet'],
         neighborhoods: ['Orenco Station', 'Reed’s Crossing', 'Tanasbourne', 'AmberGlen', 'Jackson School']
     },

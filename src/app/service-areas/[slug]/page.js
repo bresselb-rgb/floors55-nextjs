@@ -23,14 +23,14 @@ function getCityInstallCopy(city) {
         return {
             title: '4. On-Demand Installation Support',
             badge: 'Overflow & Turnkey Installation by Request',
-            body: `Crews booked out or tackling a tight ${city.name} multi-unit turnover? In addition to wholesale material supply and Local Warehouse Will-Call, Floors 55 Pro offers professional installation services by request—giving you reliable backup labor capacity whenever your project timeline demands it.`
+            body: `Crews booked out or tackling a tight ${city.name} multi-unit turnover? In addition to trade material supply and Local Warehouse Will-Call, Floors 55 Pro offers professional installation services by request—giving you reliable backup labor capacity whenever your project timeline demands it.`
         };
     }
 
     return {
         title: '4. Professional Installation Upon Request',
         badge: 'Trade Supply · Local Warehouse Will-Call · Install by Request',
-        body: `From material specification at our Portland and Lake Oswego showrooms to final walkthrough in ${city.name}, we can take the flooring scope completely off your plate. Ask your account rep to bundle certified installation into your quote alongside your wholesale material order.`
+        body: `From material specification at our Portland and Lake Oswego showrooms to final walkthrough in ${city.name}, we can take the flooring scope completely off your plate. Ask your account rep to bundle certified installation into your quote alongside your trade material order.`
     };
 }
 
@@ -43,9 +43,12 @@ export async function generateMetadata({ params }) {
     const city = TIER_1_CITIES.find((c) => c.slug === slug);
     if (!city) return {};
 
-    // Root layout.js automatically appends "| Floors 55 Pro Portal"
-    const pageTitle = `Wholesale Flooring, On-Site Measures & Installation near ${city.name}, ${city.state}`;
-    const pageDesc = `${city.tagline} Serving ${city.name} contractors, builders, and property managers via our ${city.closestHub} (${city.miles} mi). Local Warehouse Will-Call & professional installation by request.`;
+    // Root layout.js automatically appends "| Floors 55 Pro"
+    const pageTitle = `Flooring Showrooms, On-Site Measures & Installation in ${city.name}, ${city.state}`;
+    const hubDistanceText = city.isHub
+        ? `directly from our ${city.closestHub}`
+        : `via our ${city.closestHub} (${Number(city.miles)} mi)`;
+    const pageDesc = `${city.tagline} Serving ${city.name} homeowners, contractors, builders, and property managers ${hubDistanceText}. Trade pricing, Local Warehouse Will-Call & installation by request.`;
 
     return {
         title: pageTitle,
@@ -97,8 +100,8 @@ export default async function CityServiceAreaPage({ params }) {
     const cityServiceSchema = {
         '@context': 'https://schema.org',
         '@type': 'Service',
-        name: `Wholesale Flooring Supply, On-Site Takeoffs & Installation in ${city.name}, ${city.state}`,
-        serviceType: 'Wholesale Flooring Supply & Commercial/Residential Flooring Installation',
+        name: `Flooring Showrooms, On-Site Takeoffs & Installation in ${city.name}, ${city.state}`,
+        serviceType: 'Flooring Showroom, Trade Flooring Supply & Commercial/Residential Installation',
         url: `${BASE_URL}/service-areas/${city.slug}`,
         description: city.description,
         provider: {
@@ -114,7 +117,7 @@ export default async function CityServiceAreaPage({ params }) {
         },
         audience: {
             '@type': 'Audience',
-            audienceType: 'Contractors, Custom Builders, Interior Designers, Property Managers',
+            audienceType: 'Contractors, Custom Builders, Interior Designers, Realtors, Property Managers, Homeowners',
         },
     };
 
@@ -143,7 +146,7 @@ export default async function CityServiceAreaPage({ params }) {
                         <div className="flex flex-wrap items-center gap-2 mb-4 sm:mb-5">
                             <div className="inline-flex items-center gap-2 bg-amber-50 border border-[#c5a059]/40 text-gray-900 text-[11px] sm:text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full">
                                 <span className="w-2 h-2 rounded-full bg-[#c5a059] shrink-0" />
-                                <span>Served by our {city.closestHub} · {city.isHub ? 'Showroom Hub' : `${city.miles} miles (${city.driveTime})`}</span>
+                                <span>Served by our {city.closestHub} · {city.isHub ? 'Showroom Hub' : `${Number(city.miles)} miles (${city.driveTime})`}</span>
                             </div>
                             <span className="bg-gray-100 border border-gray-200 text-gray-700 text-[11px] sm:text-xs font-semibold px-3 py-1.5 rounded-full">
                                 {installInfo.badge}
@@ -151,7 +154,7 @@ export default async function CityServiceAreaPage({ params }) {
                         </div>
 
                         <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-gray-900 tracking-tight leading-tight">
-                            Wholesale Flooring, Takeoffs &amp; Installation in <span className="text-[#c5a059]">{city.name}, {city.state}</span>
+                            Flooring Showrooms, Takeoffs &amp; Installation in <span className="text-[#c5a059]">{city.name}, {city.state}</span>
                         </h1>
 
                         <p className="mt-4 sm:mt-5 text-gray-600 text-sm sm:text-base md:text-lg leading-relaxed">
@@ -178,7 +181,7 @@ export default async function CityServiceAreaPage({ params }) {
                             </div>
                             <div className="bg-gray-50 border border-gray-200 p-5 sm:p-6 rounded-xl">
                                 <h2 className="text-gray-900 font-bold text-base mb-2">
-                                    3. local warehouse
+                                    3. Local Warehouse Will-Call
                                 </h2>
                                 <p className="text-sm text-gray-600 leading-relaxed">
                                     Skip showroom bottlenecks—your material orders are staged for rapid will-call pickup directly at our local warehouses located along the major metro freight corridors.

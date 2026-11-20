@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export default async function sitemap() {
   const baseUrl = 'https://www.floors55pro.com';
 
-  // 1. Map out all of your permanent static routes
+  // 1. Map out all of your permanent indexable static routes
   const staticRoutes = [
     '', // Home page
     '/category',
@@ -19,6 +19,7 @@ export default async function sitemap() {
     '/category/laminate',
     '/category/hardwood',
     '/category/tile',
+    '/category/carpet-cushion',
     '/programs',                      // <-- Trade & Client Programs Hub
     '/programs/realtors',             // <-- Realtor & Homeowner Concierge
     '/programs/property-management',  // <-- Property Management & Multi-Family
@@ -35,12 +36,11 @@ export default async function sitemap() {
     '/become-a-pro',
     '/general-contact',
     '/wholesale-request',
-    '/order-sample',
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date(),
     changeFrequency: 'weekly',
-    priority: route === '' ? 1 : (route === '/service-areas' || route.startsWith('/programs')) ? 0.9 : 0.8,
+    priority: route === '' ? 1 : (route === '/service-areas' || route.startsWith('/programs') || route.startsWith('/category/')) ? 0.9 : 0.8,
   }));
 
   // 2. Automatically generate all 15 City SEO Spoke URLs (/service-areas/lake-oswego-or, etc.)
@@ -64,7 +64,7 @@ export default async function sitemap() {
       const data = doc.data();
       if (data.isVisible !== false) {
         productRoutes.push({
-          url: `${baseUrl}/product/${doc.id}`,
+          url: `${baseUrl}/product/${encodeURIComponent(doc.id)}`,
           lastModified: new Date(),
           changeFrequency: 'daily',
           priority: 0.9,
