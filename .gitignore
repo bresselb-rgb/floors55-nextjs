@@ -25,4 +25,4 @@ yarn-error.log*
 .env
 
 # IGNORING HEAVY ASSETS FOR VERCEL DEPLOYMENT
-public/images
+public/images* - Copy* 
