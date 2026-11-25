@@ -718,6 +718,59 @@
         </div>
     </div>
     
+    </div><!-- INLINE EMAIL REPLY MODAL -->
+    <div id="reply-email-modal" class="hidden fixed inset-0 bg-black/60 z-[80] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl max-h-[92vh] overflow-y-auto border-t-4 border-gold">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="text-lg font-black text-gray-900" id="reply-modal-title">Reply to Inquiry</h3>
+                    <p class="text-xs text-gray-500 mt-0.5" id="reply-modal-subtitle"></p>
+                </div>
+                <button type="button" onclick="window.closeReplyModal()" class="text-gray-400 hover:text-black text-2xl leading-none font-bold">&times;</button>
+            </div>
+
+            <div id="reply-context-box" class="hidden bg-gray-50 border border-gray-200 rounded-xl p-3.5 mb-4 text-xs text-gray-600 whitespace-pre-wrap max-h-32 overflow-y-auto"></div>
+
+            <form onsubmit="window.sendAdminReply(event)" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-gray-400 mb-1">To (Recipient Email)</label>
+                        <input type="email" id="reply-to-email" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-gold outline-none text-xs font-mono bg-gray-50">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-gray-400 mb-1">Return / Reply-To Email</label>
+                        <input type="email" id="reply-from-email" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-gold outline-none text-xs font-mono bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black uppercase text-gold mb-1 truncate" id="reply-am-label">AM Phone</label>
+                        <input type="tel" id="reply-contact-phone" oninput="window.syncReplyPhoneInBody(this.value)" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-gold outline-none text-xs font-mono bg-white">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-gray-400 mb-1">Subject Line</label>
+                    <input type="text" id="reply-subject" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-gold outline-none text-sm font-bold bg-white">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-gray-400 mb-1">Message</label>
+                    <textarea id="reply-body" rows="9" required class="w-full px-3.5 py-3 border border-gray-300 rounded-xl focus:border-gold outline-none text-sm bg-white leading-relaxed"></textarea>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100">
+                    <label class="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                        <input type="checkbox" id="reply-cc-self" class="accent-gold w-4 h-4">
+                        <span>CC primary notification email on this reply</span>
+                    </label>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="window.closeReplyModal()" class="px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-black">Cancel</button>
+                        <button type="submit" id="reply-send-btn" class="bg-black text-white px-6 py-2.5 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-gold hover:text-black transition-colors shadow-sm">Send Email Reply</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="toast" class="fixed bottom-6 right-6 bg-black text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 opacity-0 translate-y-4 z-50 pointer-events-none">
         <span class="text-gold font-bold">✓</span><p class="font-bold text-xs" id="toast-message"></p>
     </div>
@@ -2053,6 +2106,39 @@
             });
         }
 
+        function escapeCardHtml(str = '') {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function renderStatusPill(status) {
+            if (status === 'replied') {
+                return `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-2">✓ Replied</span>`;
+            }
+            if (status === 'read') {
+                return `<span class="bg-gray-200 text-gray-600 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-2">Reviewed</span>`;
+            }
+            return `<span class="bg-gold/20 text-amber-900 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-2">● New</span>`;
+        }
+
+        function renderReplyHistoryHTML(r) {
+            if (!r.replies || !Array.isArray(r.replies) || r.replies.length === 0) return '';
+            const items = r.replies.map(rep => {
+                const when = rep.sentAt ? new Date(rep.sentAt).toLocaleString() : '';
+                return `<div class="bg-emerald-50/60 border border-emerald-100 rounded-lg p-3 mt-2">
+                    <div class="flex justify-between items-center text-[10px] font-bold text-emerald-800 mb-1">
+                        <span>Sent: ${escapeCardHtml(rep.subject || 'Reply')} (${escapeCardHtml(rep.sentBy || 'Admin')})</span>
+                        <span>${escapeCardHtml(when)}</span>
+                    </div>
+                    <div class="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">${escapeCardHtml(rep.body || '')}</div>
+                </div>`;
+            }).join('');
+            return `<div class="mt-4 pt-3 border-t border-gray-100"><div class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Reply History (${r.replies.length})</div>${items}</div>`;
+        }
+
         function renderQuotesHTML(listToRender) {
             const tbody = document.getElementById('quotes-body'); tbody.innerHTML = '';
             listToRender.forEach(r => {
@@ -2062,13 +2148,31 @@
                 
                 let prodHTML = '';
                 if(r.product || r.color) {
-                    prodHTML = `<div class="bg-gray-50 p-4 rounded-lg mt-4 border border-gray-100 flex items-center justify-between"><div class="flex flex-col"><span class="text-[9px] font-black uppercase text-gray-400">Attached Product</span><span class="font-bold text-sm text-gray-800">${r.product || 'N/A'}</span></div><div class="flex flex-col"><span class="text-[9px] font-black uppercase text-gray-400">Colorway SKU</span><span class="font-bold text-sm text-gray-800">${r.color || 'N/A'}</span></div><div class="flex flex-col text-right"><span class="text-[9px] font-black uppercase text-gray-400">Est. Coverage</span><span class="font-bold text-sm text-gold">${r.sqft ? r.sqft + ' sqft' : 'N/A'}</span></div></div>`;
+                    prodHTML = `<div class="bg-gray-50 p-4 rounded-lg mt-4 border border-gray-100 flex items-center justify-between"><div class="flex flex-col"><span class="text-[9px] font-black uppercase text-gray-400">Attached Product</span><span class="font-bold text-sm text-gray-800">${escapeCardHtml(r.product || 'N/A')}</span></div><div class="flex flex-col"><span class="text-[9px] font-black uppercase text-gray-400">Colorway SKU</span><span class="font-bold text-sm text-gray-800">${escapeCardHtml(r.color || 'N/A')}</span></div><div class="flex flex-col text-right"><span class="text-[9px] font-black uppercase text-gray-400">Est. Coverage</span><span class="font-bold text-sm text-gold">${r.sqft ? escapeCardHtml(r.sqft) + ' sqft' : 'N/A'}</span></div></div>`;
                 }
 
-                const matBadge = r.installationNeeded ? `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-3">Installation Needed</span>` : (r.materialsOnly ? `<span class="bg-amber-100 text-amber-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-3">Supply Only</span>` : '');
-                const proBadge = r.proPartner ? `<span class="bg-purple-100 text-purple-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-3">Client of: ${r.proPartner}</span>` : '';
+                const matBadge = r.installationNeeded ? `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-2">Installation Needed</span>` : (r.materialsOnly ? `<span class="bg-amber-100 text-amber-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-2">Supply Only</span>` : '');
+                const proBadge = r.proPartner ? `<span class="bg-purple-100 text-purple-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-2">Client of: ${escapeCardHtml(r.proPartner)}</span>` : '';
+                const toggleLabel = r.status === 'new' ? 'Mark Reviewed' : 'Mark New';
                 
-                card.innerHTML = `<div class="flex justify-between items-start"><div class="flex flex-col"><div class="flex items-center"><span class="font-bold text-base text-gray-900">${r.name}</span>${matBadge}${proBadge}</div><div class="text-xs text-gray-500 mt-1">${r.email} &bull; ${r.phone}</div></div><div class="text-right"><span class="text-xs text-gray-400">${date}</span><br><button onclick="window.delQuote('${r.id}')" class="text-[9px] font-black uppercase tracking-wider text-red-500 hover:text-red-700 mt-2">Delete File</button></div></div>${prodHTML}<p class="mt-4 text-xs text-gray-650 leading-relaxed whitespace-pre-wrap">${r.message || 'No remarks added to the estimate form.'}</p>`;
+                card.innerHTML = `
+                <div class="flex justify-between items-start gap-4">
+                    <div class="flex flex-col">
+                        <div class="flex flex-wrap items-center gap-y-1"><span class="font-bold text-base text-gray-900">${escapeCardHtml(r.name)}</span>${renderStatusPill(r.status)}${matBadge}${proBadge}</div>
+                        <div class="text-xs text-gray-500 mt-1">${escapeCardHtml(r.email)} &bull; ${escapeCardHtml(r.phone)}</div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="text-xs text-gray-400">${date}</span>
+                        <div class="flex items-center justify-end gap-3 mt-2">
+                            <button onclick="window.openReplyModal('quote', '${r.id}')" class="bg-black text-white hover:bg-gold hover:text-black px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors">✉ Reply</button>
+                            <button onclick="window.toggleLeadStatus('quote_requests', '${r.id}', '${r.status || 'new'}')" class="text-[9px] font-black uppercase tracking-wider text-gray-500 hover:text-black">${toggleLabel}</button>
+                            <button onclick="window.delQuote('${r.id}')" class="text-[9px] font-black uppercase tracking-wider text-red-500 hover:text-red-700">Delete File</button>
+                        </div>
+                    </div>
+                </div>
+                ${prodHTML}
+                <p class="mt-4 text-xs text-gray-650 leading-relaxed whitespace-pre-wrap">${escapeCardHtml(r.message || 'No remarks added to the estimate form.')}</p>
+                ${renderReplyHistoryHTML(r)}`;
                 tbody.appendChild(card);
             });
             if (listToRender.length === 0) {
@@ -2119,25 +2223,31 @@
                 card.className = "bg-white p-6 rounded-xl border border-gray-200 shadow-sm transition-all";
                 const date = r.timestamp ? new Date(r.timestamp.toDate()).toLocaleDateString() : 'Just now';
                 
-                const proBadge = r.proPartner ? `<div class="mt-1"><span class="bg-purple-100 text-purple-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider inline-block">Client of: ${r.proPartner}</span></div>` : '';
+                const proBadge = r.proPartner ? `<div class="mt-1"><span class="bg-purple-100 text-purple-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider inline-block">Client of: ${escapeCardHtml(r.proPartner)}</span></div>` : '';
+                const toggleLabel = r.status === 'new' ? 'Mark Reviewed' : 'Mark New';
 
                 card.innerHTML = `
-                <div class="flex justify-between items-start">
+                <div class="flex justify-between items-start gap-4">
                     <div class="flex flex-col">
-                        <span class="font-bold text-base text-gray-900">${r.name}</span>
+                        <div class="flex items-center flex-wrap gap-y-1"><span class="font-bold text-base text-gray-900">${escapeCardHtml(r.name)}</span>${renderStatusPill(r.status)}</div>
                         ${proBadge}
-                        <div class="text-xs text-gray-500 mt-1">${r.email} &bull; ${r.phone}</div>
-                        <div class="text-sm font-semibold text-gray-800 mt-3 whitespace-pre-wrap border-l-2 border-gold pl-3 py-1 bg-gray-50">${r.address}</div>
+                        <div class="text-xs text-gray-500 mt-1">${escapeCardHtml(r.email)} &bull; ${escapeCardHtml(r.phone)}</div>
+                        <div class="text-sm font-semibold text-gray-800 mt-3 whitespace-pre-wrap border-l-2 border-gold pl-3 py-1 bg-gray-50">${escapeCardHtml(r.address)}</div>
                     </div>
-                    <div class="text-right">
-                        <span class="text-xs text-gray-400">${date}</span><br>
-                        <button onclick="window.delSample('${r.id}')" class="text-[9px] font-black uppercase tracking-wider text-red-500 hover:text-red-700 mt-2">Mark Shipped & Clear</button>
+                    <div class="text-right shrink-0">
+                        <span class="text-xs text-gray-400">${date}</span>
+                        <div class="flex items-center justify-end gap-3 mt-2">
+                            <button onclick="window.openReplyModal('sample', '${r.id}')" class="bg-black text-white hover:bg-gold hover:text-black px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors">✉ Email Update</button>
+                            <button onclick="window.toggleLeadStatus('sample_requests', '${r.id}', '${r.status || 'new'}')" class="text-[9px] font-black uppercase tracking-wider text-gray-500 hover:text-black">${toggleLabel}</button>
+                            <button onclick="window.delSample('${r.id}')" class="text-[9px] font-black uppercase tracking-wider text-red-500 hover:text-red-700">Mark Shipped & Clear</button>
+                        </div>
                     </div>
                 </div>
                 <div class="bg-gray-50 p-4 rounded-lg mt-4 border border-gray-100 flex items-center gap-8">
-                    <div class="flex flex-col"><span class="text-[9px] font-black uppercase text-gray-400">Spec Selected</span><span class="font-bold text-sm text-gray-900">${r.product || 'N/A'}</span></div>
-                    <div class="flex flex-col"><span class="text-[9px] font-black uppercase text-gray-400">Color Variant</span><span class="font-bold text-sm text-gold">${r.color || 'N/A'}</span></div>
-                </div>`;
+                    <div class="flex flex-col"><span class="text-[9px] font-black uppercase text-gray-400">Spec Selected</span><span class="font-bold text-sm text-gray-900">${escapeCardHtml(r.product || 'N/A')}</span></div>
+                    <div class="flex flex-col"><span class="text-[9px] font-black uppercase text-gray-400">Color Variant</span><span class="font-bold text-sm text-gold">${escapeCardHtml(r.color || 'N/A')}</span></div>
+                </div>
+                ${renderReplyHistoryHTML(r)}`;
                 tbody.appendChild(card);
             });
             if (listToRender.length === 0) {
@@ -2187,10 +2297,27 @@
                 card.className = "bg-white p-6 rounded-xl border border-gray-200 shadow-sm transition-all";
                 const date = r.timestamp ? new Date(r.timestamp.toDate()).toLocaleDateString() : 'Just now';
                 
-                const phoneDisplay = r.phone ? ` &bull; ${r.phone}` : '';
-                const proBadge = r.proPartner ? `<span class="bg-purple-100 text-purple-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-2">Client of: ${r.proPartner}</span>` : '';
+                const phoneDisplay = r.phone ? ` &bull; ${escapeCardHtml(r.phone)}` : '';
+                const proBadge = r.proPartner ? `<span class="bg-purple-100 text-purple-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ml-2">Client of: ${escapeCardHtml(r.proPartner)}</span>` : '';
+                const toggleLabel = r.status === 'new' ? 'Mark Reviewed' : 'Mark New';
 
-                card.innerHTML = `<div class="flex justify-between items-start"><div class="flex flex-col"><div class="flex items-center"><span class="font-bold text-base text-gray-900">${r.subject || 'No Subject'}</span>${proBadge}</div><div class="text-xs text-gray-500 mt-1">From: ${r.name} (${r.email}${phoneDisplay})</div></div><div class="text-right"><span class="text-xs text-gray-400">${date}</span><br><button onclick="window.delMsg('${r.id}')" class="text-[9px] font-black uppercase tracking-wider text-red-500 hover:text-red-700 mt-2">Delete Message</button></div></div><p class="mt-4 text-xs text-gray-650 leading-relaxed whitespace-pre-wrap">${r.message}</p>`;
+                card.innerHTML = `
+                <div class="flex justify-between items-start gap-4">
+                    <div class="flex flex-col">
+                        <div class="flex items-center flex-wrap gap-y-1"><span class="font-bold text-base text-gray-900">${escapeCardHtml(r.subject || 'No Subject')}</span>${renderStatusPill(r.status)}${proBadge}</div>
+                        <div class="text-xs text-gray-500 mt-1">From: ${escapeCardHtml(r.name)} (${escapeCardHtml(r.email)}${phoneDisplay})</div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="text-xs text-gray-400">${date}</span>
+                        <div class="flex items-center justify-end gap-3 mt-2">
+                            <button onclick="window.openReplyModal('message', '${r.id}')" class="bg-black text-white hover:bg-gold hover:text-black px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors">✉ Reply</button>
+                            <button onclick="window.toggleLeadStatus('general_inquiries', '${r.id}', '${r.status || 'new'}')" class="text-[9px] font-black uppercase tracking-wider text-gray-500 hover:text-black">${toggleLabel}</button>
+                            <button onclick="window.delMsg('${r.id}')" class="text-[9px] font-black uppercase tracking-wider text-red-500 hover:text-red-700">Delete Message</button>
+                        </div>
+                    </div>
+                </div>
+                <p class="mt-4 text-xs text-gray-650 leading-relaxed whitespace-pre-wrap">${escapeCardHtml(r.message)}</p>
+                ${renderReplyHistoryHTML(r)}`;
                 tbody.appendChild(card);
             });
             if (listToRender.length === 0) {
@@ -2243,7 +2370,8 @@
                 if (item.type === 'applicant') {
                     // Render Applicant Row
                     const statusBadge = `<span class="bg-amber-100 text-amber-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">Pending Review</span>`;
-                    const actionBtns = `<button onclick="window.approveReq('${item.id}', '${item.email}')" class="text-gold font-bold uppercase text-[9px] tracking-wider hover:text-black mr-4">Approve & Issue Login</button><button onclick="window.deleteReq('${item.id}')" class="text-gray-400 font-bold uppercase text-[9px] tracking-wider hover:text-red-500">Reject</button>`;
+                    const emailBtn = (item.email && item.email !== 'undefined') ? `<button onclick="window.openReplyModal('applicant', '${item.id}')" class="text-gray-700 font-bold uppercase text-[9px] tracking-wider hover:text-gold mr-3">✉ Email</button>` : '';
+                    const actionBtns = `${emailBtn}<button onclick="window.approveReq('${item.id}', '${item.email}')" class="text-gold font-bold uppercase text-[9px] tracking-wider hover:text-black mr-3">Approve & Issue Login</button><button onclick="window.deleteReq('${item.id}')" class="text-gray-400 font-bold uppercase text-[9px] tracking-wider hover:text-red-500">Reject</button>`;
                     
                     tr.innerHTML = `
                         <td class="px-6 py-2.5"><b>${item.business || 'N/A'}</b><br><span class="text-[10px] text-gray-500">${item.name}</span></td>
@@ -2283,9 +2411,11 @@
                         ? `<span>${resolvedEmail}</span>`
                         : `<button onclick="window.setMissingProEmail('${item.id}', '${(item.business || item.name || 'Pro').replace(/'/g, "\\'")}')" class="text-amber-600 hover:text-black underline text-[10px] font-sans font-bold cursor-pointer outline-none">+ Set Missing Email</button>`;
 
+                    const proEmailBtn = resolvedEmail ? `<button onclick="window.openReplyModal('pro', '${item.id}')" class="text-gray-700 font-bold uppercase text-[9px] tracking-wider hover:text-gold mr-3 outline-none">✉ Email</button>` : '';
                     const actionBtns = `
-                        <button onclick="window.triggerResendEmail('${resolvedEmail}')" class="text-gold font-bold uppercase text-[9px] tracking-wider hover:text-black mr-4 outline-none">Resend Invite</button>
-                        <a href="https://floors55pro.com/category?pro=${item.id}" target="_blank" class="text-blue-500 font-bold uppercase text-[9px] tracking-wider hover:text-blue-700 mr-4 outline-none" style="text-decoration:none;">View Portal ↗</a>
+                        ${proEmailBtn}
+                        <button onclick="window.triggerResendEmail('${resolvedEmail}')" class="text-gold font-bold uppercase text-[9px] tracking-wider hover:text-black mr-3 outline-none">Resend Invite</button>
+                        <a href="https://floors55pro.com/category?pro=${item.id}" target="_blank" class="text-blue-500 font-bold uppercase text-[9px] tracking-wider hover:text-blue-700 mr-3 outline-none" style="text-decoration:none;">View Portal ↗</a>
                         <button onclick="window.deletePro('${item.id}')" class="text-gray-400 font-bold uppercase text-[9px] tracking-wider hover:text-red-500 outline-none">Revoke Access</button>
                     `;
 
@@ -2922,6 +3052,258 @@
             btn.innerText = "Approve, Create, & Link Items";
             btn.disabled = false;
         };
+        // --- INLINE EMAIL REPLY LOGIC ---
+        window.activeReplyTarget = null;
+        window.lastInsertedReplyPhone = '';
+
+        function formatDisplayPhone(raw) {
+            if (!raw) return '';
+            const digits = String(raw).replace(/\D/g, '');
+            if (digits.length < 7) return '';
+            if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+            if (digits.length === 11 && digits.startsWith('1')) return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+            return String(raw).trim();
+        }
+
+        function resolveAccountManagerInfo(type, record) {
+            let matchedPro = null;
+            if (type === 'pro') {
+                matchedPro = record;
+            } else if (record) {
+                const partnerKey = (record.proPartner || '').toLowerCase().trim();
+                const recEmail = (record.email || '').toLowerCase().trim();
+                const recDigits = (record.phone || '').replace(/\D/g, '');
+
+                matchedPro = prosMaster.find(p => {
+                    if (record.proId && p.id === record.proId) return true;
+                    if (record.proUid && p.id === record.proUid) return true;
+                    if (partnerKey) {
+                        if ((p.id || '').toLowerCase() === partnerKey) return true;
+                        if ((p.business || '').toLowerCase().trim() === partnerKey) return true;
+                        if ((p.name || '').toLowerCase().trim() === partnerKey) return true;
+                    }
+                    if (recEmail && (p.email || '').toLowerCase().trim() === recEmail) return true;
+                    const proDigits = (p.phone || '').replace(/\D/g, '');
+                    if (recDigits.length >= 10 && proDigits === recDigits) return true;
+                    return false;
+                }) || null;
+            }
+
+            const amCandidate = record?.accountManager || matchedPro?.accountManager || null;
+            let liveStaff = null;
+
+            if (amCandidate) {
+                const amEmail = (amCandidate.email || '').toLowerCase().trim();
+                const amName = (amCandidate.name || '').toLowerCase().trim();
+                liveStaff = staffMaster.find(s =>
+                    (amCandidate.id && s.id === amCandidate.id) ||
+                    (amEmail && amEmail !== 'support@floors55.com' && (s.email || '').toLowerCase().trim() === amEmail) ||
+                    (amName && amName !== 'pending assignment' && (s.name || '').toLowerCase().trim() === amName)
+                ) || null;
+            }
+
+            const resolvedPhone = formatDisplayPhone(liveStaff?.phone) || formatDisplayPhone(amCandidate?.phone) || formatDisplayPhone(record?.amPhone);
+            const rawAmName = liveStaff?.name || amCandidate?.name || '';
+            const resolvedName = (rawAmName && rawAmName.toLowerCase() !== 'pending assignment') ? rawAmName : '';
+
+            return {
+                amName: resolvedName,
+                phone: resolvedPhone || '(503) 662-9230',
+                isAssigned: Boolean(resolvedPhone)
+            };
+        }
+
+        window.syncReplyPhoneInBody = (newPhone) => {
+            const bodyEl = document.getElementById('reply-body');
+            if (!bodyEl || !window.lastInsertedReplyPhone || !newPhone.trim()) return;
+            if (bodyEl.value.includes(window.lastInsertedReplyPhone)) {
+                bodyEl.value = bodyEl.value.split(window.lastInsertedReplyPhone).join(newPhone.trim());
+                window.lastInsertedReplyPhone = newPhone.trim();
+            }
+        };
+
+        window.toggleLeadStatus = async (collectionName, docId, currentStatus) => {
+            const nextStatus = currentStatus === 'new' ? 'read' : 'new';
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', collectionName, docId), { status: nextStatus });
+                showToast(nextStatus === 'read' ? 'Marked as reviewed.' : 'Marked as new.');
+            } catch (err) {
+                console.error(err);
+                window.customAlert('Error', 'Could not update lead status.');
+            }
+        };
+
+        window.openReplyModal = (type, id) => {
+            let record = null;
+            let collectionName = '';
+            let defaultSubject = '';
+            let defaultBody = '';
+            let contextPreview = '';
+            let updateStatusField = true;
+
+            if (type === 'quote') {
+                record = quotesMaster.find(q => q.id === id);
+                collectionName = 'quote_requests';
+            } else if (type === 'sample') {
+                record = samplesMaster.find(s => s.id === id);
+                collectionName = 'sample_requests';
+            } else if (type === 'message') {
+                record = messagesMaster.find(m => m.id === id);
+                collectionName = 'general_inquiries';
+            } else if (type === 'applicant') {
+                record = requestsMaster.find(r => r.id === id);
+                collectionName = 'wholesale_requests';
+                updateStatusField = false;
+            } else if (type === 'pro') {
+                record = prosMaster.find(p => p.id === id);
+                collectionName = 'users';
+                updateStatusField = false;
+            }
+
+            if (!record || !record.email || record.email === 'undefined') {
+                return window.customAlert('Missing Email', 'No valid email address is attached to this record yet.');
+            }
+
+            const firstName = (fullName) => (fullName || 'there').trim().split(/\s+/)[0];
+            const amInfo = resolveAccountManagerInfo(type, record);
+            const contactPhone = amInfo.phone;
+            const signOffTeam = amInfo.amName ? `${amInfo.amName} — Floors 55 Pro` : 'Floors 55 Pro Team';
+
+            if (type === 'quote') {
+                const itemLabel = [record.product, record.color].filter(Boolean).join(' — ') || 'Flooring Estimate';
+                defaultSubject = `Re: Your Floors 55 Estimate Request — ${itemLabel}`;
+                contextPreview = `Customer Quote Details:\nProduct: ${record.product || 'N/A'} | Color: ${record.color || 'N/A'} | Est. SqFt: ${record.sqft || 'N/A'} | Install Needed: ${record.installationNeeded ? 'Yes' : 'No'}\nNotes: ${record.message || 'None'}`;
+                defaultBody = `Hi ${firstName(record.name)},\n\nThank you for reaching out to Floors 55 regarding ${record.product ? `${record.product}${record.color ? ` (${record.color})` : ''}` : 'your upcoming flooring project'}${record.sqft ? ` for approximately ${record.sqft} sq. ft.` : ''}.\n\n\n\nPlease reply directly to this email or call/text ${contactPhone} if you have any questions or would like to stop by our Portland or Lake Oswego showroom.\n\nBest regards,\n${signOffTeam}\n${contactPhone}`;
+            } else if (type === 'sample') {
+                const itemLabel = [record.product, record.color].filter(Boolean).join(' — ') || 'Flooring Sample';
+                defaultSubject = `Your Floors 55 Sample Order — ${itemLabel}`;
+                contextPreview = `Sample Request:\nMaterial: ${record.product || 'N/A'} (${record.color || 'N/A'})\nShip To:\n${record.address || 'N/A'}`;
+                defaultBody = `Hi ${firstName(record.name)},\n\nWe have processed your physical sample request for ${record.product || 'your selected flooring'}${record.color ? ` in ${record.color}` : ''} shipping to:\n\n${record.address || ''}\n\nPlease reply directly to this email or call/text ${contactPhone} once it arrives if you would like pricing on cartons, coordinating transitions, or an on-site measure.\n\nBest regards,\n${signOffTeam}\n${contactPhone}`;
+            } else if (type === 'message') {
+                const cleanSubj = (record.subject || 'Your Inquiry to Floors 55').replace(/^re:\s*/i, '');
+                defaultSubject = `Re: ${cleanSubj}`;
+                contextPreview = `Original Message from ${record.name}:\n${record.message || ''}`;
+                defaultBody = `Hi ${firstName(record.name)},\n\nThank you for contacting Floors 55.\n\n\n\nBest regards,\n${signOffTeam}\n${contactPhone}`;
+            } else if (type === 'applicant') {
+                defaultSubject = `Your Floors 55 Pro Trade Application — ${record.business || record.name || ''}`.replace(/\s+—\s*$/, '');
+                contextPreview = `Trade Applicant: ${record.business || 'N/A'} (${record.name || 'N/A'}) | Trade: ${record.trade || 'N/A'} | Phone: ${record.phone || 'N/A'}`;
+                defaultBody = `Hi ${firstName(record.name)},\n\nThank you for applying for a Floors 55 Pro trade account${record.business ? ` for ${record.business}` : ''}.\n\n\n\nBest regards,\n${signOffTeam}\n${contactPhone}`;
+            } else if (type === 'pro') {
+                defaultSubject = `Floors 55 Pro Portal — ${record.business || record.name || 'Account Follow-Up'}`;
+                contextPreview = `Active Pro Partner: ${record.business || 'N/A'} (${record.name || 'N/A'}) | Phone: ${record.phone || 'N/A'}`;
+                defaultBody = `Hi ${firstName(record.name || record.business)},\n\nChecking in from Floors 55 Pro regarding your trade account.\n\n\n\nBest regards,\n${signOffTeam}\n${contactPhone}`;
+            }
+
+            window.activeReplyTarget = {
+                type,
+                id,
+                collectionName,
+                updateStatusField,
+                name: record.name || record.business || '',
+                existingReplies: record.replies || []
+            };
+            window.lastInsertedReplyPhone = contactPhone;
+
+            document.getElementById('reply-modal-title').innerText = `Email ${record.name || record.business || record.email}`;
+            document.getElementById('reply-modal-subtitle').innerText = `${record.email}${record.phone ? ' • ' + record.phone : ''}`;
+            document.getElementById('reply-to-email').value = record.email;
+            document.getElementById('reply-from-email').value = 'admin@floors55pro.com';
+            document.getElementById('reply-contact-phone').value = contactPhone;
+            document.getElementById('reply-am-label').innerText = amInfo.amName ? `AM Phone (${amInfo.amName})` : 'Contact Phone (Default)';
+            document.getElementById('reply-subject').value = defaultSubject;
+            document.getElementById('reply-body').value = defaultBody;
+
+            const ctxBox = document.getElementById('reply-context-box');
+            if (contextPreview) {
+                ctxBox.innerText = contextPreview;
+                ctxBox.classList.remove('hidden');
+            } else {
+                ctxBox.classList.add('hidden');
+            }
+
+            document.getElementById('reply-email-modal').classList.remove('hidden');
+        };
+
+        window.closeReplyModal = () => {
+            window.activeReplyTarget = null;
+            document.getElementById('reply-email-modal').classList.add('hidden');
+        };
+
+        window.sendAdminReply = async (e) => {
+            e.preventDefault();
+            if (!window.activeReplyTarget || !auth.currentUser) return;
+
+            const btn = document.getElementById('reply-send-btn');
+            const originalLabel = btn.innerText;
+            btn.innerText = 'Sending...';
+            btn.disabled = true;
+
+            const to = document.getElementById('reply-to-email').value.trim();
+            const replyTo = document.getElementById('reply-from-email').value.trim() || 'admin@floors55pro.com';
+            const contactPhone = document.getElementById('reply-contact-phone').value.trim() || '(503) 662-9230';
+            const subject = document.getElementById('reply-subject').value.trim();
+            const message = document.getElementById('reply-body').value.trim();
+            const ccSelf = document.getElementById('reply-cc-self').checked;
+            const ccEmail = ccSelf ? (settingsMaster?.emailAddress || 'admin@floors55pro.com') : '';
+
+            try {
+                const idToken = await auth.currentUser.getIdToken();
+                const res = await fetch('/api/admin/reply', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({
+                        to,
+                        toName: window.activeReplyTarget.name,
+                        subject,
+                        message,
+                        replyTo,
+                        contactPhone,
+                        ccEmail
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Failed to send reply.');
+
+                const newReplyEntry = {
+                    to,
+                    replyTo,
+                    contactPhone,
+                    subject,
+                    body: message,
+                    sentBy: data.sentBy || auth.currentUser.email,
+                    sentAt: new Date().toISOString()
+                };
+
+                const updatedReplies = [...(window.activeReplyTarget.existingReplies || []), newReplyEntry];
+                const firestorePatch = {
+                    lastRepliedAt: newReplyEntry.sentAt,
+                    lastRepliedBy: newReplyEntry.sentBy,
+                    replies: updatedReplies
+                };
+                if (window.activeReplyTarget.updateStatusField) {
+                    firestorePatch.status = 'replied';
+                }
+
+                await updateDoc(
+                    doc(db, 'artifacts', appId, 'public', 'data', window.activeReplyTarget.collectionName, window.activeReplyTarget.id),
+                    firestorePatch
+                );
+
+                window.closeReplyModal();
+                showToast('Email reply sent and logged!');
+            } catch (err) {
+                console.error(err);
+                window.customAlert('Email Send Failed', err.message);
+            } finally {
+                btn.innerText = originalLabel;
+                btn.disabled = false;
+            }
+        };
+
         initAdmin();
     </script>
 </body>
